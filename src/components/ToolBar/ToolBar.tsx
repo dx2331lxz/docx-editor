@@ -23,6 +23,7 @@ import {
   Printer,
   Link2,
   MessageSquare,
+  MoreHorizontal,
 } from 'lucide-react'
 import { importDocx } from '../../utils/docxHandler'
 import FontSelector from './FontSelector'
@@ -196,9 +197,19 @@ const ToolBar: React.FC<ToolBarProps> = ({
   onToggleRuler,
   trackingEnabled = false,
   onOpenStyleManager,
-  onOpenVibeEditing,
+  onOpenVibeEditing: _onOpenVibeEditing,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const moreRef = useRef<HTMLDivElement>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   // Reactively read colors from editor state
   const { fontColor, highlightColor } = useEditorState({
@@ -218,21 +229,21 @@ const ToolBar: React.FC<ToolBarProps> = ({
       const ed = ctx.editor
       if (!ed) return {} as Record<string, boolean>
       return {
-        bold:        ed.isActive('bold'),
-        italic:      ed.isActive('italic'),
-        underline:   ed.isActive('underline'),
-        strike:      ed.isActive('strike'),
-        superscript: ed.isActive('superscript'),
-        subscript:   ed.isActive('subscript'),
-        alignLeft:   ed.isActive({ textAlign: 'left' }),
-        alignCenter: ed.isActive({ textAlign: 'center' }),
-        alignRight:  ed.isActive({ textAlign: 'right' }),
-        alignJustify:ed.isActive({ textAlign: 'justify' }),
-        bulletList:  ed.isActive('bulletList'),
-        orderedList: ed.isActive('orderedList'),
-        blockquote:  ed.isActive('blockquote'),
-        codeBlock:   ed.isActive('codeBlock'),
-        link:        ed.isActive('link'),
+        bold:         ed.isActive('bold'),
+        italic:       ed.isActive('italic'),
+        underline:    ed.isActive('underline'),
+        strike:       ed.isActive('strike'),
+        superscript:  ed.isActive('superscript'),
+        subscript:    ed.isActive('subscript'),
+        alignLeft:    ed.isActive({ textAlign: 'left' }),
+        alignCenter:  ed.isActive({ textAlign: 'center' }),
+        alignRight:   ed.isActive({ textAlign: 'right' }),
+        alignJustify: ed.isActive({ textAlign: 'justify' }),
+        bulletList:   ed.isActive('bulletList'),
+        orderedList:  ed.isActive('orderedList'),
+        blockquote:   ed.isActive('blockquote'),
+        codeBlock:    ed.isActive('codeBlock'),
+        link:         ed.isActive('link'),
       }
     },
   }) ?? {}
@@ -247,32 +258,40 @@ const ToolBar: React.FC<ToolBarProps> = ({
     e.target.value = ''
   }
 
+  const closeMore = () => setMoreOpen(false)
+
   return (
     <div className="glass-toolbar flex flex-col bg-gray-50 border-b border-gray-300 select-none">
-      {/* ── Style strip ─────────────────────────────────────────── */}
-      <StyleSelector editor={editor} onOpenStyleManager={onOpenStyleManager} />
 
-      {/* ── Row 1: Font controls + text style ───────────────────── */}
-      <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5 border-b border-gray-100">
+      {/* ── Single main row ──────────────────────────────────────── */}
+      <div className="flex items-center gap-0.5 px-3 py-1 overflow-x-auto">
+
+        {/* 1. Undo / Redo */}
+        <button className={btn()} title="撤销 (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}><Undo2 size={14} /></button>
+        <button className={btn()} title="重做 (Ctrl+Y)" onClick={() => editor.chain().focus().redo().run()}><Redo2 size={14} /></button>
+        <Divider />
+
+        {/* 2. StyleSelector */}
+        <StyleSelector editor={editor} onOpenStyleManager={onOpenStyleManager} />
+        <Divider />
+
+        {/* 3. Font */}
         <FontSelector editor={editor} />
-        <div className="mx-1" />
         <FontSizeSelector editor={editor} />
         <Divider />
 
+        {/* 4. Bold / Italic / Underline */}
         <button className={btn(activeStates.bold)}      title="粗体 (Ctrl+B)"   onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={14} /></button>
         <button className={btn(activeStates.italic)}    title="斜体 (Ctrl+I)"   onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={14} /></button>
         <button className={btn(activeStates.underline)} title="下划线 (Ctrl+U)" onClick={() => editor.chain().focus().toggleUnderline().run()}><Underline size={14} /></button>
-        <button className={btn(activeStates.strike)}    title="删除线"          onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough size={14} /></button>
-        <Divider />
 
-        {/* Font color — Baseline icon with reactive color bar */}
+        {/* 5. Colors */}
         <ColorPicker
           icon={<Baseline size={14} />}
           color={fontColor}
           onChange={(c) => editor.chain().focus().setColor(c).run()}
           title="字体颜色"
         />
-        {/* Highlight color — Highlighter icon with reactive color bar */}
         <ColorPicker
           icon={<Highlighter size={14} />}
           color={highlightColor}
@@ -281,125 +300,42 @@ const ToolBar: React.FC<ToolBarProps> = ({
         />
         <Divider />
 
-        <button className={btn(activeStates.superscript)} title="上标 (x²)" onClick={() => editor.chain().focus().toggleSuperscript().run()}><Superscript size={14} /></button>
-        <button className={btn(activeStates.subscript)}   title="下标 (x₂)" onClick={() => editor.chain().focus().toggleSubscript().run()}><Subscript size={14} /></button>
-        <Divider />
-
-        <LetterSpacingDropdown editor={editor} />
-        <Divider />
-
-        <button className={btn()} title="清除格式" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}>
-          <Eraser size={14} />
-        </button>
-      </div>
-
-      {/* ── Row 2: Paragraph controls ───────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5">
-        <button className={btn()} title="撤销 (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}><Undo2 size={14} /></button>
-        <button className={btn()} title="重做 (Ctrl+Y)" onClick={() => editor.chain().focus().redo().run()}><Redo2 size={14} /></button>
-        <FormatPainter editor={editor} />
-        <Divider />
-
+        {/* 6. Alignment */}
         <button className={btn(activeStates.alignLeft)}    title="左对齐"   onClick={() => editor.chain().focus().setTextAlign('left').run()}><AlignLeft size={16} /></button>
         <button className={btn(activeStates.alignCenter)}  title="居中"     onClick={() => editor.chain().focus().setTextAlign('center').run()}><AlignCenter size={16} /></button>
         <button className={btn(activeStates.alignRight)}   title="右对齐"   onClick={() => editor.chain().focus().setTextAlign('right').run()}><AlignRight size={16} /></button>
         <button className={btn(activeStates.alignJustify)} title="两端对齐" onClick={() => editor.chain().focus().setTextAlign('justify').run()}><AlignJustify size={16} /></button>
         <Divider />
 
-        <LineSpacingDropdown editor={editor} onOpenParagraphDialog={onOpenParagraphDialog} />
-        <Divider />
-
+        {/* 7. Lists */}
         <button className={btn(activeStates.bulletList)}  title="无序列表" onClick={() => editor.chain().focus().toggleBulletList().run()}><List size={14} /></button>
         <button className={btn(activeStates.orderedList)} title="有序列表" onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered size={14} /></button>
-        {/* Multi-level list: toggle ordered list + Tab/Shift+Tab for nesting */}
+        <Divider />
+
+        {/* 8. Import / Export */}
         <button
-          className={btn(activeStates.orderedList)}
-          title="多级列表（Tab 增加层级，Shift+Tab 减少层级）"
-          onClick={() => {
-            if (!editor.isActive('orderedList')) {
-              editor.chain().focus().toggleOrderedList().run()
-            }
-          }}
-        >
-          <ListTree size={14} />
-        </button>
-        <Divider />
-
-        <button className={btn()} title="增加首行缩进" onClick={() => editor.chain().focus().increaseFirstLineIndent().run()}><Indent size={14} /></button>
-        <button className={btn()} title="减少首行缩进" onClick={() => editor.chain().focus().decreaseFirstLineIndent().run()}><Outdent size={14} /></button>
-        <Divider />
-
-        <button className={btn(activeStates.blockquote)} title="引用块"    onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote size={14} /></button>
-        <button className={btn(activeStates.codeBlock)}  title="代码块"    onClick={() => editor.chain().focus().toggleCodeBlock().run()}><Code2 size={14} /></button>
-        <button className={btn()}                         title="插入表格"  onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 size={14} /></button>
-        <button className={btn(activeStates.link)}        title="超链接 (Ctrl+K)" onClick={() => onOpenLinkDialog?.()}><Link2 size={14} /></button>
-        <Divider />
-
-        <BorderShadingPanel editor={editor} />
-        <Divider />
-
-        <button
-          className="inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-medium bg-white border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-medium bg-white border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
           title="导入 DOCX"
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload size={12} /> 导入
         </button>
         <button
-          className="inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-medium bg-white border border-gray-300 text-gray-600 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-colors"
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded text-xs font-medium bg-white border border-gray-300 text-gray-600 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-colors flex-shrink-0"
           title="导出为 DOCX"
           onClick={onExport}
         >
           <Download size={12} /> 导出
         </button>
-
         <Divider />
 
-        {/* ── Column layout dropdown ────────────────────── */}
-        <ColumnDropdown columns={columns} onColumnsChange={onColumnsChange} />
-
-        <Divider />
-
-        {/* ── Header / Footer ───────────────────────────── */}
-        <button
-          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors"
-          title="编辑页眉"
-          onClick={() => onOpenHeaderFooter?.('header')}
-        >
-          页眉
-        </button>
-        <button
-          className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors"
-          title="编辑页脚"
-          onClick={() => onOpenHeaderFooter?.('footer')}
-        >
-          页脚
-        </button>
-
-        {/* ── Ruler toggle ──────────────────────────────── */}
-        <button
-          className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs transition-colors ${showRuler ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-200'}`}
-          title="显示/隐藏标尺"
-          onClick={onToggleRuler}
-        >
-          标尺
-        </button>
-
-        <Divider />
-
-        {/* ── Print ─────────────────────────────────────── */}
-        <button
-          className={btn()}
-          title="打印 (Ctrl+P)"
-          onClick={() => window.print()}
-        >
+        {/* 9. Print */}
+        <button className={btn()} title="打印 (Ctrl+P)" onClick={() => window.print()}>
           <Printer size={14} />
         </button>
-        <button
-          className={btn(showCommentPanel)}
-          title="批注面板"
-          onClick={onToggleCommentPanel}
-        >
+
+        {/* 10. Comment toggle */}
+        <button className={btn(showCommentPanel)} title="批注面板" onClick={onToggleCommentPanel}>
           <MessageSquare size={14} />
         </button>
 
@@ -413,40 +349,128 @@ const ToolBar: React.FC<ToolBarProps> = ({
           </span>
         )}
 
-        {/* ── Vibe Editing main button ── */}
-        <div style={{ flex: 1 }} />
-        <button
-          onClick={onOpenVibeEditing}
-          title="AI Vibe Editing — 用自然语言编辑文档"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '0 14px',
-            height: 30,
-            borderRadius: 8,
-            border: 'none',
-            background: 'linear-gradient(135deg, #00d4ff, #b24bff)',
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 13,
-            cursor: 'pointer',
-            boxShadow: '0 0 14px rgba(0,212,255,0.5), 0 2px 6px rgba(0,0,0,0.2)',
-            flexShrink: 0,
-            letterSpacing: '0.3px',
-            whiteSpace: 'nowrap',
-            transition: 'box-shadow 0.2s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 0 22px rgba(0,212,255,0.8), 0 0 8px rgba(178,75,255,0.6)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 0 14px rgba(0,212,255,0.5), 0 2px 6px rgba(0,0,0,0.2)')}
-        >
-          ✨ Vibe Editing
-        </button>
+        <Divider />
+
+        {/* 11. More (···) dropdown */}
+        <div ref={moreRef} className="relative flex-shrink-0">
+          <button
+            className={btn(moreOpen)}
+            title="更多工具"
+            onClick={() => setMoreOpen((v) => !v)}
+          >
+            <MoreHorizontal size={14} />
+          </button>
+
+          {moreOpen && (
+            <div className="absolute top-full right-0 mt-0.5 bg-white border border-gray-200 shadow-xl rounded z-50 py-1 min-w-[200px]">
+
+              {/* Strikethrough / Superscript / Subscript */}
+              <div className="flex items-center gap-0.5 px-2 py-1">
+                <button className={btn(activeStates.strike)}      title="删除线"    onClick={() => { editor.chain().focus().toggleStrike().run(); closeMore() }}><Strikethrough size={14} /></button>
+                <button className={btn(activeStates.superscript)} title="上标 (x²)" onClick={() => { editor.chain().focus().toggleSuperscript().run(); closeMore() }}><Superscript size={14} /></button>
+                <button className={btn(activeStates.subscript)}   title="下标 (x₂)" onClick={() => { editor.chain().focus().toggleSubscript().run(); closeMore() }}><Subscript size={14} /></button>
+              </div>
+
+              <div className="border-t border-gray-100 mx-2 my-0.5" />
+
+              {/* Letter spacing */}
+              <div className="flex items-center gap-1 px-2 py-1">
+                <span className="text-xs text-gray-500 w-14 flex-shrink-0">字间距</span>
+                <LetterSpacingDropdown editor={editor} />
+              </div>
+
+              {/* Line spacing */}
+              <div className="flex items-center gap-1 px-2 py-1">
+                <span className="text-xs text-gray-500 w-14 flex-shrink-0">行间距</span>
+                <LineSpacingDropdown editor={editor} onOpenParagraphDialog={onOpenParagraphDialog} />
+              </div>
+
+              <div className="border-t border-gray-100 mx-2 my-0.5" />
+
+              {/* Indent / Outdent */}
+              <div className="flex items-center gap-0.5 px-2 py-1">
+                <button className={btn()} title="增加首行缩进" onClick={() => { editor.chain().focus().increaseFirstLineIndent().run(); closeMore() }}><Indent size={14} /></button>
+                <button className={btn()} title="减少首行缩进" onClick={() => { editor.chain().focus().decreaseFirstLineIndent().run(); closeMore() }}><Outdent size={14} /></button>
+              </div>
+
+              <div className="border-t border-gray-100 mx-2 my-0.5" />
+
+              {/* Multi-level list / FormatPainter / Eraser */}
+              <div className="flex items-center gap-0.5 px-2 py-1">
+                <button
+                  className={btn(activeStates.orderedList)}
+                  title="多级列表（Tab 增加层级，Shift+Tab 减少层级）"
+                  onClick={() => { if (!editor.isActive('orderedList')) editor.chain().focus().toggleOrderedList().run(); closeMore() }}
+                >
+                  <ListTree size={14} />
+                </button>
+                <FormatPainter editor={editor} />
+                <button className={btn()} title="清除格式" onClick={() => { editor.chain().focus().unsetAllMarks().clearNodes().run(); closeMore() }}>
+                  <Eraser size={14} />
+                </button>
+              </div>
+
+              <div className="border-t border-gray-100 mx-2 my-0.5" />
+
+              {/* Blockquote / CodeBlock / Table / Link */}
+              <div className="flex items-center gap-0.5 px-2 py-1">
+                <button className={btn(activeStates.blockquote)} title="引用块"          onClick={() => { editor.chain().focus().toggleBlockquote().run(); closeMore() }}><Quote size={14} /></button>
+                <button className={btn(activeStates.codeBlock)}  title="代码块"          onClick={() => { editor.chain().focus().toggleCodeBlock().run(); closeMore() }}><Code2 size={14} /></button>
+                <button className={btn()}                         title="插入表格"        onClick={() => { editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); closeMore() }}><Table2 size={14} /></button>
+                <button className={btn(activeStates.link)}        title="超链接 (Ctrl+K)" onClick={() => { onOpenLinkDialog?.(); closeMore() }}><Link2 size={14} /></button>
+              </div>
+
+              <div className="border-t border-gray-100 mx-2 my-0.5" />
+
+              {/* Border & shading */}
+              <div className="flex items-center gap-1 px-2 py-1">
+                <span className="text-xs text-gray-500 w-14 flex-shrink-0">边框底纹</span>
+                <BorderShadingPanel editor={editor} />
+              </div>
+
+              <div className="border-t border-gray-100 mx-2 my-0.5" />
+
+              {/* Column layout */}
+              <div className="flex items-center gap-1 px-2 py-1">
+                <span className="text-xs text-gray-500 w-14 flex-shrink-0">分栏</span>
+                <ColumnDropdown columns={columns} onColumnsChange={onColumnsChange} />
+              </div>
+
+              <div className="border-t border-gray-100 mx-2 my-0.5" />
+
+              {/* Header / Footer / Ruler */}
+              <div className="flex items-center gap-0.5 px-2 py-1">
+                <button
+                  className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors"
+                  title="编辑页眉"
+                  onClick={() => { onOpenHeaderFooter?.('header'); closeMore() }}
+                >
+                  页眉
+                </button>
+                <button
+                  className="inline-flex items-center gap-1 h-7 px-2 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors"
+                  title="编辑页脚"
+                  onClick={() => { onOpenHeaderFooter?.('footer'); closeMore() }}
+                >
+                  页脚
+                </button>
+                <button
+                  className={`inline-flex items-center gap-1 h-7 px-2 rounded text-xs transition-colors ${showRuler ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-200'}`}
+                  title="显示/隐藏标尺"
+                  onClick={() => { onToggleRuler?.(); closeMore() }}
+                >
+                  标尺
+                </button>
+              </div>
+
+            </div>
+          )}
+        </div>
 
         <input ref={fileInputRef} type="file" accept=".docx" className="hidden" onChange={handleImport} />
       </div>
 
-      {/* ── Row 3: Table context bar (only when cursor in table) ── */}
+      {/* ── Row 2: Table context bar (only when cursor in table) ── */}
       <TableToolbar editor={editor} />
     </div>
   )
