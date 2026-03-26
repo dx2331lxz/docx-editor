@@ -593,12 +593,14 @@ const App: React.FC = () => {
             />
           )}
           {showVibeEditing && (
-            <VibeEditingPanel
-              editor={editor}
-              onClose={() => setShowVibeEditing(false)}
-              width={vibePanelWidth}
-              onWidthChange={setVibePanelWidth}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', flexShrink: 0 }}>
+              <VibeEditingPanel
+                editor={editor}
+                onClose={() => setShowVibeEditing(false)}
+                width={vibePanelWidth}
+                onWidthChange={setVibePanelWidth}
+              />
+            </div>
           )}
         </div>
       )}

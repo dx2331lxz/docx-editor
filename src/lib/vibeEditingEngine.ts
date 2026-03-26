@@ -42,7 +42,7 @@ type Message = {
   }>
 }
 
-export type ProgressCallback = (step: { type: 'thinking' | 'action' | 'observation' | 'done' | 'error' | 'ask_continue'; text: string }) => void
+export type ProgressCallback = (step: { type: 'thinking' | 'thinking_stream' | 'action' | 'observation' | 'done' | 'error' | 'ask_continue'; text: string }) => void
 
 export async function runVibeEditing(
   userInstruction: string,
@@ -60,9 +60,9 @@ export async function runVibeEditing(
 
   while (true) {
     step++
-    onProgress({ type: 'thinking', text: `步骤 ${epoch * MAX_STEPS + step}：思考中…` })
+    onProgress({ type: 'thinking_stream', text: '' })
 
-    // Call API
+    // Call API with streaming
     const response = await fetch(API_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -76,6 +76,7 @@ export async function runVibeEditing(
         tool_choice: 'auto',
         max_tokens: 4096,
         temperature: 0.3,
+        stream: true,
       }),
     })
 
@@ -85,15 +86,82 @@ export async function runVibeEditing(
       throw new Error(`API error ${response.status}: ${errText}`)
     }
 
-    const data = await response.json()
-    const choice = data.choices?.[0]
-    if (!choice) {
-      onProgress({ type: 'error', text: 'API 返回数据异常' })
-      throw new Error('No choice in API response')
+    // Parse SSE stream
+    const reader = response.body!.getReader()
+    const decoder = new TextDecoder()
+    let accumulatedThinking = ''
+    let accumulatedContent = ''
+    const toolCallsMap: Record<number, { id: string; name: string; arguments: string }> = {}
+    let finishReason: string | null = null
+
+    outer: while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const chunk = decoder.decode(value, { stream: true })
+      const lines = chunk.split('\n')
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const dataStr = line.slice(6).trim()
+        if (dataStr === '[DONE]') break outer
+        let parsed: Record<string, unknown>
+        try { parsed = JSON.parse(dataStr) } catch { continue }
+        const choice = (parsed.choices as Array<Record<string, unknown>>)?.[0]
+        if (!choice) continue
+        const delta = choice.delta as Record<string, unknown> | undefined
+        if (!delta) {
+          const fr = choice.finish_reason as string | null
+          if (fr) finishReason = fr
+          continue
+        }
+        // Accumulate thinking (reasoning_content) if model provides it
+        const thinkText = delta.reasoning_content as string | undefined
+        if (thinkText) {
+          accumulatedThinking += thinkText
+          onProgress({ type: 'thinking_stream', text: accumulatedThinking })
+        }
+        // Accumulate normal content
+        const contentText = delta.content as string | undefined
+        if (contentText) {
+          accumulatedContent += contentText
+        }
+        // Accumulate tool calls
+        const deltaToolCalls = delta.tool_calls as Array<Record<string, unknown>> | undefined
+        if (deltaToolCalls) {
+          for (const tc of deltaToolCalls) {
+            const idx = tc.index as number
+            if (!toolCallsMap[idx]) {
+              toolCallsMap[idx] = { id: '', name: '', arguments: '' }
+            }
+            if (tc.id) toolCallsMap[idx].id = tc.id as string
+            const fn = tc.function as Record<string, string> | undefined
+            if (fn?.name) toolCallsMap[idx].name += fn.name
+            if (fn?.arguments) toolCallsMap[idx].arguments += fn.arguments
+          }
+        }
+        const fr = choice.finish_reason as string | null
+        if (fr) finishReason = fr
+      }
     }
 
-    const assistantMsg = choice.message as Message
+    // Build assistantMsg from accumulated data
+    const toolCallsList = Object.values(toolCallsMap)
+    const assistantMsg: Message = {
+      role: 'assistant',
+      content: accumulatedContent || null,
+      ...(toolCallsList.length > 0 ? {
+        tool_calls: toolCallsList.map(tc => ({
+          id: tc.id,
+          type: 'function' as const,
+          function: { name: tc.name, arguments: tc.arguments },
+        }))
+      } : {}),
+    }
     messages.push(assistantMsg)
+
+    // If streaming ended with thinking text but no tool calls, show a placeholder
+    if (accumulatedThinking && !assistantMsg.tool_calls?.length && !accumulatedContent) {
+      onProgress({ type: 'thinking_stream', text: accumulatedThinking })
+    }
 
     // If the model returned plain text (no tool call), treat as done
     if (!assistantMsg.tool_calls || assistantMsg.tool_calls.length === 0) {

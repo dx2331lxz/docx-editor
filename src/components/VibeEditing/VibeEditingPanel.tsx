@@ -12,7 +12,7 @@ interface Props {
 
 type StepEntry = {
   id: number
-  type: 'thinking' | 'action' | 'observation' | 'done' | 'error'
+  type: 'thinking' | 'thinking_stream' | 'action' | 'observation' | 'done' | 'error'
   text: string
 }
 
@@ -43,9 +43,10 @@ const PRESETS = [
   { label: '💧 添加公司水印', value: '为文档添加水印：add_watermark 文字为"机密文件"，透明度 0.08，同时 apply_document_theme business 应用商务风格' },
 ]
 
-const STEP_ICON: Record<string, string> = { thinking: '🤔', action: '🔧', observation: '👁', done: '✅', error: '❌', ask_continue: '⏸' }
+const STEP_ICON: Record<string, string> = { thinking: '🤔', thinking_stream: '💭', action: '🔧', observation: '👁', done: '✅', error: '❌', ask_continue: '⏸' }
 const STEP_COLOR: Record<string, string> = {
   thinking: '#8899bb',
+  thinking_stream: '#9966cc',
   action: '#00d4ff',
   observation: '#4fc',
   done: '#00ffcc',
@@ -212,6 +213,23 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
 
     const onProgress: ProgressCallback = (s) => {
       gStepId++
+      if (s.type === 'thinking_stream') {
+        // Update last thinking_stream step in-place, or create it
+        setMessages(prev => {
+          const next = [...prev]
+          const aiMsg = next[next.length - 1]
+          if (aiMsg?.role !== 'ai') return prev
+          const steps = [...aiMsg.steps]
+          const lastIdx = steps.length - 1
+          if (lastIdx >= 0 && steps[lastIdx].type === 'thinking_stream') {
+            steps[lastIdx] = { ...steps[lastIdx], text: s.text }
+          } else {
+            steps.push({ id: gStepId, type: 'thinking_stream', text: s.text })
+          }
+          return [...next.slice(0, -1), { ...aiMsg, steps }]
+        })
+        return
+      }
       if (s.type === 'ask_continue') {
         // Handled separately via askContinueResolver — just record the step
         setMessages(prev => {
@@ -649,6 +667,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
 
       <style>{`
         @keyframes vspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes vblink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
       `}</style>
     </div>
   )
@@ -690,8 +709,26 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                   color: STEP_COLOR[step.type] || '#c8d8ff',
                   fontStyle: step.type === 'thinking' ? 'italic' : 'normal',
                   wordBreak: 'break-word',
+                  flex: 1,
                 }}>
-                  {step.type === 'observation'
+                  {step.type === 'thinking_stream' ? (
+                    <span style={{
+                      display: 'block',
+                      maxHeight: step.text.length > 200 ? 80 : undefined,
+                      overflowY: step.text.length > 200 ? 'auto' : undefined,
+                      fontStyle: 'italic',
+                      opacity: 0.85,
+                      fontSize: 11,
+                      lineHeight: 1.5,
+                      padding: '2px 6px',
+                      background: 'rgba(153,102,204,0.08)',
+                      borderRadius: 4,
+                      borderLeft: '2px solid rgba(153,102,204,0.4)',
+                    }}>
+                      {step.text || '…'}
+                      {!msg.done && <span style={{ animation: 'vblink 1s step-end infinite', marginLeft: 1 }}>▌</span>}
+                    </span>
+                  ) : step.type === 'observation'
                     ? step.text.slice(0, 60) + (step.text.length > 60 ? '…' : '')
                     : step.text}
                   {step.type === 'ask_continue' && askContinueResolver && (
