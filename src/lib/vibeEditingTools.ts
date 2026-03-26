@@ -432,6 +432,105 @@ export const VIBE_TOOLS = [
       parameters: { type: 'object', properties: {}, required: [] },
     },
   },
+  // ── Layout shortcuts (no-selector, whole-document) ──────────────────────
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_document_line_height',
+      description: '将全文所有段落的行间距统一设为指定倍数，无需指定选择器。常用值：1.0/1.5/2.0/2.5',
+      parameters: {
+        type: 'object',
+        properties: {
+          value: { type: 'string', description: '行距倍数，如 "1.5"、"2.0"。也可用 px/em 单位' },
+        },
+        required: ['value'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_document_paragraph_spacing',
+      description: '将全文所有段落的段前/段后间距统一设为指定像素值',
+      parameters: {
+        type: 'object',
+        properties: {
+          before: { type: 'string', description: '段前间距，如 "6px"、"0px"' },
+          after:  { type: 'string', description: '段后间距，如 "6px"、"12px"' },
+        },
+        required: ['before', 'after'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_first_line_indent',
+      description: '将全文所有正文段落设为首行缩进2字符（2em），中文排版标准格式',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_body_font_size',
+      description: '将全文正文（段落、列表、表格，不含标题）统一设为指定字号',
+      parameters: {
+        type: 'object',
+        properties: {
+          size: { type: 'string', description: '字号，如 "12pt"、"14px"、"16px"' },
+        },
+        required: ['size'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_body_font_family',
+      description: '将全文正文（段落、列表、表格，不含标题）统一设为指定字体',
+      parameters: {
+        type: 'object',
+        properties: {
+          font: { type: 'string', description: '字体名称，如 "宋体"、"黑体"、"微软雅黑"、"仿宋"、"楷体"' },
+        },
+        required: ['font'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'remove_blank_lines',
+      description: '清除文档中连续多余的空行，每处最多保留1个空行',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'clear_inline_styles',
+      description: '清除全文所有内联样式，保留标题层级和基础结构（段落/列表/表格），适合重新排版',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'smart_layout',
+      description: '一键智能排版：统一字体宋体、正文12pt、行距1.5、首行缩进2em、标题加粗，快速达到规范格式',
+      parameters: {
+        type: 'object',
+        properties: {
+          font:      { type: 'string', description: '正文字体，默认 "宋体"' },
+          bodySize:  { type: 'string', description: '正文字号，默认 "12pt"' },
+          lineHeight:{ type: 'string', description: '行距倍数，默认 "1.5"' },
+          indent:    { type: 'boolean', description: '是否首行缩进2em，默认 true' },
+        },
+        required: [],
+      },
+    },
+  },
   // ── Finish ────────────────────────────────────────────────────────────────
   {
     type: 'function' as const,
@@ -907,6 +1006,111 @@ export async function executeTool(
           return '已在文档开头插入 AI 生成的摘要'
         }
         return '摘要生成失败，API 未返回内容'
+      }
+
+      // ── Layout shortcuts ─────────────────────────────────────────────
+      case 'set_document_line_height': {
+        const { value } = args as { value: string }
+        const { newHtml, count } = applyStylesToHTML(
+          editor.getHTML(),
+          'p,h1,h2,h3,h4,h5,h6,li,blockquote',
+          { 'line-height': value }
+        )
+        editor.chain().focus().setContent(newHtml, true).run()
+        return `已将 ${count} 个段落行间距设为 ${value}`
+      }
+
+      case 'set_document_paragraph_spacing': {
+        const { before, after } = args as { before: string; after: string }
+        const { newHtml, count } = applyStylesToHTML(
+          editor.getHTML(),
+          'p,h1,h2,h3,h4,h5,h6',
+          { 'margin-top': before, 'margin-bottom': after }
+        )
+        editor.chain().focus().setContent(newHtml, true).run()
+        return `已将 ${count} 个段落段前设为 ${before}，段后设为 ${after}`
+      }
+
+      case 'set_first_line_indent': {
+        const { newHtml, count } = applyStylesToHTML(
+          editor.getHTML(),
+          'p',
+          { 'text-indent': '2em' }
+        )
+        editor.chain().focus().setContent(newHtml, true).run()
+        return `已将 ${count} 个段落设为首行缩进 2em`
+      }
+
+      case 'set_body_font_size': {
+        const { size } = args as { size: string }
+        const { newHtml, count } = applyStylesToHTML(
+          editor.getHTML(),
+          'p,li,td,th',
+          { 'font-size': size }
+        )
+        editor.chain().focus().setContent(newHtml, true).run()
+        return `已将 ${count} 个正文元素字号设为 ${size}`
+      }
+
+      case 'set_body_font_family': {
+        const { font } = args as { font: string }
+        const { newHtml, count } = applyStylesToHTML(
+          editor.getHTML(),
+          'p,li,td,th',
+          { 'font-family': font }
+        )
+        editor.chain().focus().setContent(newHtml, true).run()
+        return `已将 ${count} 个正文元素字体设为 ${font}`
+      }
+
+      case 'remove_blank_lines': {
+        const html = editor.getHTML()
+        const cleaned = html.replace(/(<p[^>]*>(<br\s*\/?>|&nbsp;|\u00a0|\s)*<\/p>\s*){2,}/gi, '<p><br></p>')
+        editor.chain().focus().setContent(cleaned, true).run()
+        return '已清除多余空行'
+      }
+
+      case 'clear_inline_styles': {
+        const html = editor.getHTML()
+        const parser = new DOMParser()
+        const docNode = parser.parseFromString(html, 'text/html')
+        // Remove inline styles but keep heading/paragraph/list structure
+        docNode.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'))
+        // Unwrap <span> and <font> but keep semantic tags
+        docNode.querySelectorAll('span,font').forEach(el => {
+          const parent = el.parentNode
+          if (!parent) return
+          while (el.firstChild) parent.insertBefore(el.firstChild, el)
+          parent.removeChild(el)
+        })
+        editor.chain().focus().setContent(docNode.body.innerHTML, true).run()
+        return '已清除所有内联格式，保留标题层级和段落结构'
+      }
+
+      case 'smart_layout': {
+        const {
+          font = '宋体',
+          bodySize = '12pt',
+          lineHeight = '1.5',
+          indent = true,
+        } = args as { font?: string; bodySize?: string; lineHeight?: string; indent?: boolean }
+
+        let html = editor.getHTML()
+        // Step 1: unified body font
+        html = applyStylesToHTML(html, 'p,li,td,th', { 'font-family': font }).newHtml
+        // Step 2: unified body font size
+        html = applyStylesToHTML(html, 'p,li,td,th', { 'font-size': bodySize }).newHtml
+        // Step 3: line height for all blocks
+        html = applyStylesToHTML(html, 'p,h1,h2,h3,h4,h5,h6,li', { 'line-height': lineHeight }).newHtml
+        // Step 4: first-line indent for paragraphs
+        if (indent) {
+          html = applyStylesToHTML(html, 'p', { 'text-indent': '2em' }).newHtml
+        }
+        // Step 5: ensure headings are bold
+        html = applyStylesToHTML(html, 'h1,h2,h3,h4', { 'font-weight': '700' }).newHtml
+
+        editor.chain().focus().setContent(html, true).run()
+        return `智能排版完成：字体 ${font}、正文 ${bodySize}、行距 ${lineHeight}、${indent ? '首行缩进2em、' : ''}标题加粗`
       }
 
       case 'finish': {
