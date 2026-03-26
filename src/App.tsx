@@ -535,7 +535,7 @@ const App: React.FC = () => {
           {editorCanvas}
         </PrintPreviewOverlay>
       ) : (
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
           {showNavPane && editor && (
             <NavigationPane editor={editor} onClose={() => setShowNavPane(false)} />
           )}
@@ -593,7 +593,7 @@ const App: React.FC = () => {
             />
           )}
           {showVibeEditing && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', flexShrink: 0, height: '100%', minHeight: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', flexShrink: 0, minHeight: 0 }}>
               <VibeEditingPanel
                 editor={editor}
                 onClose={() => setShowVibeEditing(false)}

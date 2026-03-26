@@ -332,7 +332,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     <div style={{
       position: 'relative',
       width,
-      height: '100%',
+      flex: 1,
       minHeight: 0,
       alignSelf: 'stretch',
       flexShrink: 0,
