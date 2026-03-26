@@ -315,6 +315,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       position: 'relative',
       width,
       height: '100%',
+      alignSelf: 'stretch',
       flexShrink: 0,
       zIndex: 100,
       display: 'flex',

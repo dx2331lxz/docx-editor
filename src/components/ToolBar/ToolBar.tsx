@@ -53,6 +53,7 @@ interface ToolBarProps {
   trackingEnabled?: boolean
   onOpenStyleManager?: () => void
   onOpenVibeEditing?: () => void
+  onPreview?: () => void
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -197,6 +198,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
   trackingEnabled = false,
   onOpenStyleManager,
   onOpenVibeEditing: _onOpenVibeEditing,
+  onPreview,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
@@ -342,7 +344,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
         <Divider />
 
         {/* 9. Print Preview */}
-        <button className={`${btn()} gap-1`} title="预览排版效果 (Ctrl+P)" onClick={() => window.print()}>
+        <button className={`${btn()} gap-1`} title="预览排版效果" onClick={() => onPreview?.()}>
           <ScanSearch size={14} />
           <span style={{ fontSize: 11 }}>预览</span>
         </button>

@@ -1,10 +1,362 @@
 {
   "docId": "test-doc",
   "content": {
-    "type": "doc"
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": "left",
+          "firstLineIndent": "2em",
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "color": "#000000",
+                  "fontFamily": "Georgia, serif",
+                  "fontSize": "20px",
+                  "lineHeight": null,
+                  "letterSpacing": null
+                }
+              }
+            ],
+            "text": "欢迎使用 DocxEditor"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": "2em",
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "color": null,
+                  "fontFamily": "Georgia, serif",
+                  "fontSize": null,
+                  "lineHeight": null,
+                  "letterSpacing": null
+                }
+              }
+            ],
+            "text": "这是一个对标 WPS 的在线文档编辑器，基于 TipTap + React + TypeScript 构建。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": "2em",
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "textStyle",
+                "attrs": {
+                  "color": null,
+                  "fontFamily": "Georgia, serif",
+                  "fontSize": null,
+                  "lineHeight": null,
+                  "letterSpacing": null
+                }
+              }
+            ],
+            "text": "主要特性："
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "富文本格式"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：粗体、斜体、下划线、删除线、高亮"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "段落对齐"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：左对齐、居中、右对齐、两端对齐"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "多级标题"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：H1 ~ H6"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "列表"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：无序列表、有序列表"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "表格"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：可调整大小的表格"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "DOCX 导入/导出"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：支持 .docx 格式"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "字体/字号/颜色/行距"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：完整排版控制"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": "2em",
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "后续将接入 "
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ],
+            "text": "AI 自动排版"
+          },
+          {
+            "type": "text",
+            "text": "（/api/ai-format），实现 Vibe Editing。"
+          }
+        ]
+      }
+    ]
   },
   "meta": {
-    "title": "Test"
+    "title": "docx-editor"
   },
-  "updatedAt": "2026-03-26T13:56:49.320Z"
+  "updatedAt": "2026-03-26T16:35:15.491Z"
 }

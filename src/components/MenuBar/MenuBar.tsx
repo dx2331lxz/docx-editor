@@ -352,7 +352,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
           </button>
 
           {openMenu === menu.label && (
-            <div className="glass-dropdown absolute top-full left-0 mt-0 bg-white border border-gray-200 shadow-lg rounded min-w-40 py-1 z-50">
+            <div className="glass-dropdown absolute top-full left-0 mt-0 bg-white border border-gray-200 shadow-lg rounded min-w-40 py-1 z-50" style={{ maxHeight: 'calc(100vh - 60px)', overflowY: 'auto' }}>
               {menu.items.map((item, idx) =>
                 item.divider ? (
                   <div key={idx} className="border-t border-gray-200 my-1" />
