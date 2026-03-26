@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
 import {
@@ -201,11 +202,24 @@ const ToolBar: React.FC<ToolBarProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
+  const moreButtonRef = useRef<HTMLButtonElement>(null)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [morePos, setMorePos] = useState({ top: 0, right: 0 })
+
+  const openMore = useCallback(() => {
+    if (moreButtonRef.current) {
+      const rect = moreButtonRef.current.getBoundingClientRect()
+      setMorePos({ top: rect.bottom + 2, right: window.innerWidth - rect.right })
+    }
+    setMoreOpen(true)
+  }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false)
+      if (
+        moreRef.current && !moreRef.current.contains(e.target as Node) &&
+        moreButtonRef.current && !moreButtonRef.current.contains(e.target as Node)
+      ) setMoreOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -352,17 +366,33 @@ const ToolBar: React.FC<ToolBarProps> = ({
         <Divider />
 
         {/* 11. More (···) dropdown */}
-        <div ref={moreRef} className="relative flex-shrink-0">
+        <div className="relative flex-shrink-0">
           <button
+            ref={moreButtonRef}
             className={btn(moreOpen)}
             title="更多工具"
-            onClick={() => setMoreOpen((v) => !v)}
+            onClick={() => moreOpen ? setMoreOpen(false) : openMore()}
           >
             <MoreHorizontal size={14} />
           </button>
 
-          {moreOpen && (
-            <div className="absolute top-full right-0 mt-0.5 bg-white border border-gray-200 shadow-xl rounded z-50 py-1 min-w-[200px]">
+          {moreOpen && ReactDOM.createPortal(
+            <div
+              ref={moreRef}
+              style={{
+                position: 'fixed',
+                top: morePos.top,
+                right: morePos.right,
+                zIndex: 9999,
+                background: '#fff',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                borderRadius: 6,
+                minWidth: 200,
+                paddingTop: 4,
+                paddingBottom: 4,
+              }}
+            >
 
               {/* Strikethrough / Superscript / Subscript */}
               <div className="flex items-center gap-0.5 px-2 py-1">
@@ -464,7 +494,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
               </div>
 
             </div>
-          )}
+          , document.body)}
         </div>
 
         <input ref={fileInputRef} type="file" accept=".docx" className="hidden" onChange={handleImport} />

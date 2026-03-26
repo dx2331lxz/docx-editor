@@ -214,7 +214,7 @@ const App: React.FC = () => {
   const [showFormFields, setShowFormFields] = useState(false)
   // Round 20 state
   const [showVibeEditing, setShowVibeEditing] = useState(false)
-  const [showVibeTooltip, setShowVibeTooltip] = useState(false)
+  // (tooltip removed — Vibe button now uses title attr)
   // Tab bar state
   const [tabs, setTabs] = useState<Tab[]>([{ id: 'tab-1', title: '新文档', content: '', isDirty: false }])
   const [activeTabId, setActiveTabId] = useState('tab-1')
@@ -516,21 +516,6 @@ const App: React.FC = () => {
           {showOutlineView && (
             <OutlinePanel editor={editor} onClose={() => setShowOutlineView(false)} />
           )}
-          {/* VSCode-style Activity Bar */}
-          <div style={{ width: 28, flexShrink: 0, background: 'rgba(10,14,30,0.6)', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }}>
-            <div style={{ position: 'relative' }}>
-              <button
-                title="Vibe Editing (AI 编辑)"
-                onClick={() => setShowVibeEditing(v => !v)}
-                onMouseEnter={() => { setShowVibeTooltip(true) }}
-                onMouseLeave={() => { setShowVibeTooltip(false) }}
-                style={{ width: 26, height: 26, borderRadius: 6, background: showVibeEditing ? 'rgba(0,212,255,0.2)' : 'transparent', border: showVibeEditing ? '1px solid rgba(0,212,255,0.4)' : '1px solid transparent', color: '#c8d8ff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
-              >✨</button>
-              {showVibeTooltip && (
-                <div style={{ position: 'absolute', left: 32, top: 0, background: 'rgba(10,14,30,0.9)', color: '#e0e8ff', fontSize: 11, padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 1000 }}>Vibe Editing</div>
-              )}
-            </div>
-          </div>
           {isSplitView ? (
             <SplitView
               editor={editor}
@@ -1010,6 +995,36 @@ const App: React.FC = () => {
       )}
       {showDocDiff && <DocDiffDialog editor={editor} onClose={() => setShowDocDiff(false)} />}
       {showFormFields && <FormFieldDialog editor={editor} onClose={() => setShowFormFields(false)} />}
+      {/* Vibe Editing toggle button — fixed top-right */}
+      <button
+        onClick={() => setShowVibeEditing(v => !v)}
+        title="Vibe Editing (AI 智能编辑)"
+        style={{
+          position: 'fixed',
+          top: 8,
+          right: showVibeEditing ? 376 : 12,
+          zIndex: 1200,
+          background: showVibeEditing
+            ? 'linear-gradient(135deg, rgba(0,212,255,0.25), rgba(178,75,255,0.25))'
+            : 'linear-gradient(135deg, #00d4ff, #b24bff)',
+          border: showVibeEditing ? '1px solid rgba(0,212,255,0.5)' : 'none',
+          borderRadius: 20,
+          color: '#fff',
+          fontSize: 13,
+          fontWeight: 600,
+          padding: '5px 12px 5px 9px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          boxShadow: showVibeEditing ? 'none' : '0 2px 12px rgba(0,212,255,0.4)',
+          transition: 'right 0.3s ease, background 0.2s',
+          letterSpacing: '0.02em',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <span style={{ fontSize: 15 }}>✨</span> Vibe
+      </button>
       {/* Round 20: Vibe Editing panel (right drawer) */}
       {showVibeEditing && (
         <VibeEditingPanel editor={editor} onClose={() => setShowVibeEditing(false)} />
