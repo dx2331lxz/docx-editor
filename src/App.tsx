@@ -101,7 +101,7 @@ import FormFieldDialog from './components/FormFields/FormFieldDialog'
 import './styles/mobile.css'
 // Round 20
 import VibeEditingPanel from './components/VibeEditing/VibeEditingPanel'
-import VibeFloatBar from './components/VibeEditing/VibeFloatBar'
+// VibeFloatBar import removed (component kept for future use)
 
 const App: React.FC = () => {
   const [stats, setStats] = useState<EditorStats>({ characters: 0, words: 0, paragraphs: 0 })
@@ -214,6 +214,7 @@ const App: React.FC = () => {
   const [showFormFields, setShowFormFields] = useState(false)
   // Round 20 state
   const [showVibeEditing, setShowVibeEditing] = useState(false)
+  const [vibePanelWidth, setVibePanelWidth] = useState(360)
   // (tooltip removed — Vibe button now uses title attr)
   // Tab bar state
   const [tabs, setTabs] = useState<Tab[]>([{ id: 'tab-1', title: '新文档', content: '', isDirty: false }])
@@ -556,7 +557,6 @@ const App: React.FC = () => {
           ) : (
             <div style={gridPaper.enabled ? { ...buildGridCss(gridPaper), flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' } : { flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
               {editorCanvas}
-              <VibeFloatBar editor={editor} />
             </div>
           )}
           {showCommentPanel && (
@@ -565,6 +565,14 @@ const App: React.FC = () => {
               comments={comments}
               onAddComment={handleAddComment}
               onDeleteComment={handleDeleteComment}
+            />
+          )}
+          {showVibeEditing && (
+            <VibeEditingPanel
+              editor={editor}
+              onClose={() => setShowVibeEditing(false)}
+              width={vibePanelWidth}
+              onWidthChange={setVibePanelWidth}
             />
           )}
         </div>
@@ -1002,7 +1010,8 @@ const App: React.FC = () => {
         style={{
           position: 'fixed',
           top: 8,
-          right: showVibeEditing ? 376 : 12,
+          right: showVibeEditing ? vibePanelWidth + 12 : 12,
+          transition: 'right 0.2s ease, background 0.2s',
           zIndex: 1200,
           background: showVibeEditing
             ? 'linear-gradient(135deg, rgba(0,212,255,0.25), rgba(178,75,255,0.25))'
@@ -1018,17 +1027,13 @@ const App: React.FC = () => {
           alignItems: 'center',
           gap: 5,
           boxShadow: showVibeEditing ? 'none' : '0 2px 12px rgba(0,212,255,0.4)',
-          transition: 'right 0.3s ease, background 0.2s',
+          transition: 'background 0.2s',
           letterSpacing: '0.02em',
           whiteSpace: 'nowrap',
         }}
       >
         <span style={{ fontSize: 15 }}>✨</span> Vibe
       </button>
-      {/* Round 20: Vibe Editing panel (right drawer) */}
-      {showVibeEditing && (
-        <VibeEditingPanel editor={editor} onClose={() => setShowVibeEditing(false)} />
-      )}
     </div>
   )
 }

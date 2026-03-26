@@ -6,6 +6,8 @@ import type { ProgressCallback } from '../../lib/vibeEditingEngine'
 interface Props {
   editor: Editor | null
   onClose: () => void
+  width?: number
+  onWidthChange?: (w: number) => void
 }
 
 type StepEntry = {
@@ -41,13 +43,14 @@ const PRESETS = [
   { label: '💧 添加公司水印', value: '为文档添加水印：add_watermark 文字为"机密文件"，透明度 0.08，同时 apply_document_theme business 应用商务风格' },
 ]
 
-const STEP_ICON: Record<string, string> = { thinking: '🤔', action: '🔧', observation: '👁', done: '✅', error: '❌' }
+const STEP_ICON: Record<string, string> = { thinking: '🤔', action: '🔧', observation: '👁', done: '✅', error: '❌', ask_continue: '⏸' }
 const STEP_COLOR: Record<string, string> = {
   thinking: '#8899bb',
   action: '#00d4ff',
   observation: '#4fc',
   done: '#00ffcc',
   error: '#ff6b6b',
+  ask_continue: '#f0c060',
 }
 
 const MODE_LABELS: Record<Mode, string> = { ask: 'ASK', edit: 'EDIT', agent: 'AGENT' }
@@ -91,7 +94,7 @@ function saveSessions(sessions: ChatSession[]) {
   localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 20)))
 }
 
-export default function VibeEditingPanel({ editor, onClose }: Props) {
+export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
@@ -100,8 +103,26 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
   const [showHistory, setShowHistory] = useState(false)
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [viewingSession, setViewingSession] = useState<ChatSession | null>(null)
+  const [askContinueResolver, setAskContinueResolver] = useState<((v: boolean) => void) | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Drag-resize handle
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = width
+    const onMove = (mv: MouseEvent) => {
+      const newWidth = Math.max(280, Math.min(600, startWidth + (startX - mv.clientX)))
+      onWidthChange?.(newWidth)
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [width, onWidthChange])
 
   useEffect(() => {
     setSessions(loadSessions())
@@ -191,6 +212,19 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
 
     const onProgress: ProgressCallback = (s) => {
       gStepId++
+      if (s.type === 'ask_continue') {
+        // Handled separately via askContinueResolver — just record the step
+        setMessages(prev => {
+          const next = [...prev]
+          const aiMsg = next[next.length - 1]
+          if (aiMsg?.role !== 'ai') return prev
+          return [
+            ...next.slice(0, -1),
+            { ...aiMsg, steps: [...aiMsg.steps, { id: gStepId, ...s }] },
+          ]
+        })
+        return
+      }
       setMessages(prev => {
         const next = [...prev]
         const aiMsg = next[next.length - 1]
@@ -201,6 +235,11 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
         ]
       })
     }
+
+    const onAskContinue = (): Promise<boolean> =>
+      new Promise<boolean>(resolve => {
+        setAskContinueResolver(() => resolve)
+      })
 
     try {
       let summary: string
@@ -216,7 +255,7 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
         })
       } else {
         const effectiveInst = mode === 'edit' ? `【精确编辑模式】${inst}` : inst
-        summary = await runVibeEditing(effectiveInst, editor, onProgress)
+        summary = await runVibeEditing(effectiveInst, editor, onProgress, onAskContinue)
         setMessages(prev => {
           const next = [...prev]
           const aiMsg = next[next.length - 1]
@@ -249,6 +288,7 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
       })
     } finally {
       setRunning(false)
+      setAskContinueResolver(null)
       textareaRef.current?.focus()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,20 +312,35 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
 
   return (
     <div style={{
-      position: 'fixed',
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width: 360,
-      zIndex: 1000,
+      position: 'relative',
+      width,
+      height: '100%',
+      flexShrink: 0,
+      zIndex: 100,
       display: 'flex',
       flexDirection: 'column',
       background: 'rgba(10, 14, 30, 0.97)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderLeft: '1px solid rgba(178, 75, 255, 0.3)',
-      boxShadow: '-8px 0 40px rgba(0,0,0,0.5)',
+      boxShadow: '-4px 0 20px rgba(0,0,0,0.4)',
     }}>
+      {/* Drag-resize handle */}
+      <div
+        onMouseDown={handleResizeMouseDown}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          cursor: 'col-resize',
+          zIndex: 10,
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.4)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      />
 
       {/* ── Title bar ─────────────────────────────── */}
       <div style={{
@@ -387,28 +442,7 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
             </button>
           </div>
 
-          {viewingSession ? (
-            /* Read-only view of a session */
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <button
-                  onClick={() => setViewingSession(null)}
-                  style={{ background: 'none', border: 'none', color: '#6677aa', cursor: 'pointer', fontSize: 13, padding: 0 }}
-                >← 返回</button>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 4,
-                  background: `${MODE_BADGE_COLOR[viewingSession.mode]}22`,
-                  color: MODE_BADGE_COLOR[viewingSession.mode],
-                  border: `1px solid ${MODE_BADGE_COLOR[viewingSession.mode]}44`,
-                }}>
-                  {MODE_LABELS[viewingSession.mode]}
-                </span>
-                <span style={{ fontSize: 11, color: '#445577' }}>{relativeTime(viewingSession.createdAt)}</span>
-              </div>
-              {renderMessages(viewingSession.messages)}
-            </div>
-          ) : (
-            /* Session list */
+          {/* Session list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
               {sessions.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: '#445577', fontSize: 13 }}>
@@ -418,7 +452,13 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
               {sessions.slice(0, 10).map(sess => (
                 <button
                   key={sess.id}
-                  onClick={() => setViewingSession(sess)}
+                  onClick={() => {
+                    // Load history session as active context (not readonly)
+                    setMessages(sess.messages)
+                    setMode(sess.mode)
+                    setShowHistory(false)
+                    setViewingSession(null)
+                  }}
                   style={{
                     width: '100%',
                     background: 'none',
@@ -455,11 +495,10 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
                 </button>
               ))}
             </div>
-          )}
         </div>
       ) : (
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {displayedMessages.length === 0 && (
+          {messages.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>✨</div>
               <div style={{ fontSize: 14, color: '#6677aa', lineHeight: 1.6 }}>
@@ -469,13 +508,13 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
               </div>
             </div>
           )}
-          {renderMessages(displayedMessages)}
+          {renderMessages(messages)}
           <div ref={bottomRef} />
         </div>
       )}
 
       {/* ── Presets (collapsible, hidden during history) ── */}
-      {!showHistory && !isReadOnly && (
+      {!showHistory && (
         <div style={{
           flexShrink: 0,
           borderTop: '1px solid rgba(255,255,255,0.07)',
@@ -533,7 +572,7 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
       )}
 
       {/* ── Input area (hidden during history browse) ─ */}
-      {!showHistory && !isReadOnly && (
+      {!showHistory && (
         <div style={{
           flexShrink: 0,
           borderTop: '1px solid rgba(0,212,255,0.18)',
@@ -654,6 +693,14 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
                   {step.type === 'observation'
                     ? step.text.slice(0, 60) + (step.text.length > 60 ? '…' : '')
                     : step.text}
+                  {step.type === 'ask_continue' && askContinueResolver && (
+                    <span style={{ display: 'inline-flex', gap: 6, marginLeft: 8 }}>
+                      <button onClick={() => { askContinueResolver(true); setAskContinueResolver(null) }}
+                        style={{ background: 'rgba(0,212,255,0.2)', border: '1px solid rgba(0,212,255,0.4)', borderRadius: 4, color: '#00d4ff', cursor: 'pointer', fontSize: 11, padding: '1px 8px' }}>继续</button>
+                      <button onClick={() => { askContinueResolver(false); setAskContinueResolver(null) }}
+                        style={{ background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.35)', borderRadius: 4, color: '#ff6b6b', cursor: 'pointer', fontSize: 11, padding: '1px 8px' }}>停止</button>
+                    </span>
+                  )}
                 </span>
               </div>
             ))}

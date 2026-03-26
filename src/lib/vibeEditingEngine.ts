@@ -7,7 +7,7 @@ import { VIBE_TOOLS, executeTool } from './vibeEditingTools'
 const API_ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions'
 const API_KEY = 'sk-tsecqgrifovrucwvcdvcyzzjluxrpsehbishnwgamhjozwsw'
 const MODEL = 'Pro/moonshotai/Kimi-K2.5'
-const MAX_STEPS = 15
+const MAX_STEPS = 50
 
 const SYSTEM_PROMPT = `你是 DocxEditor 的核心 AI 编辑引擎，拥有完整的文档排版能力。
 
@@ -42,12 +42,13 @@ type Message = {
   }>
 }
 
-export type ProgressCallback = (step: { type: 'thinking' | 'action' | 'observation' | 'done' | 'error'; text: string }) => void
+export type ProgressCallback = (step: { type: 'thinking' | 'action' | 'observation' | 'done' | 'error' | 'ask_continue'; text: string }) => void
 
 export async function runVibeEditing(
   userInstruction: string,
   editor: Editor,
   onProgress: ProgressCallback,
+  onAskContinue?: () => Promise<boolean>,
 ): Promise<string> {
   const messages: Message[] = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -55,10 +56,11 @@ export async function runVibeEditing(
   ]
 
   let step = 0
+  let epoch = 0  // how many 50-step cycles we've run
 
-  while (step < MAX_STEPS) {
+  while (true) {
     step++
-    onProgress({ type: 'thinking', text: `步骤 ${step}：思考中…` })
+    onProgress({ type: 'thinking', text: `步骤 ${epoch * MAX_STEPS + step}：思考中…` })
 
     // Call API
     const response = await fetch(API_ENDPOINT, {
@@ -129,10 +131,19 @@ export async function runVibeEditing(
         return summary
       }
     }
-  }
 
-  // Forced finish after MAX_STEPS
-  const forcedMsg = `已执行 ${MAX_STEPS} 步，编辑结束。`
-  onProgress({ type: 'done', text: forcedMsg })
-  return forcedMsg
+    // Check step limit for this epoch
+    if (step >= MAX_STEPS) {
+      onProgress({ type: 'ask_continue', text: `已执行 ${(epoch + 1) * MAX_STEPS} 步，是否继续？` })
+      const shouldContinue = onAskContinue ? await onAskContinue() : false
+      if (!shouldContinue) {
+        const forcedMsg = `已执行 ${(epoch + 1) * MAX_STEPS} 步，编辑结束。`
+        onProgress({ type: 'done', text: forcedMsg })
+        return forcedMsg
+      }
+      // Reset for next epoch
+      step = 0
+      epoch++
+    }
+  }
 }

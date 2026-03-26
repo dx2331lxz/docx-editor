@@ -22,7 +22,7 @@ import {
   Columns2,
   Columns3,
   Square,
-  Printer,
+  ScanSearch,
   Link2,
   MessageSquare,
   MoreHorizontal,
@@ -341,9 +341,10 @@ const ToolBar: React.FC<ToolBarProps> = ({
         </button>
         <Divider />
 
-        {/* 9. Print */}
-        <button className={btn()} title="打印 (Ctrl+P)" onClick={() => window.print()}>
-          <Printer size={14} />
+        {/* 9. Print Preview */}
+        <button className={`${btn()} gap-1`} title="预览排版效果 (Ctrl+P)" onClick={() => window.print()}>
+          <ScanSearch size={14} />
+          <span style={{ fontSize: 11 }}>预览</span>
         </button>
 
         {/* 10. Comment toggle */}
