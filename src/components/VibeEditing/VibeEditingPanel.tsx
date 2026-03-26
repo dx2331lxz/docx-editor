@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
 import { runVibeEditing } from '../../lib/vibeEditingEngine'
 import type { ProgressCallback } from '../../lib/vibeEditingEngine'
@@ -8,113 +8,267 @@ interface Props {
   onClose: () => void
 }
 
-type LogEntry = {
+type StepEntry = {
   id: number
   type: 'thinking' | 'action' | 'observation' | 'done' | 'error'
   text: string
 }
 
-const MAX_STEPS = 15
+type ChatMessage =
+  | { role: 'user'; text: string }
+  | { role: 'ai'; steps: StepEntry[]; summary: string | null; done: boolean }
+
+type Mode = 'ask' | 'edit' | 'agent'
+
+interface ChatSession {
+  id: string
+  mode: Mode
+  title: string
+  createdAt: number
+  messages: ChatMessage[]
+}
+
+const SESSIONS_KEY = 'vibe-editing-sessions'
 
 const PRESETS = [
   { label: '🏛️ 正式公文风格', value: '将这篇文章改写为正式公文风格：使用规范的公文标题格式，段落缩进两字符，措辞正式严谨，去除口语化表达，标题层级规范化（主标题用 h1，小标题用 h2/h3）' },
   { label: '🍎 苹果简约风', value: '按照苹果风格重新排版：大标题简洁有力，段落简短（每段不超过3句），增加空白感，去除冗余文字，关键词加粗，整体简洁现代' },
-  { label: '📚 学术论文格式', value: '将文档改为学术论文格式：调用 summarize_document 生成摘要插入开头，正文分为引言、方法、结果、讨论、结论五个章节，语言学术严谨，normalize_headings 规范标题层级' },
-  { label: '💼 商业报告风格', value: '转换为商业报告格式：添加执行摘要，正文用要点列表展示，数据用表格呈现，结论和建议单独成节，apply_document_theme business 应用商务主题' },
+  { label: '📚 学术论文格式', value: '将文档改为学术论文格式：调用 summarize_document 生成摘要插入开头，语言学术严谨，normalize_headings 规范标题层级' },
+  { label: '💼 商业报告风格', value: '转换为商业报告格式：添加执行摘要，正文用要点列表展示，结论和建议单独成节，apply_document_theme business 应用商务主题' },
   { label: '🧹 一键清理格式', value: '清理文档中所有多余格式：remove_extra_spaces 清空格，remove_extra_blank_lines 清空行，normalize_headings 规范标题，整体排版整洁统一' },
-  { label: '🎨 添加彩色主题', value: '为文档应用彩色活力主题：apply_document_theme colorful，apply_heading_style background，format_all_tables colorful，让文档充满色彩活力' },
+  { label: '🎨 添加彩色主题', value: '为文档应用彩色活力主题：apply_document_theme colorful，apply_heading_style background，让文档充满色彩活力' },
   { label: '📑 规范标题层级', value: '规范文档所有标题的层级结构：normalize_headings 确保 h1/h2/h3 层级正确，apply_heading_style bordered 添加左边框强调，让文档结构清晰' },
   { label: '💧 添加公司水印', value: '为文档添加水印：add_watermark 文字为"机密文件"，透明度 0.08，同时 apply_document_theme business 应用商务风格' },
 ]
 
-const TOOL_CATEGORIES = [
-  { title: '文字格式', tools: 'set_font_size / set_font_family / set_text_color / set_font_bold / set_line_height / set_letter_spacing' },
-  { title: '段落布局', tools: 'set_text_align / set_paragraph_spacing / set_indent' },
-  { title: '文档结构', tools: 'normalize_headings / set_page_margins / add_watermark' },
-  { title: '样式主题', tools: 'apply_document_theme / apply_heading_style / set_document_font' },
-  { title: '内容改写 (AI)', tools: 'convert_to_formal / convert_to_casual / summarize_document' },
-  { title: '内容清理', tools: 'remove_extra_spaces / remove_extra_blank_lines / add_section_dividers' },
-  { title: '表格美化', tools: 'format_all_tables (bordered/striped/minimal/colorful)' },
-  { title: '高级操作', tools: 'highlight_keywords / remove_formatting / batch_replace' },
-]
-
-const ICON_MAP: Record<string, string> = {
-  thinking: '🤔',
-  action: '🔧',
-  observation: '👁',
-  done: '✅',
-  error: '❌',
-}
-
-const COLOR_MAP: Record<string, string> = {
+const STEP_ICON: Record<string, string> = { thinking: '🤔', action: '🔧', observation: '👁', done: '✅', error: '❌' }
+const STEP_COLOR: Record<string, string> = {
   thinking: '#8899bb',
   action: '#00d4ff',
-  observation: '#a0b4d0',
+  observation: '#4fc',
   done: '#00ffcc',
   error: '#ff6b6b',
 }
 
-const HISTORY_KEY = 'vibe_editing_history'
+const MODE_LABELS: Record<Mode, string> = { ask: 'ASK', edit: 'EDIT', agent: 'AGENT' }
+const MODE_DESC: Record<Mode, string> = {
+  ask: '问答 · 不修改文档',
+  edit: '精确编辑 · 针对指定内容',
+  agent: '智能代理 · 自主规划 · 多步执行',
+}
+const MODE_PLACEHOLDER: Record<Mode, string> = {
+  ask: '问我关于这篇文档的任何问题...',
+  edit: '描述你想修改的内容（选中文字后可直接描述）...',
+  agent: '描述你想要的整体效果，AI 会自主规划执行...',
+}
+const MODE_BADGE_COLOR: Record<Mode, string> = {
+  ask: '#00d4ff',
+  edit: '#4fc3a1',
+  agent: '#b24bff',
+}
 
-function loadHistory(): string[] {
+let gStepId = 0
+
+function relativeTime(ts: number): string {
+  const diff = Date.now() - ts
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return '刚刚'
+  if (m < 60) return `${m} 分钟前`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} 小时前`
+  return `${Math.floor(h / 24)} 天前`
+}
+
+function loadSessions(): ChatSession[] {
   try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    return JSON.parse(localStorage.getItem(SESSIONS_KEY) ?? '[]')
   } catch {
     return []
   }
 }
 
-function saveHistory(instruction: string, history: string[]): string[] {
-  const filtered = history.filter(h => h !== instruction)
-  const next = [instruction, ...filtered].slice(0, 5)
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
-  return next
+function saveSessions(sessions: ChatSession[]) {
+  localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 20)))
 }
 
 export default function VibeEditingPanel({ editor, onClose }: Props) {
-  const [instruction, setInstruction] = useState('')
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
-  const [logs, setLogs] = useState<LogEntry[]>([])
-  const [step, setStep] = useState(0)
-  const [result, setResult] = useState<string | null>(null)
-  const [history, setHistory] = useState<string[]>(loadHistory)
-  const [showTools, setShowTools] = useState(false)
-  const logEndRef = useRef<HTMLDivElement>(null)
-  const logIdRef = useRef(0)
+  const [presetsOpen, setPresetsOpen] = useState(true)
+  const [mode, setMode] = useState<Mode>('agent')
+  const [showHistory, setShowHistory] = useState(false)
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [viewingSession, setViewingSession] = useState<ChatSession | null>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [logs])
+    setSessions(loadSessions())
+  }, [showHistory])
 
-  const addLog = (entry: Omit<LogEntry, 'id'>) => {
-    logIdRef.current++
-    setLogs(prev => [...prev, { ...entry, id: logIdRef.current }])
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const resizeTextarea = useCallback((el?: HTMLTextAreaElement | null) => {
+    const target = el ?? textareaRef.current
+    if (!target) return
+    target.style.height = 'auto'
+    target.style.height = Math.min(target.scrollHeight, 200) + 'px'
+  }, [])
+
+  // Resize textarea after every input state change (runs after React DOM update)
+  useEffect(() => {
+    resizeTextarea()
+  }, [input, resizeTextarea])
+
+  const saveSession = useCallback((msgs: ChatMessage[], sessionMode: Mode) => {
+    if (msgs.length === 0) return
+    const firstUserMsg = msgs.find(m => m.role === 'user')
+    const title = firstUserMsg
+      ? (firstUserMsg as { role: 'user'; text: string }).text.slice(0, 20)
+      : '无标题'
+    const session: ChatSession = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      mode: sessionMode,
+      title,
+      createdAt: Date.now(),
+      messages: msgs,
+    }
+    const existing = loadSessions()
+    saveSessions([session, ...existing])
+  }, [])
+
+  const runAskMode = async (
+    question: string,
+    doc_text: string,
+    _onChunk: (t: string) => void,
+  ): Promise<string> => {
+    const resp = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer sk-tsecqgrifovrucwvcdvcyzzjluxrpsehbishnwgamhjozwsw',
+      },
+      body: JSON.stringify({
+        model: 'Pro/moonshotai/Kimi-K2.5',
+        messages: [
+          {
+            role: 'system',
+            content: `你是一个文档助手。以下是用户的文档内容：\n\n${doc_text.slice(0, 4000)}\n\n请根据文档内容回答用户的问题，不要修改文档，只提供信息和建议。`,
+          },
+          { role: 'user', content: question },
+        ],
+        max_tokens: 1000,
+        stream: false,
+      }),
+    })
+    const data = await resp.json()
+    return data.choices?.[0]?.message?.content ?? '无法获取回答'
   }
 
-  const handleStart = async (text?: string) => {
-    const inst = (text ?? instruction).trim()
+  const handleSwitchMode = (newMode: Mode) => {
+    if (newMode === mode) return
+    if (messages.length > 0 && !confirm('切换模式将清空当前对话，确定吗？')) return
+    setMessages([])
+    setMode(newMode)
+  }
+
+  const handleSend = useCallback(async (text?: string) => {
+    const inst = (text ?? input).trim()
     if (!editor || !inst || running) return
+
+    setInput('')
+    setTimeout(resizeTextarea, 0)
     setRunning(true)
-    setLogs([])
-    setResult(null)
-    setStep(0)
-    setHistory(prev => saveHistory(inst, prev))
+
+    const userMsg: ChatMessage = { role: 'user', text: inst }
+    setMessages(prev => [...prev, userMsg])
+
+    const aiPlaceholder: ChatMessage = { role: 'ai', steps: [], summary: null, done: false }
+    setMessages(prev => [...prev, aiPlaceholder])
 
     const onProgress: ProgressCallback = (s) => {
-      addLog(s)
-      if (s.type === 'action') setStep(prev => prev + 1)
+      gStepId++
+      setMessages(prev => {
+        const next = [...prev]
+        const aiMsg = next[next.length - 1]
+        if (aiMsg?.role !== 'ai') return prev
+        return [
+          ...next.slice(0, -1),
+          { ...aiMsg, steps: [...aiMsg.steps, { id: gStepId, ...s }] },
+        ]
+      })
     }
 
     try {
-      const summary = await runVibeEditing(inst, editor, onProgress)
-      setResult(summary)
+      let summary: string
+
+      if (mode === 'ask') {
+        const docText = editor.getText()
+        summary = await runAskMode(inst, docText, () => {})
+        setMessages(prev => {
+          const next = [...prev]
+          const aiMsg = next[next.length - 1]
+          if (aiMsg?.role !== 'ai') return prev
+          return [...next.slice(0, -1), { ...aiMsg, summary, done: true }]
+        })
+      } else {
+        const effectiveInst = mode === 'edit' ? `【精确编辑模式】${inst}` : inst
+        summary = await runVibeEditing(effectiveInst, editor, onProgress)
+        setMessages(prev => {
+          const next = [...prev]
+          const aiMsg = next[next.length - 1]
+          if (aiMsg?.role !== 'ai') return prev
+          return [...next.slice(0, -1), { ...aiMsg, summary, done: true }]
+        })
+      }
+
+      setMessages(prev => {
+        saveSession(prev, mode)
+        return prev
+      })
     } catch (err) {
-      addLog({ type: 'error', text: String(err) })
-      setResult('编辑过程出现错误，请重试。')
+      gStepId++
+      setMessages(prev => {
+        const next = [...prev]
+        const aiMsg = next[next.length - 1]
+        if (aiMsg?.role !== 'ai') return prev
+        const updated = [
+          ...next.slice(0, -1),
+          {
+            ...aiMsg,
+            steps: [...aiMsg.steps, { id: gStepId, type: 'error' as const, text: String(err) }],
+            summary: '编辑过程出现错误，请重试。',
+            done: true,
+          },
+        ]
+        saveSession(updated, mode)
+        return updated
+      })
     } finally {
       setRunning(false)
+      textareaRef.current?.focus()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, input, running, resizeTextarea, mode, saveSession])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
     }
   }
+
+  const startNewSession = () => {
+    setMessages([])
+    setViewingSession(null)
+    setShowHistory(false)
+  }
+
+  const displayedMessages = viewingSession ? viewingSession.messages : messages
+  const isReadOnly = viewingSession !== null
 
   return (
     <div style={{
@@ -122,262 +276,411 @@ export default function VibeEditingPanel({ editor, onClose }: Props) {
       top: 0,
       right: 0,
       bottom: 0,
-      width: 380,
+      width: 360,
       zIndex: 1000,
       display: 'flex',
       flexDirection: 'column',
       background: 'rgba(10, 14, 30, 0.97)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
-      borderLeft: '1px solid rgba(178, 75, 255, 0.35)',
-      boxShadow: '-8px 0 40px rgba(0, 0, 0, 0.5), -2px 0 0 rgba(0, 212, 255, 0.08)',
+      borderLeft: '1px solid rgba(178, 75, 255, 0.3)',
+      boxShadow: '-8px 0 40px rgba(0,0,0,0.5)',
     }}>
-      {/* Header */}
+
+      {/* ── Title bar ─────────────────────────────── */}
       <div style={{
+        flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '16px 18px 12px',
+        padding: '14px 16px 12px',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
-        background: 'linear-gradient(135deg, rgba(0,212,255,0.08), rgba(178,75,255,0.08))',
-        flexShrink: 0,
+        background: 'linear-gradient(135deg, rgba(0,212,255,0.07), rgba(178,75,255,0.07))',
       }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#e0e8ff', letterSpacing: '0.3px' }}>
-            ✨ Vibe Editing
-          </div>
-          <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>
-            AI 驱动的智能文档编辑 · 30+ 工具
-          </div>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#e0e8ff' }}>✨ Vibe Editing</span>
+          <span style={{ fontSize: 11, color: '#6677aa', marginLeft: 8 }}>AI 驱动 · 30+ 工具</span>
         </div>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#8899bb',
-            cursor: 'pointer',
-            fontSize: 20,
-            padding: '4px 6px',
-            borderRadius: 6,
-            lineHeight: 1,
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button
+            onClick={() => { setShowHistory(v => !v); setViewingSession(null) }}
+            title="历史记录"
+            style={{
+              background: showHistory ? 'rgba(0,212,255,0.12)' : 'none',
+              border: 'none',
+              color: showHistory ? '#00d4ff' : '#6677aa',
+              cursor: 'pointer',
+              fontSize: 16,
+              padding: '2px 6px',
+              borderRadius: 6,
+              lineHeight: 1,
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#e0e8ff')}
+            onMouseLeave={e => (e.currentTarget.style.color = showHistory ? '#00d4ff' : '#6677aa')}
+          >🕐</button>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', color: '#6677aa', cursor: 'pointer',
+            fontSize: 18, padding: '2px 6px', borderRadius: 6, lineHeight: 1,
+            transition: 'color 0.15s',
           }}
-        >✕</button>
+            onMouseEnter={e => (e.currentTarget.style.color = '#e0e8ff')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#6677aa')}
+          >✕</button>
+        </div>
       </div>
 
-      {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-        {/* Instruction input */}
-        <div>
-          <label style={{ fontSize: 12, color: '#8899bb', display: 'block', marginBottom: 6 }}>
-            描述你想要的效果
-          </label>
-          <textarea
-            value={instruction}
-            onChange={e => setInstruction(e.target.value)}
-            disabled={running}
-            placeholder="例如：把这篇文章改成正式公文风格，标题规范化，段落间距加大..."
-            rows={4}
-            style={{
-              width: '100%',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 8,
-              color: '#e0e8ff',
-              fontSize: 13,
-              padding: '10px 12px',
-              resize: 'vertical',
-              outline: 'none',
-              boxSizing: 'border-box',
-              lineHeight: 1.5,
-            }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleStart() } }}
-            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.5)'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0,212,255,0.12)' }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.boxShadow = 'none' }}
-          />
-        </div>
-
-        {/* Preset buttons — 2 rows of 4 */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {PRESETS.map(p => (
-            <button
-              key={p.label}
-              onClick={() => setInstruction(p.value)}
-              disabled={running}
-              style={{
-                padding: '6px 10px',
-                fontSize: 11,
-                background: 'rgba(0,212,255,0.07)',
-                border: '1px solid rgba(0,212,255,0.18)',
-                borderRadius: 8,
-                color: '#a8d4ff',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                textAlign: 'left',
-                lineHeight: 1.3,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.16)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.18)' }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Start button */}
-        <button
-          onClick={() => handleStart()}
-          disabled={running || !instruction.trim() || !editor}
-          style={{
-            width: '100%',
-            padding: '11px',
-            fontSize: 14,
-            fontWeight: 600,
-            borderRadius: 8,
-            border: running ? '1px solid rgba(178,75,255,0.3)' : '1px solid rgba(0,212,255,0.4)',
-            background: running
-              ? 'rgba(178,75,255,0.15)'
-              : 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(178,75,255,0.2))',
-            color: running ? '#a0b4d0' : '#e0e8ff',
-            cursor: running ? 'not-allowed' : 'pointer',
-            boxShadow: running ? 'none' : '0 0 16px rgba(0,212,255,0.2)',
-            transition: 'all 0.2s',
-            letterSpacing: '0.5px',
-          }}
-        >
-          {running ? (
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
-              AI 编辑中… (步骤 {step}/{MAX_STEPS})
-            </span>
-          ) : '✨ 开始 Vibe Editing'}
-        </button>
-
-        {/* Progress bar */}
-        {running && (
-          <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden', height: 4 }}>
-            <div style={{
-              height: '100%',
-              width: `${Math.min(step * (100 / MAX_STEPS), 95)}%`,
-              background: 'linear-gradient(90deg, #00d4ff, #b24bff)',
-              borderRadius: 4,
-              transition: 'width 0.4s ease',
-            }} />
-          </div>
-        )}
-
-        {/* History */}
-        {history.length > 0 && !running && (
-          <div>
-            <div style={{ fontSize: 11, color: '#8899bb', marginBottom: 6 }}>🕐 最近使用</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {history.map((h, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setInstruction(h); handleStart(h) }}
-                  style={{
-                    padding: '5px 10px',
-                    fontSize: 11,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: 6,
-                    color: '#8899bb',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap',
-                    textOverflow: 'ellipsis',
-                    transition: 'all 0.15s',
-                  }}
-                  title={h}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#c8d8ff' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#8899bb' }}
-                >
-                  {h.slice(0, 60)}{h.length > 60 ? '…' : ''}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Log area */}
-        {logs.length > 0 && (
-          <div style={{
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 8,
-            padding: '10px 12px',
-            maxHeight: 240,
-            overflowY: 'auto',
-            fontSize: 12,
-            lineHeight: 1.6,
-          }}>
-            {logs.map(log => (
-              <div key={log.id} style={{ color: COLOR_MAP[log.type] || '#c8d8ff', marginBottom: 4, wordBreak: 'break-all' }}>
-                <span style={{ marginRight: 6 }}>{ICON_MAP[log.type] || '•'}</span>
-                {log.text}
-              </div>
+      {/* ── Mode tabs ─────────────────────────────── */}
+      {!showHistory && (
+        <div style={{
+          flexShrink: 0,
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          background: 'rgba(0,0,0,0.15)',
+          padding: '0 12px',
+        }}>
+          <div style={{ display: 'flex', gap: 0 }}>
+            {(['ask', 'edit', 'agent'] as Mode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => handleSwitchMode(m)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: mode === m ? '2px solid #00d4ff' : '2px solid transparent',
+                  color: mode === m ? '#fff' : '#6677aa',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: mode === m ? 600 : 400,
+                  padding: '8px 16px 6px',
+                  letterSpacing: '0.05em',
+                  transition: 'color 0.15s, border-color 0.15s',
+                }}
+              >
+                {MODE_LABELS[m]}
+              </button>
             ))}
-            <div ref={logEndRef} />
           </div>
-        )}
-
-        {/* Result summary */}
-        {result && !running && (
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(0,255,204,0.08), rgba(0,212,255,0.08))',
-            border: '1px solid rgba(0,255,204,0.2)',
-            borderRadius: 8,
-            padding: '12px 14px',
-            fontSize: 13,
-            color: '#e0e8ff',
-            lineHeight: 1.6,
-          }}>
-            <div style={{ color: '#00ffcc', fontWeight: 600, marginBottom: 6, fontSize: 12 }}>✅ 编辑完成</div>
-            {result}
+          <div style={{ fontSize: 10, color: '#445577', padding: '3px 2px 5px', letterSpacing: '0.02em' }}>
+            {MODE_DESC[mode]}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Collapsible AI capabilities */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10 }}>
-          <button
-            onClick={() => setShowTools(v => !v)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#6677aa',
-              fontSize: 11,
-              cursor: 'pointer',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <span style={{ transform: showTools ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.2s' }}>▶</span>
-            AI 能力列表（{TOOL_CATEGORIES.length} 类 30+ 工具）
-          </button>
-          {showTools && (
-            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {TOOL_CATEGORIES.map(cat => (
-                <div key={cat.title} style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: 6,
-                  padding: '6px 10px',
+      {/* ── History panel OR Chat area ─────────────── */}
+      {showHistory ? (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: '#8899bb', fontWeight: 600 }}>最近对话</span>
+            <button
+              onClick={startNewSession}
+              style={{
+                background: 'rgba(0,212,255,0.1)',
+                border: '1px solid rgba(0,212,255,0.25)',
+                borderRadius: 8,
+                color: '#00d4ff',
+                cursor: 'pointer',
+                fontSize: 11,
+                padding: '4px 10px',
+              }}
+            >
+              + 新对话
+            </button>
+          </div>
+
+          {viewingSession ? (
+            /* Read-only view of a session */
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <button
+                  onClick={() => setViewingSession(null)}
+                  style={{ background: 'none', border: 'none', color: '#6677aa', cursor: 'pointer', fontSize: 13, padding: 0 }}
+                >← 返回</button>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 4,
+                  background: `${MODE_BADGE_COLOR[viewingSession.mode]}22`,
+                  color: MODE_BADGE_COLOR[viewingSession.mode],
+                  border: `1px solid ${MODE_BADGE_COLOR[viewingSession.mode]}44`,
                 }}>
-                  <div style={{ fontSize: 11, color: '#00d4ff', fontWeight: 600, marginBottom: 3 }}>{cat.title}</div>
-                  <div style={{ fontSize: 10, color: '#6677aa', lineHeight: 1.4 }}>{cat.tools}</div>
+                  {MODE_LABELS[viewingSession.mode]}
+                </span>
+                <span style={{ fontSize: 11, color: '#445577' }}>{relativeTime(viewingSession.createdAt)}</span>
+              </div>
+              {renderMessages(viewingSession.messages)}
+            </div>
+          ) : (
+            /* Session list */
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+              {sessions.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#445577', fontSize: 13 }}>
+                  暂无历史记录
                 </div>
+              )}
+              {sessions.slice(0, 10).map(sess => (
+                <button
+                  key={sess.id}
+                  onClick={() => setViewingSession(sess)}
+                  style={{
+                    width: '100%',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    textAlign: 'left',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span style={{
+                    flexShrink: 0,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    background: `${MODE_BADGE_COLOR[sess.mode]}22`,
+                    color: MODE_BADGE_COLOR[sess.mode],
+                    border: `1px solid ${MODE_BADGE_COLOR[sess.mode]}44`,
+                    letterSpacing: '0.04em',
+                  }}>
+                    {MODE_LABELS[sess.mode]}
+                  </span>
+                  <span style={{ flex: 1, fontSize: 12, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {sess.title}
+                  </span>
+                  <span style={{ flexShrink: 0, fontSize: 10, color: '#445577' }}>{relativeTime(sess.createdAt)}</span>
+                </button>
               ))}
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {displayedMessages.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>✨</div>
+              <div style={{ fontSize: 14, color: '#6677aa', lineHeight: 1.6 }}>
+                {mode === 'ask' ? '向 AI 提问关于文档的任何问题' : mode === 'edit' ? '描述你想精确修改的内容' : '描述你想要的文档效果'}
+                <br />
+                {mode === 'agent' ? 'AI 将自动选择并组合工具执行' : ''}
+              </div>
+            </div>
+          )}
+          {renderMessages(displayedMessages)}
+          <div ref={bottomRef} />
+        </div>
+      )}
 
-      {/* Spin animation */}
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      {/* ── Presets (collapsible, hidden during history) ── */}
+      {!showHistory && !isReadOnly && (
+        <div style={{
+          flexShrink: 0,
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          background: 'rgba(0,0,0,0.2)',
+        }}>
+          <button
+            onClick={() => setPresetsOpen(v => !v)}
+            style={{
+              width: '100%', background: 'none', border: 'none',
+              padding: '8px 14px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+              color: '#6677aa', fontSize: 11,
+            }}
+          >
+            <span style={{
+              display: 'inline-block',
+              transform: presetsOpen ? 'rotate(90deg)' : 'none',
+              transition: 'transform 0.2s',
+            }}>▶</span>
+            快捷预设
+          </button>
+
+          {presetsOpen && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, padding: '0 10px 10px' }}>
+              {PRESETS.map(p => (
+                <button
+                  key={p.label}
+                  onClick={() => { setInput(p.value); textareaRef.current?.focus() }}
+                  disabled={running}
+                  style={{
+                    padding: '5px 8px',
+                    fontSize: 10.5,
+                    background: 'rgba(0,212,255,0.06)',
+                    border: '1px solid rgba(0,212,255,0.15)',
+                    borderRadius: 8,
+                    color: '#9bbfe0',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    lineHeight: 1.3,
+                    transition: 'all 0.15s',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.14)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.35)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.15)' }}
+                  title={p.value}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Input area (hidden during history browse) ─ */}
+      {!showHistory && !isReadOnly && (
+        <div style={{
+          flexShrink: 0,
+          borderTop: '1px solid rgba(0,212,255,0.18)',
+          padding: '10px 12px 12px',
+          background: 'rgba(10,14,30,0.95)',
+          display: 'flex',
+          gap: 8,
+          alignItems: 'flex-end',
+        }}>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={e => {
+              setInput(e.target.value)
+              // 直接在事件目标上调整高度，避免 React re-render 覆盖
+              const el = e.target
+              el.style.height = 'auto'
+              el.style.height = Math.min(el.scrollHeight, 200) + 'px'
+            }}
+            onKeyDown={handleKeyDown}
+            disabled={running}
+            placeholder={MODE_PLACEHOLDER[mode]}
+            rows={1}
+            style={{
+              flex: 1,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(0,212,255,0.2)',
+              borderRadius: 10,
+              color: '#e0e8ff',
+              fontSize: 13,
+              padding: '9px 12px',
+              outline: 'none',
+              resize: 'none',
+              lineHeight: 1.5,
+              fontFamily: 'inherit',
+              minHeight: 80,
+              maxHeight: 200,
+              overflow: 'hidden',
+              transition: 'border-color 0.2s',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.5)' }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.2)' }}
+          />
+          <button
+            onClick={() => handleSend()}
+            disabled={running || !input.trim() || !editor}
+            style={{
+              flexShrink: 0,
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              border: 'none',
+              background: running || !input.trim()
+                ? 'rgba(0,212,255,0.12)'
+                : 'linear-gradient(135deg, #00d4ff, #b24bff)',
+              color: running || !input.trim() ? 'rgba(0,212,255,0.35)' : '#fff',
+              cursor: running || !input.trim() ? 'not-allowed' : 'pointer',
+              fontSize: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              boxShadow: running || !input.trim() ? 'none' : '0 0 12px rgba(0,212,255,0.35)',
+            }}
+            title="发送 (Enter)"
+          >
+            {running
+              ? <span style={{ display: 'inline-block', animation: 'vspin 1s linear infinite' }}>⟳</span>
+              : '↑'}
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes vspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   )
+
+  function renderMessages(msgs: ChatMessage[]) {
+    return msgs.map((msg, i) =>
+      msg.role === 'user' ? (
+        <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{
+            maxWidth: '85%',
+            padding: '10px 14px',
+            borderRadius: '12px 12px 2px 12px',
+            background: 'rgba(0,212,255,0.1)',
+            borderLeft: '2px solid rgba(0,212,255,0.5)',
+            color: '#c8e8ff',
+            fontSize: 13,
+            lineHeight: 1.6,
+            wordBreak: 'break-word',
+          }}>
+            {msg.text}
+          </div>
+        </div>
+      ) : (
+        <div key={i} style={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <div style={{
+            maxWidth: '95%',
+            padding: '10px 12px',
+            borderRadius: '2px 12px 12px 12px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            fontSize: 12,
+            lineHeight: 1.7,
+            minWidth: 120,
+          }}>
+            {msg.steps.map(step => (
+              <div key={step.id} style={{ display: 'flex', gap: 6, marginBottom: 3, alignItems: 'flex-start' }}>
+                <span style={{ flexShrink: 0 }}>{STEP_ICON[step.type] || '•'}</span>
+                <span style={{
+                  color: STEP_COLOR[step.type] || '#c8d8ff',
+                  fontStyle: step.type === 'thinking' ? 'italic' : 'normal',
+                  wordBreak: 'break-word',
+                }}>
+                  {step.type === 'observation'
+                    ? step.text.slice(0, 60) + (step.text.length > 60 ? '…' : '')
+                    : step.text}
+                </span>
+              </div>
+            ))}
+
+            {!msg.done && (
+              <div style={{ color: '#6677aa', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                <span style={{ display: 'inline-block', animation: 'vspin 1s linear infinite' }}>⟳</span>
+                <span>执行中…</span>
+              </div>
+            )}
+
+            {msg.summary && (
+              <div style={{
+                marginTop: msg.steps.length > 0 ? 8 : 0,
+                paddingTop: msg.steps.length > 0 ? 8 : 0,
+                borderTop: msg.steps.length > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                fontSize: 13,
+                color: '#e0e8ff',
+                fontWeight: 500,
+                lineHeight: 1.6,
+              }}>
+                {msg.summary}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    )
+  }
 }

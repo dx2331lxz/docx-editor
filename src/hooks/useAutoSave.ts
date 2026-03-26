@@ -1,11 +1,14 @@
 /**
  * useAutoSave — persists editor content to localStorage every 30s.
+ * Also syncs to local server if cloud sync is enabled.
  * Returns: { lastSaved, draftInfo, restoreDraft, dismissDraft, saveNow }
  */
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
+import { loadCloudSyncConfig, pushToLocalServer } from '../components/CloudSync/CloudSyncDialog'
 
 const STORAGE_KEY = 'docx-editor-autosave'
+const EXIT_FLAG_KEY = 'docx-editor-normal-exit'
 const INTERVAL_MS = 30_000
 
 interface DraftMeta {
@@ -26,16 +29,28 @@ export function useAutoSave(editor: Editor | null): AutoSaveState {
   const [draftInfo, setDraftInfo] = useState<{ savedAt: Date } | null>(null)
   const hasRestoredRef = useRef(false)
 
-  // Check for existing draft on mount
+  // Check for existing draft on mount — only show if previous exit was abnormal
   useEffect(() => {
     if (hasRestoredRef.current) return
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
+      const wasNormalExit = localStorage.getItem(EXIT_FLAG_KEY) === 'true'
+      // Clear the flag so next load starts fresh
+      localStorage.removeItem(EXIT_FLAG_KEY)
+      if (raw && !wasNormalExit) {
         const meta: DraftMeta = JSON.parse(raw)
         setDraftInfo({ savedAt: new Date(meta.savedAt) })
       }
     } catch { /* ignore */ }
+  }, [])
+
+  // Mark normal exit on page unload
+  useEffect(() => {
+    const handler = () => {
+      localStorage.setItem(EXIT_FLAG_KEY, 'true')
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
   }, [])
 
   const saveNow = useCallback(() => {
@@ -45,6 +60,11 @@ export function useAutoSave(editor: Editor | null): AutoSaveState {
       const meta: DraftMeta = { content, savedAt: new Date().toISOString() }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(meta))
       setLastSaved(new Date())
+      // Cloud sync if enabled
+      const cfg = loadCloudSyncConfig()
+      if (cfg.enabled && cfg.provider === 'local') {
+        pushToLocalServer(cfg.docId, content, { title: 'docx-editor' }).catch(() => {/* silent fail */})
+      }
     } catch { /* ignore */ }
   }, [editor])
 

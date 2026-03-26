@@ -127,7 +127,7 @@ const HeaderFooterZone: React.FC<{
 
 const EditorCanvas: React.FC<EditorCanvasProps> = ({
   editor,
-  showRuler = true,
+  showRuler = false,
   columns = 1,
   headerContent = '',
   footerContent = '',
@@ -278,7 +278,8 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
             />
           )}
 
-          {/* ── Header zone ─────────────────────────────────── */}
+          {/* ── Header zone (only when has content or editing) ── */}
+          {(headerContent || headerFooterMode === 'header') && (
           <HeaderFooterZone
             position="header"
             content={headerContent}
@@ -287,13 +288,15 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
             onActivate={() => onEditHeader?.()}
             onDeactivate={() => onExitHeaderFooter?.()}
           />
+          )}
 
           {/* ── Main content ────────────────────────────────── */}
           <div onClick={handleBodyClick} style={{ position: 'relative', zIndex: 1, writingMode: isVertical ? 'vertical-rl' : undefined }}>
             <EditorContent editor={editor} />
           </div>
 
-          {/* ── Footer zone ─────────────────────────────────── */}
+          {/* ── Footer zone (only when has content or editing) ── */}
+          {(footerContent || headerFooterMode === 'footer') && (
           <HeaderFooterZone
             position="footer"
             content={footerContent}
@@ -302,6 +305,7 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
             onActivate={() => onEditFooter?.()}
             onDeactivate={() => onExitHeaderFooter?.()}
           />
+          )}
         </div>
         <ContextMenu editor={editor} onInsertComment={onInsertComment} onTranslate={onTranslate} />
         <PasteOptionsPopup editor={editor} />

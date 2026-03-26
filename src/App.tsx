@@ -101,7 +101,6 @@ import FormFieldDialog from './components/FormFields/FormFieldDialog'
 import './styles/mobile.css'
 // Round 20
 import VibeEditingPanel from './components/VibeEditing/VibeEditingPanel'
-import VibeFloatingBar from './components/VibeEditing/VibeFloatingBar'
 import VibeFloatBar from './components/VibeEditing/VibeFloatBar'
 
 const App: React.FC = () => {
@@ -215,6 +214,7 @@ const App: React.FC = () => {
   const [showFormFields, setShowFormFields] = useState(false)
   // Round 20 state
   const [showVibeEditing, setShowVibeEditing] = useState(false)
+  const [showVibeTooltip, setShowVibeTooltip] = useState(false)
   // Tab bar state
   const [tabs, setTabs] = useState<Tab[]>([{ id: 'tab-1', title: '新文档', content: '', isDirty: false }])
   const [activeTabId, setActiveTabId] = useState('tab-1')
@@ -229,7 +229,7 @@ const App: React.FC = () => {
 
   // Layout
   const [columns, setColumns] = useState<ColumnCount>(1)
-  const [showRuler, setShowRuler] = useState(true)
+  const [showRuler, setShowRuler] = useState(false)
 
   const editor = useDocxEditor({ onStatsChange: setStats, onDocumentChange: setCurrentDoc })
   const { lastSaved, draftInfo, restoreDraft, dismissDraft } = useAutoSave(editor)
@@ -516,6 +516,21 @@ const App: React.FC = () => {
           {showOutlineView && (
             <OutlinePanel editor={editor} onClose={() => setShowOutlineView(false)} />
           )}
+          {/* VSCode-style Activity Bar */}
+          <div style={{ width: 28, flexShrink: 0, background: 'rgba(10,14,30,0.6)', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                title="Vibe Editing (AI 编辑)"
+                onClick={() => setShowVibeEditing(v => !v)}
+                onMouseEnter={() => { setShowVibeTooltip(true) }}
+                onMouseLeave={() => { setShowVibeTooltip(false) }}
+                style={{ width: 26, height: 26, borderRadius: 6, background: showVibeEditing ? 'rgba(0,212,255,0.2)' : 'transparent', border: showVibeEditing ? '1px solid rgba(0,212,255,0.4)' : '1px solid transparent', color: '#c8d8ff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+              >✨</button>
+              {showVibeTooltip && (
+                <div style={{ position: 'absolute', left: 32, top: 0, background: 'rgba(10,14,30,0.9)', color: '#e0e8ff', fontSize: 11, padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 1000 }}>Vibe Editing</div>
+              )}
+            </div>
+          </div>
           {isSplitView ? (
             <SplitView
               editor={editor}
@@ -981,6 +996,7 @@ const App: React.FC = () => {
           lastSyncTime={lastSyncTime}
           onStatusChange={setSyncStatus}
           onSyncTimeChange={setLastSyncTime}
+          getContent={() => editor?.getJSON() ?? {}}
           onClose={() => setShowCloudSync(false)}
         />
       )}
@@ -998,8 +1014,6 @@ const App: React.FC = () => {
       {showVibeEditing && (
         <VibeEditingPanel editor={editor} onClose={() => setShowVibeEditing(false)} />
       )}
-      {/* Round 21: Vibe Floating Bar */}
-      {!printPreview && <VibeFloatingBar editor={editor} />}
     </div>
   )
 }

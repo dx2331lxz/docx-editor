@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync-server": "node sync-server/server.cjs",
+    "dev:full": "concurrently \"npm run dev\" \"npm run sync-server\""
   },
   "dependencies": {
     "@tiptap/extension-character-count": "^3.20.5",

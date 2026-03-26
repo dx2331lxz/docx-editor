@@ -1,0 +1,10 @@
+{
+  "docId": "test-doc",
+  "content": {
+    "type": "doc"
+  },
+  "meta": {
+    "title": "Test"
+  },
+  "updatedAt": "2026-03-26T13:56:49.320Z"
+}
