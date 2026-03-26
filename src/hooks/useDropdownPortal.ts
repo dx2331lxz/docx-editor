@@ -4,6 +4,7 @@ interface DropdownPos {
   top: number
   left: number
   minWidth?: number
+  maxHeight?: number
 }
 
 export function useDropdownPortal() {
@@ -15,10 +16,12 @@ export function useDropdownPortal() {
   const openDropdown = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect()
+      const top = rect.bottom + 2
       setPos({
-        top: rect.bottom + 2,
+        top,
         left: rect.left,
         minWidth: rect.width,
+        maxHeight: window.innerHeight - top - 8,
       })
     }
     setOpen(true)

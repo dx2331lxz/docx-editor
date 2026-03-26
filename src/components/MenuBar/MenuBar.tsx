@@ -1,6 +1,8 @@
-import React, { useRef } from 'react'
+import React, { useRef, useEffect } from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { importDocx } from '../../utils/docxHandler'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface MenuBarProps {
   editor: Editor | null
@@ -108,6 +110,102 @@ interface MenuBarProps {
 interface MenuItem {
   label: string
   items: { label: string; shortcut?: string; action?: () => void; divider?: boolean }[]
+}
+
+interface MenuDropdownProps {
+  menu: MenuItem
+  isOpen: boolean
+  isAnyOpen: boolean
+  onToggle: () => void
+  onClose: () => void
+}
+
+const MenuDropdown: React.FC<MenuDropdownProps> = ({ menu, isOpen, isAnyOpen, onToggle, onClose }) => {
+  const { triggerRef, pos, openDropdown } = useDropdownPortal()
+  const dropdownDivRef = useRef<HTMLDivElement>(null)
+
+  // Click-outside to close
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: MouseEvent) => {
+      const inTrigger = triggerRef.current?.contains(e.target as Node)
+      const inDropdown = dropdownDivRef.current?.contains(e.target as Node)
+      if (!inTrigger && !inDropdown) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [isOpen, onClose, triggerRef])
+
+  const handleClick = () => {
+    if (isOpen) {
+      onClose()
+    } else {
+      openDropdown()
+      onToggle()
+    }
+  }
+
+  const handleMouseEnter = () => {
+    // Switch menus on hover only when another menu is already open
+    if (isAnyOpen && !isOpen) {
+      openDropdown()
+      onToggle()
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
+        className={`px-3 py-1 rounded hover:bg-blue-100 transition-colors ${isOpen ? 'bg-blue-100' : ''}`}
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+      >
+        {menu.label}
+      </button>
+
+      {isOpen && ReactDOM.createPortal(
+        <div
+          ref={dropdownDivRef}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: 6,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            zIndex: 9999,
+            minWidth: 160,
+            maxHeight: pos.maxHeight ? Math.min(pos.maxHeight, window.innerHeight * 0.65) : window.innerHeight * 0.65,
+            overflowY: 'auto',
+            padding: '4px 0',
+          }}
+        >
+          {menu.items.map((item, idx) =>
+            item.divider ? (
+              <div key={idx} className="border-t border-gray-200 my-1" />
+            ) : (
+              <button
+                key={idx}
+                className="w-full text-left px-4 py-1.5 hover:bg-blue-50 flex justify-between items-center gap-8 whitespace-nowrap text-sm"
+                onClick={() => {
+                  item.action?.()
+                  onClose()
+                }}
+              >
+                <span>{item.label}</span>
+                {item.shortcut && (
+                  <span className="text-xs text-gray-400">{item.shortcut}</span>
+                )}
+              </button>
+            )
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  )
 }
 
 const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter, onOpenPageSetup, onOpenSpecialSymbols, onInsertTOC, onInsertComment, onOpenPageBorder, onOpenWordCount, onPrintPreview, onOpenWatermark, onOpenProtect, onToggleNavPane, showNavPane, trackingEnabled, onConvertToTraditional, onConvertToSimplified, onOpenBookmarks, onOpenDocGrid, onOpenStyleManager, onTableToText, onTextToTable, onSmartFormat, onRemoveBlankLines, onAddFirstLineIndent, onRemoveLeadingSpaces, onFullToHalf, onHalfToFull, onToggleVertical, isVertical, onOpenEnvelope, onToggleSplitView, isSplitView, onOpenTheme, onOpenChart, onOpenFormula, onOpenDocProps, onOpenPageBg, currentThemeName, onOpenCompare, onOpenWordFreq, onOpenTranslate, onToggleReadMode, readMode, onOpenPageNumber, onOpenCrossRef, onOpenContentControl, onOpenMailMerge, onOpenDropCap, onOpenSmartArt, onOpenAdvancedTOC, onOpenFootnoteSettings, onOpenExportOptions, onOpenDocInspector, onToggleOutlineView, showOutlineView, onOpenCitations, onOpenIndex, onOpenWordArt, onOpenShapes, onOpenGridPaper, onOpenTableAdvanced, onOpenTextBox, onOpenTemplate, onOpenBookFold, onOpenCalligraphy, onOpenShortcuts, onOpenHighlight, onOpenParaBorder, onOpenVersionHistory, onOpenMacro, onOpenAppTheme, onOpenPasteSettings, onToggleTwoPageView, isTwoPageView, onOpenTableChart, onOpenVideoEmbed, onOpenAdvancedFind, onOpenTTS, onOpenDocStats, onOpenGrammarLint, onOpenCustomShortcuts, onOpenCloudSync, onOpenAIAdvisor, onOpenTemplateGallery, onOpenDocDiff, onOpenFormFields, onOpenVibeEditing }) => {
@@ -336,45 +434,14 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
       <span className="font-bold text-blue-600 mr-4 text-base">📝 DocxEditor</span>
 
       {menus.map((menu) => (
-        <div
+        <MenuDropdown
           key={menu.label}
-          className="relative"
-          onMouseEnter={() => openMenu && setOpenMenu(menu.label)}
-          onMouseLeave={() => setOpenMenu(null)}
-        >
-          <button
-            className={`px-3 py-1 rounded hover:bg-blue-100 transition-colors ${
-              openMenu === menu.label ? 'bg-blue-100' : ''
-            }`}
-            onClick={() => setOpenMenu(openMenu === menu.label ? null : menu.label)}
-          >
-            {menu.label}
-          </button>
-
-          {openMenu === menu.label && (
-            <div className="glass-dropdown absolute top-full left-0 mt-0 bg-white border border-gray-200 shadow-lg rounded min-w-40 py-1 z-50" style={{ maxHeight: 'calc(100vh - 60px)', overflowY: 'auto' }}>
-              {menu.items.map((item, idx) =>
-                item.divider ? (
-                  <div key={idx} className="border-t border-gray-200 my-1" />
-                ) : (
-                  <button
-                    key={idx}
-                    className="w-full text-left px-4 py-1.5 hover:bg-blue-50 flex justify-between items-center gap-8 whitespace-nowrap"
-                    onClick={() => {
-                      item.action?.()
-                      setOpenMenu(null)
-                    }}
-                  >
-                    <span>{item.label}</span>
-                    {item.shortcut && (
-                      <span className="text-xs text-gray-400">{item.shortcut}</span>
-                    )}
-                  </button>
-                )
-              )}
-            </div>
-          )}
-        </div>
+          menu={menu}
+          isOpen={openMenu === menu.label}
+          isAnyOpen={openMenu !== null}
+          onToggle={() => setOpenMenu(menu.label)}
+          onClose={() => setOpenMenu(null)}
+        />
       ))}
 
       {/* Hidden file input for import */}
