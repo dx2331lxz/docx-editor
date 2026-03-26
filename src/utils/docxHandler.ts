@@ -351,9 +351,23 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
       }
 
       // Color: prefer textColor mark, then textStyle color
+      // Handle both #RRGGBB and rgb(r,g,b) formats
       const textColorAttrs = markAttrs('textColor') as Record<string, string>
       const rawColor = textColorAttrs?.color ?? styleAttrs.color ?? undefined
-      const color = rawColor ? rawColor.replace('#', '') : undefined
+      let color: string | undefined
+      if (rawColor) {
+        if (rawColor.startsWith('#')) {
+          color = rawColor.replace('#', '').toUpperCase()
+        } else if (rawColor.startsWith('rgb')) {
+          const m = rawColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
+          if (m) {
+            color = [m[1], m[2], m[3]]
+              .map(n => parseInt(n).toString(16).padStart(2, '0'))
+              .join('')
+              .toUpperCase()
+          }
+        }
+      }
 
       return new TextRun({
         text:      child.text ?? '',
@@ -428,26 +442,32 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
   if (node.type === 'bulletList') {
     return (node.content ?? []).flatMap((item) =>
       (item.content ?? []).flatMap((child) => {
-        const paras = nodeToParagraphs(child)
-        return paras.map((p, i) =>
-          p instanceof Paragraph && i === 0
-            ? new Paragraph({ ...p, bullet: { level: 0 } })
-            : p
-        )
+        if (child.type === 'paragraph') {
+          const childAlign = toAlignment(child.attrs?.textAlign as string | undefined)
+          return [new Paragraph({
+            alignment: childAlign,
+            children: buildRuns(child),
+            bullet: { level: 0 },
+          })]
+        }
+        return nodeToParagraphs(child)
       })
     )
   }
 
   if (node.type === 'orderedList') {
-    return (node.content ?? []).flatMap((item, idx) =>
+    return (node.content ?? []).flatMap((item) =>
       (item.content ?? []).flatMap((child) => {
-        const paras = nodeToParagraphs(child)
-        return paras.map((p, i) =>
-          p instanceof Paragraph && i === 0
-            ? new Paragraph({ ...p, numbering: { reference: 'default-numbering', level: 0 } })
-            : p
-        )
-      }).map(p => { void idx; return p })
+        if (child.type === 'paragraph') {
+          const childAlign = toAlignment(child.attrs?.textAlign as string | undefined)
+          return [new Paragraph({
+            alignment: childAlign,
+            children: buildRuns(child),
+            numbering: { reference: 'default-numbering', level: 0 },
+          })]
+        }
+        return nodeToParagraphs(child)
+      })
     )
   }
 
