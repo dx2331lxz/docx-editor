@@ -1,0 +1,304 @@
+/* ═══════════════════════════════════════════════════════
+   Glassmorphism / Futurist Dark Theme
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Global background ─────────────────────────────────── */
+body, #root {
+  background: #0a0e1a !important;
+  color: #e0e8ff;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(0, 212, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(178, 75, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 255, 204, 0.03) 0%, transparent 70%);
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0e1a; }
+::-webkit-scrollbar-thumb { background: rgba(0, 212, 255, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 212, 255, 0.5); }
+
+/* ── Flow light animation ──────────────────────────────── */
+@keyframes flowLight {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.flow-border {
+  background: linear-gradient(90deg, #00d4ff, #b24bff, #00ffcc, #00d4ff);
+  background-size: 300% 300%;
+  animation: flowLight 4s ease infinite;
+  height: 1px;
+  border: none;
+  flex-shrink: 0;
+}
+
+/* ── Glass toolbar / menubar ───────────────────────────── */
+.glass-toolbar {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #e0e8ff !important;
+}
+
+.glass-toolbar * {
+  color: #c8d8ff;
+}
+
+.glass-toolbar button,
+.glass-toolbar select,
+.glass-toolbar input[type="text"],
+.glass-toolbar input[type="number"] {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #c8d8ff !important;
+}
+
+.glass-toolbar button:hover {
+  background: rgba(0, 212, 255, 0.15) !important;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.4) !important;
+  border-color: rgba(0, 212, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.glass-toolbar button.is-active,
+.glass-toolbar button[data-active="true"] {
+  background: rgba(178, 75, 255, 0.2) !important;
+  box-shadow: 0 0 8px rgba(178, 75, 255, 0.5) !important;
+  color: #ffffff !important;
+}
+
+/* ── Glass menu bar (top menu) ─────────────────────────── */
+.glass-menubar {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: none !important;
+  color: #e0e8ff !important;
+}
+
+.glass-menubar > * {
+  color: #c8d8ff !important;
+}
+
+.glass-menubar button {
+  color: #c8d8ff !important;
+  background: transparent !important;
+}
+
+.glass-menubar button:hover {
+  background: rgba(0, 212, 255, 0.12) !important;
+  color: #ffffff !important;
+  border-radius: 4px !important;
+}
+
+/* ── Glass dropdown panel ──────────────────────────────── */
+.glass-dropdown {
+  background: rgba(10, 14, 30, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1), 0 2px 8px rgba(0,0,0,0.5) !important;
+  color: #c8d8ff !important;
+}
+
+.glass-dropdown button,
+.glass-dropdown li,
+.glass-dropdown a {
+  color: #c8d8ff !important;
+}
+
+.glass-dropdown button:hover,
+.glass-dropdown li:hover {
+  background: rgba(0, 212, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+/* ── Glass dialog / panel ──────────────────────────────── */
+.glass-dialog {
+  background: rgba(13, 10, 30, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(178, 75, 255, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(178, 75, 255, 0.1) !important;
+  color: #e0e8ff !important;
+}
+
+.glass-dialog h2, .glass-dialog h3 {
+  color: #e0e8ff !important;
+}
+
+.glass-dialog label {
+  color: #a0b4d0 !important;
+}
+
+.glass-dialog input[type="text"],
+.glass-dialog input[type="number"],
+.glass-dialog input[type="email"],
+.glass-dialog textarea,
+.glass-dialog select {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #e0e8ff !important;
+  border-radius: 6px !important;
+}
+
+.glass-dialog input:focus,
+.glass-dialog textarea:focus,
+.glass-dialog select:focus {
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15) !important;
+  outline: none !important;
+}
+
+.glass-dialog button {
+  color: #c8d8ff !important;
+}
+
+.glass-dialog button:hover {
+  background: rgba(0, 212, 255, 0.15) !important;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.3) !important;
+}
+
+/* ── Glass tab bar ─────────────────────────────────────── */
+.glass-tabbar {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(8px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.glass-tabbar .tab-item {
+  color: #8899bb !important;
+  border-bottom: 2px solid transparent;
+}
+
+.glass-tabbar .tab-item:hover {
+  background: rgba(0, 212, 255, 0.08) !important;
+  color: #c8d8ff !important;
+}
+
+.glass-tabbar .tab-item.active {
+  background: rgba(0, 212, 255, 0.12) !important;
+  border-bottom-color: #00d4ff !important;
+  color: #ffffff !important;
+}
+
+.glass-tabbar .tab-new-btn {
+  color: #8899bb !important;
+}
+
+.glass-tabbar .tab-new-btn:hover {
+  background: rgba(0, 212, 255, 0.12) !important;
+  color: #00d4ff !important;
+}
+
+/* ── Status bar ────────────────────────────────────────── */
+.glass-statusbar {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(8px) !important;
+  border-top: none !important;
+  color: #8899bb !important;
+}
+
+.glass-statusbar * {
+  color: #8899bb !important;
+}
+
+.glass-statusbar button {
+  color: #8899bb !important;
+  background: transparent !important;
+}
+
+.glass-statusbar button:hover {
+  color: #c8d8ff !important;
+}
+
+/* ── Editor canvas area ────────────────────────────────── */
+.glass-canvas-bg {
+  background: #0f1420 !important;
+}
+
+.glass-canvas-bg .a4-page {
+  box-shadow: 0 4px 40px rgba(0, 212, 255, 0.15), 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* ── Ruler ─────────────────────────────────────────────── */
+.glass-ruler {
+  background: rgba(15, 20, 32, 0.8) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+  color: #556677 !important;
+}
+
+/* ── Navigation pane / sidebar ─────────────────────────── */
+.glass-sidebar {
+  background: rgba(10, 14, 26, 0.95) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #c8d8ff !important;
+}
+
+/* ── Modal overlay ─────────────────────────────────────── */
+.glass-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* ── Divider lines inside toolbars ─────────────────────── */
+.glass-toolbar .toolbar-divider,
+.glass-toolbar [class*="divider"],
+.glass-toolbar hr {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ── Tailwind overrides for dark theme ─────────────────── */
+.bg-white { background: transparent !important; }
+.bg-gray-50 { background: rgba(255,255,255,0.03) !important; }
+.bg-gray-100 { background: rgba(255,255,255,0.05) !important; }
+.bg-gray-200 { background: rgba(255,255,255,0.07) !important; }
+.bg-gray-300 { background: #0f1420 !important; }
+.bg-blue-600 { background: rgba(255, 255, 255, 0.03) !important; }
+.text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900 { color: #c8d8ff !important; }
+.text-gray-400, .text-gray-500 { color: #8899bb !important; }
+.border-gray-200, .border-gray-300 { border-color: rgba(255,255,255,0.08) !important; }
+.hover\:bg-gray-100:hover { background: rgba(0, 212, 255, 0.12) !important; }
+.hover\:bg-gray-200:hover { background: rgba(0, 212, 255, 0.15) !important; }
+.hover\:bg-blue-50:hover { background: rgba(0, 212, 255, 0.1) !important; }
+.bg-blue-50 { background: rgba(0, 212, 255, 0.08) !important; }
+.bg-blue-100 { background: rgba(0, 212, 255, 0.12) !important; }
+.text-blue-600, .text-blue-700 { color: #00d4ff !important; }
+.text-white { color: #e0e8ff !important; }
+.bg-white.rounded, .bg-white.shadow { 
+  background: rgba(13, 10, 30, 0.92) !important;
+  border: 1px solid rgba(178, 75, 255, 0.25) !important;
+}
+
+/* Fix: dialog/modal overlays that use fixed positioning */
+[class*="fixed"][class*="inset"] {
+  background: rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Keep A4 page white for readability */
+.a4-page {
+  background: #ffffff !important;
+  color: #1a1a2e !important;
+}
+
+.a4-page * {
+  color: inherit;
+}
+
+.ProseMirror {
+  color: #1a1a2e !important;
+}

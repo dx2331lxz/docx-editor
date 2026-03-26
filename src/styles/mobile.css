@@ -1,0 +1,90 @@
+/* Mobile styles for docx-editor */
+
+@media (max-width: 768px) {
+  /* Toolbar wraps and collapses */
+  .toolbar-row {
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide ruler on mobile */
+  .ruler-container,
+  [class*="ruler"] {
+    display: none !important;
+  }
+
+  /* A4 page goes full width with small padding */
+  .a4-page,
+  [class*="a4-page"],
+  .ProseMirror {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Editor content area fills screen */
+  .editor-scroll-area,
+  [class*="editor-canvas"] {
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Hamburger menu hint (toolbar collapses) */
+  .menu-bar {
+    flex-wrap: wrap;
+    overflow-x: auto;
+  }
+
+  /* Navigation pane overlays on mobile */
+  .navigation-pane {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    width: 80vw !important;
+    max-width: 320px;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Tab bar scrolls horizontally */
+  .tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Dialogs become full-screen on mobile */
+  .dialog-overlay > div,
+  [class*="shadow-2xl"] {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+  }
+
+  /* Status bar hides secondary items */
+  .status-bar-extra {
+    display: none;
+  }
+
+  /* Font size selector shrinks */
+  select, input[type="text"] {
+    font-size: 16px; /* prevent iOS zoom */
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small screens */
+  .toolbar-row button {
+    padding: 2px 4px;
+    font-size: 12px;
+  }
+
+  .menu-bar button {
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+}
