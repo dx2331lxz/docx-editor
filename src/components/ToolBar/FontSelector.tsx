@@ -35,9 +35,25 @@ const FontSelector: React.FC<FontSelectorProps> = ({ editor }) => {
       (ctx.editor?.getAttributes('textStyle')?.fontFamily as string | undefined) ?? '',
   })
 
-  const matchedFamily = FONT_FAMILIES.find((f) => f.value === currentFont)
+  // DOM fallback when no explicit fontFamily mark is set
+  const resolvedFont = (() => {
+    if (currentFont) return currentFont
+    if (!editor) return ''
+    try {
+      const sel = editor.view.state.selection
+      const domInfo = editor.view.domAtPos(sel.from)
+      let node = domInfo.node as HTMLElement | null
+      if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement
+      if (node) return window.getComputedStyle(node).fontFamily
+    } catch { /* ignore */ }
+    return ''
+  })()
+
+  const matchedFamily = FONT_FAMILIES.find((f) => f.value === resolvedFont)
+    ?? FONT_FAMILIES.find((f) => resolvedFont.toLowerCase().includes(f.value.split(',')[0].toLowerCase().replace(/"/g, '')))
   const displayLabel = matchedFamily?.label
-    ?? (currentFont ? currentFont.split(',')[0].replace(/"/g, '').trim() : DEFAULT_FONT.label)
+    ?? (resolvedFont ? resolvedFont.split(',')[0].replace(/"/g, '').trim() : DEFAULT_FONT.label)
+  const displayFontValue = matchedFamily?.value ?? DEFAULT_FONT.value
 
   const select = (value: string) => {
     editor?.chain().focus().setFontFamily(value).run()
@@ -55,7 +71,7 @@ const FontSelector: React.FC<FontSelectorProps> = ({ editor }) => {
         title="字体"
         type="button"
       >
-        <span className="truncate" style={{ fontFamily: matchedFamily?.value ?? DEFAULT_FONT.value }}>
+        <span className="truncate" style={{ fontFamily: displayFontValue }}>
           {displayLabel}
         </span>
         <ChevronDown size={11} className="ml-1 flex-shrink-0 text-gray-400" />

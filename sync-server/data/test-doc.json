@@ -4,31 +4,19 @@
     "type": "doc",
     "content": [
       {
-        "type": "paragraph",
+        "type": "heading",
         "attrs": {
-          "textAlign": "left",
-          "firstLineIndent": "2em",
+          "textAlign": null,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
           "paddingLeft": null,
-          "paddingRight": null
+          "paddingRight": null,
+          "level": 1
         },
         "content": [
           {
             "type": "text",
-            "marks": [
-              {
-                "type": "textStyle",
-                "attrs": {
-                  "color": "#000000",
-                  "fontFamily": "Georgia, serif",
-                  "fontSize": "20px",
-                  "lineHeight": null,
-                  "letterSpacing": null
-                }
-              }
-            ],
             "text": "欢迎使用 DocxEditor"
           }
         ]
@@ -37,7 +25,7 @@
         "type": "paragraph",
         "attrs": {
           "textAlign": null,
-          "firstLineIndent": "2em",
+          "firstLineIndent": 0,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
@@ -47,18 +35,6 @@
         "content": [
           {
             "type": "text",
-            "marks": [
-              {
-                "type": "textStyle",
-                "attrs": {
-                  "color": null,
-                  "fontFamily": "Georgia, serif",
-                  "fontSize": null,
-                  "lineHeight": null,
-                  "letterSpacing": null
-                }
-              }
-            ],
             "text": "这是一个对标 WPS 的在线文档编辑器，基于 TipTap + React + TypeScript 构建。"
           }
         ]
@@ -67,7 +43,7 @@
         "type": "paragraph",
         "attrs": {
           "textAlign": null,
-          "firstLineIndent": "2em",
+          "firstLineIndent": 0,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
@@ -77,18 +53,6 @@
         "content": [
           {
             "type": "text",
-            "marks": [
-              {
-                "type": "textStyle",
-                "attrs": {
-                  "color": null,
-                  "fontFamily": "Georgia, serif",
-                  "fontSize": null,
-                  "lineHeight": null,
-                  "letterSpacing": null
-                }
-              }
-            ],
             "text": "主要特性："
           }
         ]
@@ -326,7 +290,7 @@
         "type": "paragraph",
         "attrs": {
           "textAlign": null,
-          "firstLineIndent": "2em",
+          "firstLineIndent": 0,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
@@ -358,5 +322,5 @@
   "meta": {
     "title": "docx-editor"
   },
-  "updatedAt": "2026-03-26T16:35:15.491Z"
+  "updatedAt": "2026-03-26T16:40:57.152Z"
 }

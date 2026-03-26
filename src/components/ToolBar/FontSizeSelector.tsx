@@ -10,7 +10,33 @@ interface FontSizeSelectorProps {
 }
 
 const PRESET_SIZES = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 42, 48, 54, 60, 72]
-const DEFAULT_SIZE = 12
+const DEFAULT_SIZE = 14  // matches .ProseMirror { font-size: 14pt } in index.css
+
+/** Convert any fontSize string (e.g. "16px", "12pt", "14") to pt number */
+function toPt(raw: string | undefined): number | null {
+  if (!raw) return null
+  const val = parseFloat(raw)
+  if (isNaN(val)) return null
+  if (raw.endsWith('pt')) return val
+  if (raw.endsWith('px')) return val / 1.3333
+  // bare number — treat as pt (legacy storage)
+  return val
+}
+
+/** Get pt size via DOM computedStyle fallback for unset text */
+function getDomFontSizePt(editor: Editor): number | null {
+  try {
+    const sel = editor.view.state.selection
+    const domInfo = editor.view.domAtPos(sel.from)
+    let node = domInfo.node as HTMLElement | null
+    if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement
+    if (!node) return null
+    const px = parseFloat(window.getComputedStyle(node).fontSize)
+    return isNaN(px) ? null : px / 1.3333
+  } catch {
+    return null
+  }
+}
 
 const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
   const { triggerRef, dropdownRef, open, pos, openDropdown, closeDropdown } = useDropdownPortal()
@@ -24,9 +50,18 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
       (ctx.editor?.getAttributes('textStyle')?.fontSize as string | undefined) ?? '',
   })
 
-  const parsedSize = currentSizeRaw ? parseFloat(currentSizeRaw.replace('px', '')) : NaN
-  // When no explicit size is set, fall back to DEFAULT_SIZE
-  const displaySize = isNaN(parsedSize) ? DEFAULT_SIZE : parsedSize
+  // Parse stored value (may be "14pt", "16px", or legacy bare number)
+  const explicitPt = toPt(currentSizeRaw)
+
+  // When no explicit size is set, use DOM computedStyle for accurate fallback
+  const displaySize = (() => {
+    if (explicitPt !== null) return Math.round(explicitPt * 10) / 10
+    if (editor) {
+      const domPt = getDomFontSizePt(editor)
+      if (domPt !== null) return Math.round(domPt * 10) / 10
+    }
+    return DEFAULT_SIZE
+  })()
 
   // Keep input in sync when not actively editing
   useEffect(() => {
@@ -35,7 +70,7 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
 
   const applySize = (size: number) => {
     if (!isNaN(size) && size > 0 && size <= 1000 && editor) {
-      editor.chain().focus().setFontSize(`${size}px`).run()
+      editor.chain().focus().setFontSize(`${size}pt`).run()
     }
   }
 
@@ -63,9 +98,12 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
   }
 
   const stepSize = (direction: 1 | -1) => {
-    const idx = PRESET_SIZES.findIndex((s) => s >= displaySize)
+    // Find nearest preset index
+    const idx = PRESET_SIZES.findIndex((s) => s >= displaySize - 0.01)
     if (direction === 1) {
-      const next = PRESET_SIZES[Math.min(idx + 1, PRESET_SIZES.length - 1)]
+      // If current is already at or past this preset, go to next
+      const startIdx = PRESET_SIZES[idx] <= displaySize + 0.01 ? idx + 1 : idx
+      const next = PRESET_SIZES[Math.min(startIdx, PRESET_SIZES.length - 1)]
       applySize(next ?? PRESET_SIZES[PRESET_SIZES.length - 1])
     } else {
       const prev = PRESET_SIZES[Math.max((idx <= 0 ? 1 : idx) - 1, 0)]
@@ -118,7 +156,7 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
               key={s}
               type="button"
               className={`w-full text-center px-1 py-0.5 text-sm hover:bg-blue-50 hover:text-blue-700 transition-colors ${
-                displaySize === s ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
+                Math.abs(displaySize - s) < 0.1 ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
               }`}
               onMouseDown={(e) => {
                 e.preventDefault()
