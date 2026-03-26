@@ -12,6 +12,27 @@ interface FontSizeSelectorProps {
 const PRESET_SIZES = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 42, 48, 54, 60, 72]
 const DEFAULT_SIZE = 14  // matches .ProseMirror { font-size: 14pt } in index.css
 
+/** Chinese traditional size names mapped to pt values */
+const CHINESE_SIZES: { label: string; size: number }[] = [
+  { label: '初号',  size: 42 },
+  { label: '小初',  size: 36 },
+  { label: '一号',  size: 26 },
+  { label: '小一',  size: 24 },
+  { label: '二号',  size: 22 },
+  { label: '小二',  size: 18 },
+  { label: '三号',  size: 16 },
+  { label: '小三',  size: 15 },
+  { label: '四号',  size: 14 },
+  { label: '小四',  size: 12 },
+  { label: '五号',  size: 10.5 },
+  { label: '小五',  size: 9 },
+]
+
+/** Map pt → Chinese name for display in the numeric list */
+const PT_TO_CHINESE: Record<number, string> = Object.fromEntries(
+  CHINESE_SIZES.map(({ label, size }) => [size, label])
+)
+
 /** Convert any fontSize string (e.g. "16px", "12pt", "14") to pt number */
 function toPt(raw: string | undefined): number | null {
   if (!raw) return null
@@ -149,23 +170,46 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
         <div
           ref={dropdownRef as React.RefObject<HTMLDivElement>}
           style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
-          className="w-[70px] bg-white border border-gray-200 shadow-xl rounded py-1 max-h-52 overflow-y-auto"
+          className="w-[110px] bg-white border border-gray-200 shadow-xl rounded py-1 max-h-64 overflow-y-auto"
         >
-          {PRESET_SIZES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`w-full text-center px-1 py-0.5 text-sm hover:bg-blue-50 hover:text-blue-700 transition-colors ${
-                Math.abs(displaySize - s) < 0.1 ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
-              }`}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                selectPreset(s)
-              }}
-            >
-              {s}
-            </button>
-          ))}
+          {/* Numeric preset sizes — show Chinese name where applicable */}
+          {PRESET_SIZES.map((s) => {
+            const chName = PT_TO_CHINESE[s]
+            const isActive = Math.abs(displaySize - s) < 0.1
+            return (
+              <button
+                key={s}
+                type="button"
+                className={`w-full flex items-center justify-between px-2 py-0.5 text-sm hover:bg-blue-50 hover:text-blue-700 transition-colors ${
+                  isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
+                }`}
+                onMouseDown={(e) => { e.preventDefault(); selectPreset(s) }}
+              >
+                <span>{s}</span>
+                {chName && <span className="text-xs text-gray-400 ml-1">{chName}</span>}
+              </button>
+            )
+          })}
+
+          {/* Divider + Chinese traditional sizes section */}
+          <div className="border-t border-gray-200 mx-1 my-1" />
+          <div className="px-2 py-0.5 text-xs text-gray-400 font-medium">中文字号</div>
+          {CHINESE_SIZES.map(({ label, size }) => {
+            const isActive = Math.abs(displaySize - size) < 0.1
+            return (
+              <button
+                key={label}
+                type="button"
+                className={`w-full flex items-center justify-between px-2 py-0.5 text-sm hover:bg-blue-50 hover:text-blue-700 transition-colors ${
+                  isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
+                }`}
+                onMouseDown={(e) => { e.preventDefault(); selectPreset(size) }}
+              >
+                <span>{label}</span>
+                <span className="text-xs text-gray-400">{size}pt</span>
+              </button>
+            )
+          })}
         </div>,
         document.body
       )}
