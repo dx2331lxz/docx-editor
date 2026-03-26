@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
 import { ChevronDown, AArrowUp, AArrowDown } from 'lucide-react'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface FontSizeSelectorProps {
   editor: Editor | null
@@ -11,9 +13,8 @@ const PRESET_SIZES = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32
 const DEFAULT_SIZE = 12
 
 const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
-  const [open, setOpen] = useState(false)
-  const [inputValue, setInputValue] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const { triggerRef, dropdownRef, open, pos, openDropdown, closeDropdown } = useDropdownPortal()
+  const [inputValue, setInputValue] = React.useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Reactively read font size from editor on every cursor move / selection change
@@ -32,15 +33,6 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
     if (!open) setInputValue(String(displaySize))
   }, [displaySize, open])
 
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   const applySize = (size: number) => {
     if (!isNaN(size) && size > 0 && size <= 1000 && editor) {
       editor.chain().focus().setFontSize(`${size}px`).run()
@@ -49,17 +41,17 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
 
   const selectPreset = (size: number) => {
     applySize(size)
-    setOpen(false)
+    closeDropdown()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       const val = parseFloat(inputValue)
       applySize(val)
-      setOpen(false)
+      closeDropdown()
       inputRef.current?.blur()
     } else if (e.key === 'Escape') {
-      setOpen(false)
+      closeDropdown()
       setInputValue(String(displaySize))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
@@ -84,14 +76,16 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
   if (!editor) return null
 
   return (
-    <div ref={ref} className="relative flex items-center gap-0.5">
+    <div className="relative flex items-center gap-0.5">
       {/* Size input — flex wrapper makes chevron always visible */}
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
         className="inline-flex items-center justify-between w-[70px] h-7 px-2 rounded border border-gray-300 bg-white hover:border-blue-400 transition-colors cursor-pointer gap-0.5"
         onClick={() => {
           setInputValue(String(displaySize))
-          setOpen((v) => !v)
+          if (open) closeDropdown()
+          else openDropdown()
         }}
         title="字号（点击展开预设列表）"
       >
@@ -103,7 +97,7 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
           onChange={(e) => setInputValue(e.target.value)}
           onFocus={() => {
             setInputValue(String(displaySize))
-            setOpen(true)
+            openDropdown()
           }}
           onKeyDown={handleKeyDown}
           onClick={(e) => e.stopPropagation()}
@@ -113,8 +107,12 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
       </button>
 
       {/* Preset dropdown */}
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 w-[70px] bg-white border border-gray-200 shadow-xl rounded z-50 py-1 max-h-52 overflow-y-auto">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="w-[70px] bg-white border border-gray-200 shadow-xl rounded py-1 max-h-52 overflow-y-auto"
+        >
           {PRESET_SIZES.map((s) => (
             <button
               key={s}
@@ -130,7 +128,8 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
               {s}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* A↑ / A↓ step buttons using lucide icons */}

@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { PaintBucket, ChevronDown } from 'lucide-react'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface BorderShadingPanelProps {
   editor: Editor
@@ -14,30 +16,26 @@ const SHADING_COLORS = [
 ]
 
 const BorderShadingPanel: React.FC<BorderShadingPanelProps> = ({ editor }) => {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
         className="inline-flex items-center justify-center w-8 h-7 rounded text-gray-600 hover:bg-gray-200 transition-colors"
         title="段落底纹"
-        onClick={() => setOpen(v => !v)}
+        onClick={toggleDropdown}
       >
         <PaintBucket size={14} />
         <ChevronDown size={9} className="ml-0.5" />
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 shadow-xl rounded-lg p-3 z-50 w-52">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 shadow-xl rounded-lg p-3 w-52"
+        >
           <p className="text-[11px] text-gray-400 mb-1.5 font-medium uppercase tracking-wide">段落底纹颜色</p>
           <div className="grid grid-cols-5 gap-1 mb-2">
             {SHADING_COLORS.map(c => (
@@ -49,7 +47,7 @@ const BorderShadingPanel: React.FC<BorderShadingPanelProps> = ({ editor }) => {
                 title={c}
                 onClick={() => {
                   editor.chain().focus().setParagraphBg(c).run()
-                  setOpen(false)
+                  closeDropdown()
                 }}
               />
             ))}
@@ -59,12 +57,13 @@ const BorderShadingPanel: React.FC<BorderShadingPanelProps> = ({ editor }) => {
             className="w-full text-center px-2 py-1 text-xs text-gray-500 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
             onClick={() => {
               editor.chain().focus().unsetParagraphBg().run()
-              setOpen(false)
+              closeDropdown()
             }}
           >
             无 (清除)
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

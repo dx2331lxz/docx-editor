@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
+import ReactDOM from 'react-dom'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface ColorPickerProps {
   icon: React.ReactNode
@@ -21,26 +23,17 @@ const PRESET_COLORS = [
 ]
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ icon, color, onChange, title }) => {
-  const [open, setOpen] = useState(false)
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
   const [hexInput, setHexInput] = useState(color)
-  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) setHexInput(color)
   }, [color, open])
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   const apply = (c: string, close = false) => {
     onChange(c)
     setHexInput(c)
-    if (close) setOpen(false)
+    if (close) closeDropdown()
   }
 
   const handleHexInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,13 +51,14 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ icon, color, onChange, title 
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       {/* Trigger button — icon + color bar */}
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
         className="inline-flex flex-col items-center justify-center w-8 h-7 rounded text-gray-600 hover:bg-gray-200 transition-colors gap-0"
         title={title}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleDropdown}
       >
         <span className="flex items-center justify-center h-4 leading-none">{icon}</span>
         {/* Color bar */}
@@ -75,8 +69,12 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ icon, color, onChange, title 
       </button>
 
       {/* Color panel */}
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 shadow-xl rounded-lg p-3 z-50 w-56">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 shadow-xl rounded-lg p-3 w-56"
+        >
           <p className="text-[11px] text-gray-400 mb-1.5 font-medium uppercase tracking-wide">标准颜色</p>
           <div className="grid grid-cols-8 gap-1 mb-3">
             {PRESET_COLORS.map((c) => (
@@ -118,7 +116,8 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ icon, color, onChange, title 
               onClick={() => apply(hexInput, true)}
             >确认</button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

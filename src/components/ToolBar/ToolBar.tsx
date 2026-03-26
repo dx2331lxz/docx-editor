@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 import {
   Bold, Italic, Underline, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
@@ -78,38 +79,38 @@ const ColumnDropdown: React.FC<{
   columns?: ColumnCount
   onColumnsChange?: (n: ColumnCount) => void
 }> = ({ columns = 1, onColumnsChange }) => {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
   const current = COLUMN_OPTIONS.find((o) => o.value === columns) ?? COLUMN_OPTIONS[0]
   return (
-    <div ref={ref} className="relative flex-shrink-0">
+    <div className="relative flex-shrink-0">
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         className={btn(columns !== 1)}
         title="分栏"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleDropdown}
         style={{ width: 'auto', paddingInline: '4px', gap: '2px' }}
       >
         {current.icon}
         <ChevronDown size={10} />
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 shadow-lg rounded z-50 py-1 w-28">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 shadow-lg rounded py-1 w-28"
+        >
           {COLUMN_OPTIONS.map((opt) => (
             <button
               key={String(opt.value)}
               className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 ${columns === opt.value ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
-              onClick={() => { onColumnsChange?.(opt.value); setOpen(false) }}
+              onClick={() => { onColumnsChange?.(opt.value); closeDropdown() }}
             >
               {opt.icon}
               {opt.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -120,24 +121,16 @@ const LINE_SPACINGS = ['1.0', '1.15', '1.5', '2.0', '2.5', '3.0']
 // ── Line spacing dropdown ─────────────────────────────────────────────────────
 
 const LineSpacingDropdown: React.FC<{ editor: Editor; onOpenParagraphDialog?: () => void }> = ({ editor, onOpenParagraphDialog }) => {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
         className={`${btn()} w-9`}
         title="行间距"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleDropdown}
       >
         {/* Custom line-height SVG icon */}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -149,8 +142,12 @@ const LineSpacingDropdown: React.FC<{ editor: Editor; onOpenParagraphDialog?: ()
         </svg>
         <ChevronDown size={9} className="ml-0.5" />
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 shadow-xl rounded z-50 py-1 w-24">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 shadow-xl rounded py-1 w-24"
+        >
           {LINE_SPACINGS.map((s) => (
             <button
               key={s}
@@ -158,7 +155,7 @@ const LineSpacingDropdown: React.FC<{ editor: Editor; onOpenParagraphDialog?: ()
               className="w-full text-center px-2 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
               onClick={() => {
                 editor.chain().focus().setLineHeight(s).run()
-                setOpen(false)
+                closeDropdown()
               }}
             >
               {s} 倍
@@ -169,14 +166,15 @@ const LineSpacingDropdown: React.FC<{ editor: Editor; onOpenParagraphDialog?: ()
               type="button"
               className="w-full text-center px-2 py-1.5 text-xs text-blue-600 hover:bg-blue-50 transition-colors"
               onClick={() => {
-                setOpen(false)
+                closeDropdown()
                 onOpenParagraphDialog?.()
               }}
             >
               段落设置…
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

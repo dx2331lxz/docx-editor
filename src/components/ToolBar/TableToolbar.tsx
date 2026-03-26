@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import {
   ArrowUpFromLine,
@@ -10,6 +11,7 @@ import {
   SplitSquareVertical,
   ChevronDown,
 } from 'lucide-react'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface TableToolbarProps {
   editor: Editor | null
@@ -93,29 +95,25 @@ function applyTableStyle(editor: Editor, styleId: string) {
 
 // ── Table Style Dropdown ───────────────────────────────────────────────────────
 const TableStyleDropdown: React.FC<{ editor: Editor }> = ({ editor }) => {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
         className={`${tbtn} gap-1`}
         title="表格样式"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleDropdown}
       >
         表格样式 <ChevronDown size={10} />
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 shadow-xl rounded z-50 py-1 w-36">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 shadow-xl rounded py-1 w-36"
+        >
           {TABLE_STYLES.map((s) => (
             <button
               key={s.id}
@@ -123,13 +121,14 @@ const TableStyleDropdown: React.FC<{ editor: Editor }> = ({ editor }) => {
               className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
               onClick={() => {
                 applyTableStyle(editor, s.id)
-                setOpen(false)
+                closeDropdown()
               }}
             >
               {s.name}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -19,7 +19,7 @@ export const DEFAULT_CLOUD_SYNC: CloudSyncConfig = {
 }
 
 const STORAGE_KEY = 'docx-editor-cloud-sync'
-export const LOCAL_SERVER = 'http://localhost:3011'
+export const LOCAL_SERVER = 'http://47.117.124.93:3011'
 
 export function loadCloudSyncConfig(): CloudSyncConfig {
   try { return { ...DEFAULT_CLOUD_SYNC, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } }

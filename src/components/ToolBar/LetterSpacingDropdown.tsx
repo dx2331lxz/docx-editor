@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { ChevronDown } from 'lucide-react'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface LetterSpacingDropdownProps {
   editor: Editor
@@ -16,30 +18,26 @@ const SPACINGS = [
 ]
 
 const LetterSpacingDropdown: React.FC<LetterSpacingDropdownProps> = ({ editor }) => {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
         className="inline-flex items-center gap-0.5 h-7 px-1.5 rounded text-xs text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
         title="字符间距"
-        onClick={() => setOpen(v => !v)}
+        onClick={toggleDropdown}
       >
         <span className="text-[11px]">字间距</span>
         <ChevronDown size={9} />
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 bg-white border border-gray-200 shadow-xl rounded z-50 py-1 w-36">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 shadow-xl rounded py-1 w-36"
+        >
           {SPACINGS.map(s => (
             <button
               key={s.value}
@@ -48,13 +46,14 @@ const LetterSpacingDropdown: React.FC<LetterSpacingDropdownProps> = ({ editor })
               onClick={() => {
                 if (s.value === '0') editor.chain().focus().unsetLetterSpacing().run()
                 else editor.chain().focus().setLetterSpacing(s.value).run()
-                setOpen(false)
+                closeDropdown()
               }}
             >
               {s.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

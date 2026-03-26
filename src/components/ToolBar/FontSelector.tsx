@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
 import { ChevronDown } from 'lucide-react'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface FontSelectorProps {
   editor: Editor | null
@@ -24,8 +26,7 @@ const FONT_FAMILIES = [
 const DEFAULT_FONT = FONT_FAMILIES[0]
 
 const FontSelector: React.FC<FontSelectorProps> = ({ editor }) => {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
 
   // Reactively read font from editor state on every selection/transaction update
   const currentFont = useEditorState({
@@ -38,26 +39,19 @@ const FontSelector: React.FC<FontSelectorProps> = ({ editor }) => {
   const displayLabel = matchedFamily?.label
     ?? (currentFont ? currentFont.split(',')[0].replace(/"/g, '').trim() : DEFAULT_FONT.label)
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   const select = (value: string) => {
     editor?.chain().focus().setFontFamily(value).run()
-    setOpen(false)
+    closeDropdown()
   }
 
   if (!editor) return null
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         className="inline-flex items-center justify-between w-[122px] h-7 px-2 rounded border border-gray-300 bg-white text-sm text-gray-800 hover:border-blue-400 focus:outline-none transition-colors"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleDropdown}
         title="字体"
         type="button"
       >
@@ -67,8 +61,12 @@ const FontSelector: React.FC<FontSelectorProps> = ({ editor }) => {
         <ChevronDown size={11} className="ml-1 flex-shrink-0 text-gray-400" />
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 mt-0.5 w-44 bg-white border border-gray-200 shadow-xl rounded z-50 py-1 max-h-64 overflow-y-auto">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="w-44 bg-white border border-gray-200 shadow-xl rounded py-1 max-h-64 overflow-y-auto"
+        >
           {FONT_FAMILIES.map((f) => (
             <button
               key={f.value}
@@ -82,7 +80,8 @@ const FontSelector: React.FC<FontSelectorProps> = ({ editor }) => {
               {f.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

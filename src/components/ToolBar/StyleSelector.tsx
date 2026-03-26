@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import ReactDOM from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
+import { useDropdownPortal } from '../../hooks/useDropdownPortal'
 
 interface StyleSelectorProps {
   editor: Editor | null
@@ -61,9 +63,8 @@ const STYLES: StyleDef[] = [
 ]
 
 const StyleSelector: React.FC<StyleSelectorProps> = ({ editor, onOpenStyleManager }) => {
-  const [open, setOpen] = useState(false)
+  const { triggerRef, dropdownRef, open, pos, toggleDropdown, closeDropdown } = useDropdownPortal()
   const [toastMsg, setToastMsg] = useState<string | null>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // React to selection changes
   const activeHeadingLevel = useEditorState({
@@ -79,16 +80,7 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ editor, onOpenStyleManage
   })
 
   // Close on outside click
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  // (handled by useDropdownPortal)
 
   // Toast auto-clear
   useEffect(() => {
@@ -115,15 +107,16 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ editor, onOpenStyleManage
   const applyStyle = (style: StyleDef) => {
     style.apply(editor)
     setToastMsg(`已应用：${style.label}`)
-    setOpen(false)
+    closeDropdown()
   }
 
   return (
-    <div className="relative flex items-center gap-1 px-3 py-1.5 bg-white border-b border-gray-200 flex-wrap" ref={dropdownRef}>
+    <div className="relative flex items-center gap-1 px-3 py-1.5 bg-white border-b border-gray-200 flex-wrap">
       {/* Current style button */}
       <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleDropdown}
         className="inline-flex items-center gap-1 px-3 h-7 rounded border border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm flex-shrink-0"
         title="样式列表"
       >
@@ -132,8 +125,12 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ editor, onOpenStyleManage
       </button>
 
       {/* Dropdown */}
-      {open && (
-        <div className="absolute top-full left-3 mt-1 z-50 bg-white border border-gray-200 rounded shadow-lg p-2 w-[320px]">
+      {open && ReactDOM.createPortal(
+        <div
+          ref={dropdownRef as React.RefObject<HTMLDivElement>}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="bg-white border border-gray-200 rounded shadow-lg p-2 w-[320px]"
+        >
           {/* 2-column grid */}
           <div className="grid grid-cols-2 gap-1.5 mb-2">
             {STYLES.map((style) => {
@@ -173,12 +170,13 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({ editor, onOpenStyleManage
             <button
               type="button"
               className="w-full text-sm text-blue-600 hover:bg-blue-50 py-1 rounded text-left px-2"
-              onClick={() => { setOpen(false); onOpenStyleManager?.() }}
+              onClick={() => { closeDropdown(); onOpenStyleManager?.() }}
             >
               ＋ 新建样式…
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Toast */}

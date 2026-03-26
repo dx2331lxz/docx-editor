@@ -1,0 +1,850 @@
+{
+  "docId": "default",
+  "content": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "尊敬的xxx老师："
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "我叫刘欣宇，是哈尔滨医科大学2021级医学检验技术专业的学生。今年考研初试成绩为xxx分，特此致信，主要是想要提前地与您认识交流，并且想向您咨询，您今年是否还有研究生招生名额；其次是想借此机会向您介绍一下我的基本情况与本科阶段的学习经历，希望能让您对我有所了解。非常感谢您在百忙之中抽出时间阅读这封邮件，期待有机会得到您的指导！"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "bold"
+              }
+            ],
+            "text": "（一）学生的基本情况"
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "学习成绩优异，专业基础扎实："
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "在校期间，我专业成绩优异，综测排名第3/217，成绩排名第7/217，主修课程成绩优异：临床医学概论(90/100)、临床分子生物学检验技术(95/100)、医学免疫学(99/100)、临床生物化学检验技术(89/100)、医学微生物学(93/100)、临床寄生虫学与检验技术(93/100)、医学遗传学(95/100)、临床基础检验学技术(93/100)等，具备扎实的医学检验与基础医学知识基础。已通过英语六级，获得本科生综合二等奖学金及“三好学生”荣誉称号。"
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "实习经历丰富，实践技能扎实"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "我于2024年7月至2025年5月在中国人民解放军总医院第四医学中心实习，轮转多个检验科室，熟练掌握PCR技术、ANCA、ANA等手工检测方法，基本掌握贝克曼、罗氏、雅培等部分仪器的使用方法和日常维护，基本具备标本处理、检测、结果核 对能力"
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "科研助理经历：提前进组磨砺，夯实科研基本功"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "在备战硕士研究生入学考试期间，我主动申请并加入哈尔滨医科大学基础医学院刘卓课题组，担任科研助理。任职期间，我全面统筹课题组综合事务，负责官方网站运维、科研物资采购及财务报销全流程，为团队的高效运转提供了坚实保障。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "在此期间，我坚持全程参与课题组每周组会，系统了解并熟悉了科研工作的完整流程，包括课题设计思路的探讨、实验进度的汇报与反馈机制，以及团队协作的沟通模式。同时，我深入研读了课题组研究方向相关的经典文献——《Polyethylene glycol immunogenicity in nanomedicine》，并就其核心观点与研究启示在组会上向导师及团队成员进行了详细汇报，初步锻炼了文献精读与学术表达的能力。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "这段经历使我提前融入了严谨的科研环境，对研究生的科研节奏与要求建立了清晰的认知，为未来深入开展科研工作奠定了扎实的基础。"
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "研究生阶段规划"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "content": [
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null,
+                      "firstLineIndent": 0,
+                      "backgroundColor": null,
+                      "marginTop": null,
+                      "marginBottom": null,
+                      "paddingLeft": null,
+                      "paddingRight": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "时 间"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null,
+                      "firstLineIndent": 0,
+                      "backgroundColor": null,
+                      "marginTop": null,
+                      "marginBottom": null,
+                      "paddingLeft": null,
+                      "paddingRight": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "计划内容"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null,
+                      "firstLineIndent": 0,
+                      "backgroundColor": null,
+                      "marginTop": null,
+                      "marginBottom": null,
+                      "paddingLeft": null,
+                      "paddingRight": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "研一"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "orderedList",
+                    "attrs": {
+                      "start": 1,
+                      "type": null
+                    },
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "attrs": {
+                              "textAlign": null,
+                              "firstLineIndent": 0,
+                              "backgroundColor": null,
+                              "marginTop": null,
+                              "marginBottom": null,
+                              "paddingLeft": null,
+                              "paddingRight": null
+                            },
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "认真完成学位课程，争取优异成绩，为科研打下坚实的理论基础。"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "attrs": {
+                              "textAlign": null,
+                              "firstLineIndent": 0,
+                              "backgroundColor": null,
+                              "marginTop": null,
+                              "marginBottom": null,
+                              "paddingLeft": null,
+                              "paddingRight": null
+                            },
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "坚持阅读本专业顶级期刊的文献，每周精读 2-3 篇高质量外文文献，学习科研思路和写作逻辑。"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null,
+                      "firstLineIndent": 0,
+                      "backgroundColor": null,
+                      "marginTop": null,
+                      "marginBottom": null,
+                      "paddingLeft": null,
+                      "paddingRight": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "研二"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "orderedList",
+                    "attrs": {
+                      "start": 1,
+                      "type": null
+                    },
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "attrs": {
+                              "textAlign": null,
+                              "firstLineIndent": 0,
+                              "backgroundColor": null,
+                              "marginTop": null,
+                              "marginBottom": null,
+                              "paddingLeft": null,
+                              "paddingRight": null
+                            },
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "参与导师核心科研项目，力争成为技术攻坚力量"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "attrs": {
+                              "textAlign": null,
+                              "firstLineIndent": 0,
+                              "backgroundColor": null,
+                              "marginTop": null,
+                              "marginBottom": null,
+                              "paddingLeft": null,
+                              "paddingRight": null
+                            },
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "尝试撰写并投稿 1-2篇学术论文"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "tableRow",
+            "content": [
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "attrs": {
+                      "textAlign": null,
+                      "firstLineIndent": 0,
+                      "backgroundColor": null,
+                      "marginTop": null,
+                      "marginBottom": null,
+                      "paddingLeft": null,
+                      "paddingRight": null
+                    },
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "研三"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "tableCell",
+                "attrs": {
+                  "colspan": 1,
+                  "rowspan": 1,
+                  "colwidth": null
+                },
+                "content": [
+                  {
+                    "type": "orderedList",
+                    "attrs": {
+                      "start": 1,
+                      "type": null
+                    },
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "attrs": {
+                              "textAlign": null,
+                              "firstLineIndent": 0,
+                              "backgroundColor": null,
+                              "marginTop": null,
+                              "marginBottom": null,
+                              "paddingLeft": null,
+                              "paddingRight": null
+                            },
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "全身心投入学位论文的撰写。严格按照学术规范，确保逻辑严谨、数据翔实，完成高质量的毕业论文送审与答辩。"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "attrs": {
+                              "textAlign": null,
+                              "firstLineIndent": 0,
+                              "backgroundColor": null,
+                              "marginTop": null,
+                              "marginBottom": null,
+                              "paddingLeft": null,
+                              "paddingRight": null
+                            },
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "为申请读博深造做准备"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "对您的研究方向感兴趣"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "天津医科大学学术氛围浓厚，技术实力雄厚，能够进入这里学习也一直是我的梦想。我仔细了解了您的研究方向，对您的学术造诣十分钦佩。我认真研读过老师您近年来的著作与论文，其中您在xxx领域的研究成果让我对相关技术产生浓厚的兴趣。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "本科期间xxx。您的研究方向正是我的兴趣所在，所以想在随后的几年中加入您的科研团队跟随您继续学习。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "我的技术适应性很强，对有价值的研究领域都愿意深入探索。我了解到您对学术方面要求较高，但为人热情，待人亲切，我自己最喜欢这样的老师。我做事踏实勤奋，力争上游，认真仔细，特别是在技术研发领域里愿意全身心付出，同时有着较强的学习能力和接受新技术的能力。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "不知道您今年是否还有预留的招生名额？我是否能够有机会跟随您继续学习？"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "十分期待您的回信！"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "诚祝工作顺利，身体健康！"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "附件是我的简历及相关材料，请查收，以便您进一步了解我。"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null,
+          "firstLineIndent": 0,
+          "backgroundColor": null,
+          "marginTop": null,
+          "marginBottom": null,
+          "paddingLeft": null,
+          "paddingRight": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "学生：刘欣宇"
+          }
+        ]
+      }
+    ]
+  },
+  "meta": {
+    "title": "docx-editor"
+  },
+  "updatedAt": "2026-03-26T15:30:53.559Z"
+}
