@@ -593,7 +593,7 @@ const App: React.FC = () => {
             />
           )}
           {showVibeEditing && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', flexShrink: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', flexShrink: 0, height: '100%', minHeight: 0 }}>
               <VibeEditingPanel
                 editor={editor}
                 onClose={() => setShowVibeEditing(false)}
