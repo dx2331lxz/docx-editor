@@ -6,6 +6,8 @@
  * Saves to:
  *   screenshots/latest.png
  *   screenshots/YYYY-MM-DD-HH-mm-ss.png
+ *
+ * Also captures console errors/warnings and reports them.
  */
 
 import { chromium } from 'playwright'
@@ -25,6 +27,39 @@ async function main() {
   const browser = await chromium.launch({ headless: true })
   const page = await browser.newPage()
 
+  // ── Console monitoring ─────────────────────────────────────────────────────
+  const consoleErrors = []
+  const consoleWarnings = []
+
+  page.on('console', (msg) => {
+    const type = msg.type()
+    const text = msg.text()
+    // Skip noisy known-OK messages
+    if (text.includes('Keep-Alive mechanism') || text.includes('Download the React DevTools')) return
+    if (type === 'error') {
+      consoleErrors.push(text)
+      console.error(`  [console.error] ${text}`)
+    } else if (type === 'warning') {
+      consoleWarnings.push(text)
+      console.warn(`  [console.warn]  ${text}`)
+    }
+  })
+
+  page.on('pageerror', (err) => {
+    consoleErrors.push(`[pageerror] ${err.message}`)
+    console.error(`  [pageerror] ${err.message}`)
+  })
+
+  page.on('requestfailed', (req) => {
+    const url = req.url()
+    // Ignore chrome-extension and favicon
+    if (url.startsWith('chrome-extension') || url.includes('favicon')) return
+    const failure = req.failure()?.errorText || 'unknown'
+    consoleErrors.push(`[net::ERR] ${url} — ${failure}`)
+    console.error(`  [net::ERR] ${url} — ${failure}`)
+  })
+  // ──────────────────────────────────────────────────────────────────────────
+
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto(URL, { waitUntil: 'networkidle', timeout: 30000 })
 
@@ -38,7 +73,7 @@ async function main() {
   }
 
   // Extra settle time for fonts / layout
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(800)
 
   // Build timestamped filename
   const now = new Date()
@@ -62,6 +97,22 @@ async function main() {
 
   console.log(`✅ Screenshot saved: ${latestPath}`)
   console.log(`✅ Backup saved:     ${timestampPath}`)
+
+  // ── Console report ─────────────────────────────────────────────────────────
+  if (consoleErrors.length === 0 && consoleWarnings.length === 0) {
+    console.log('✅ Console clean — no errors or warnings')
+  } else {
+    if (consoleErrors.length > 0) {
+      console.error(`\n❌ Console errors (${consoleErrors.length}):`)
+      consoleErrors.forEach((e, i) => console.error(`  ${i + 1}. ${e}`))
+    }
+    if (consoleWarnings.length > 0) {
+      console.warn(`\n⚠  Console warnings (${consoleWarnings.length}):`)
+      consoleWarnings.forEach((w, i) => console.warn(`  ${i + 1}. ${w}`))
+    }
+    // Exit non-zero if there are errors (so CI can catch it)
+    if (consoleErrors.length > 0) process.exit(1)
+  }
 }
 
 main().catch((err) => {

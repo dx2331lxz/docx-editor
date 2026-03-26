@@ -86,6 +86,9 @@ export function useDocxEditor(options: UseDocxEditorOptions = {}) {
       // ── Core ──────────────────────────────────────────────────
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4, 5, 6] },
+        // Disabled because we register these separately with custom config
+        link: false,
+        underline: false,
       }),
 
       // ── Text style extensions (each independently encapsulated) ──
