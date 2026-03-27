@@ -337,10 +337,12 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
       const markAttrs = (type: string) =>
         marks.find((m) => m.type === type)?.attrs ?? {}
 
-      const styleAttrs = markAttrs('textStyle') as Record<string, string>
+      // All inline style attrs live in the single `textStyle` mark
+      // (TipTap Color, FontFamily, FontSize extensions all extend textStyle)
+      const styleAttrs = markAttrs('textStyle') as Record<string, string | null>
       const fontFamily = styleAttrs.fontFamily?.replace(/"/g, '').split(',')[0]?.trim()
 
-      // Font size: may be in px, pt, or em
+      // Font size: stored as "16pt" or "24px"; docx uses half-points
       let sizeHalfPt: number | undefined
       const fsRaw = styleAttrs.fontSize ?? ''
       if (fsRaw.endsWith('pt')) {
@@ -352,10 +354,8 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
         if (!isNaN(px)) sizeHalfPt = Math.round(px * 1.5)
       }
 
-      // Color: prefer textColor mark, then textStyle color
-      // Handle both #RRGGBB and rgb(r,g,b) formats
-      const textColorAttrs = markAttrs('textColor') as Record<string, string>
-      const rawColor = textColorAttrs?.color ?? styleAttrs.color ?? undefined
+      // Color: stored in textStyle.attrs.color as "#RRGGBB" or "rgb(r,g,b)"
+      const rawColor = styleAttrs.color ?? undefined
       let color: string | undefined
       if (rawColor) {
         if (rawColor.startsWith('#')) {
