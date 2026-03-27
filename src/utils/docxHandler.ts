@@ -499,9 +499,227 @@ const PAPER_SIZES_TWIP: Record<string, { width: number; height: number }> = {
   Letter: { width: 12240, height: 15840 },  // 8.5in × 11in
 }
 
+// ── HTML → docx helpers (used when htmlContent is provided) ─────────────────
+
+/** Parse a CSS inline-style string into a key→value map */
+function parseInlineStyle(style: string): Record<string, string> {
+  const result: Record<string, string> = {}
+  style.split(';').forEach(decl => {
+    const idx = decl.indexOf(':')
+    if (idx < 0) return
+    const prop = decl.slice(0, idx).trim().toLowerCase()
+    const val  = decl.slice(idx + 1).trim()
+    if (prop && val) result[prop] = val
+  })
+  return result
+}
+
+/** Convert font-size CSS value to half-points (docx unit) */
+function parseFontSizeToHalfPt(val?: string): number | undefined {
+  if (!val) return undefined
+  const n = parseFloat(val)
+  if (isNaN(n)) return undefined
+  if (val.endsWith('pt'))  return Math.round(n * 2)
+  if (val.endsWith('px'))  return Math.round(n * 1.5)
+  if (val.endsWith('em'))  return Math.round(n * 24)  // assume 12pt base
+  return Math.round(n * 2)  // bare number treated as pt
+}
+
+/** Convert CSS color to docx hex string (RRGGBB, no #) */
+function parseCssColor(val?: string): string | undefined {
+  if (!val) return undefined
+  if (val.startsWith('#')) return val.replace('#', '').toUpperCase().slice(0, 6)
+  const m = val.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/)
+  if (m) {
+    return [m[1], m[2], m[3]]
+      .map(n => parseInt(n).toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase()
+  }
+  return undefined
+}
+
+/** Extract TextRuns from an Element, handling nested inline elements */
+function htmlNodeToRuns(el: Element, inherited: {
+  bold?: boolean; italics?: boolean; underline?: boolean; strike?: boolean
+  color?: string; fontFamily?: string; sizeHalfPt?: number
+} = {}): TextRun[] {
+  const runs: TextRun[] = []
+
+  el.childNodes.forEach(node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent ?? ''
+      if (!text) return
+      runs.push(new TextRun({
+        text,
+        bold:      inherited.bold,
+        italics:   inherited.italics,
+        underline: inherited.underline ? {} : undefined,
+        strike:    inherited.strike,
+        color:     inherited.color,
+        font:      inherited.fontFamily ? { name: inherited.fontFamily } : undefined,
+        size:      inherited.sizeHalfPt,
+      }))
+      return
+    }
+    if (!(node instanceof Element)) return
+
+    const tag = node.tagName.toLowerCase()
+    const style = node.getAttribute('style') ?? ''
+    const css = parseInlineStyle(style)
+
+    // Derive formatting for this element
+    const ctx = { ...inherited }
+    if (tag === 'strong' || tag === 'b' || css['font-weight'] === 'bold' || css['font-weight'] === '700') ctx.bold = true
+    if (tag === 'em' || tag === 'i' || css['font-style'] === 'italic') ctx.italics = true
+    if (tag === 'u' || css['text-decoration']?.includes('underline')) ctx.underline = true
+    if (tag === 's' || tag === 'strike' || css['text-decoration']?.includes('line-through')) ctx.strike = true
+
+    const colorVal = parseCssColor(css['color'])
+    if (colorVal) ctx.color = colorVal
+
+    const ff = css['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim()
+    if (ff) ctx.fontFamily = ff
+
+    const sz = parseFontSizeToHalfPt(css['font-size'])
+    if (sz) ctx.sizeHalfPt = sz
+
+    // Recurse into children
+    runs.push(...htmlNodeToRuns(node, ctx))
+  })
+
+  return runs
+}
+
+/** Parse text-align from inline style string */
+function parseTextAlign(style: string): AlignmentType {
+  const css = parseInlineStyle(style)
+  switch (css['text-align']) {
+    case 'center':  return AlignmentType.CENTER
+    case 'right':   return AlignmentType.RIGHT
+    case 'justify': return AlignmentType.JUSTIFIED
+    default:        return AlignmentType.LEFT
+  }
+}
+
+const HTML_HEADING_LEVELS: Record<string, HeadingLevel> = {
+  h1: HeadingLevel.HEADING_1,
+  h2: HeadingLevel.HEADING_2,
+  h3: HeadingLevel.HEADING_3,
+  h4: HeadingLevel.HEADING_4,
+  h5: HeadingLevel.HEADING_5,
+  h6: HeadingLevel.HEADING_6,
+}
+
+/** Convert parsed HTML body into docx block elements */
+function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
+  const domParser = new DOMParser()
+  const parsed = domParser.parseFromString(html, 'text/html')
+  const children: (Paragraph | Table)[] = []
+
+  const processNode = (node: Element) => {
+    const tag = node.tagName.toLowerCase()
+    const style = node.getAttribute('style') ?? ''
+    const align = parseTextAlign(style)
+
+    // Headings
+    if (tag in HTML_HEADING_LEVELS) {
+      children.push(new Paragraph({
+        heading: HTML_HEADING_LEVELS[tag],
+        alignment: align,
+        children: htmlNodeToRuns(node),
+      }))
+      return
+    }
+
+    // Paragraph
+    if (tag === 'p') {
+      const lineStyle = parseInlineStyle(style)
+      const lhRaw = lineStyle['line-height']
+      let spacing: { line?: number; lineRule?: 'auto' | 'atLeast' | 'exact' } | undefined
+      if (lhRaw) {
+        const lh = parseFloat(lhRaw)
+        if (!isNaN(lh) && lh > 0) spacing = { line: Math.round(lh * 240), lineRule: 'auto' }
+      }
+      children.push(new Paragraph({
+        alignment: align,
+        spacing,
+        children: htmlNodeToRuns(node),
+      }))
+      return
+    }
+
+    // Unordered list
+    if (tag === 'ul') {
+      node.querySelectorAll(':scope > li').forEach(li => {
+        children.push(new Paragraph({
+          bullet: { level: 0 },
+          children: htmlNodeToRuns(li),
+        }))
+      })
+      return
+    }
+
+    // Ordered list
+    if (tag === 'ol') {
+      node.querySelectorAll(':scope > li').forEach(li => {
+        children.push(new Paragraph({
+          numbering: { reference: 'default-numbering', level: 0 },
+          children: htmlNodeToRuns(li),
+        }))
+      })
+      return
+    }
+
+    // Table
+    if (tag === 'table') {
+      const rows = Array.from(node.querySelectorAll('tr')).map(tr => {
+        const cells = Array.from(tr.querySelectorAll('td, th')).map(td => {
+          const cellParas = Array.from(td.children).flatMap(child => {
+            const childEl = child as Element
+            const childTag = childEl.tagName.toLowerCase()
+            if (['p', 'h1','h2','h3','h4','h5','h6'].includes(childTag)) {
+              processNode(childEl)
+              const last = children.pop()
+              return last ? [last] : []
+            }
+            return [new Paragraph({ children: htmlNodeToRuns(childEl) })]
+          })
+          return new TableCell({
+            children: cellParas.length > 0 ? cellParas as Paragraph[] : [new Paragraph({ children: [] })],
+            borders: {
+              top:    { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left:   { style: BorderStyle.SINGLE, size: 1 },
+              right:  { style: BorderStyle.SINGLE, size: 1 },
+            },
+          })
+        })
+        return new TableRow({ children: cells })
+      })
+      if (rows.length > 0) {
+        children.push(new Table({
+          rows,
+          width: { size: 100, type: WidthType.PERCENTAGE },
+        }))
+      }
+      return
+    }
+
+    // Blockquote / div — recurse into children
+    Array.from(node.children).forEach(child => processNode(child as Element))
+  }
+
+  Array.from(parsed.body.children).forEach(child => processNode(child as Element))
+  return children
+}
+
 /** Export TipTap JSON document to a .docx Blob */
-export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig): Promise<Blob> {
-  const children = doc.content.flatMap(nodeToParagraphs)
+export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlContent?: string): Promise<Blob> {
+  // Prefer HTML path (full fidelity) when caller provides editor.getHTML()
+  const children = htmlContent
+    ? htmlToDocxChildren(htmlContent)
+    : doc.content.flatMap(nodeToParagraphs)
 
   const cfg: PageConfig = pageConfig ?? {
     paperSize: 'A4',

@@ -3,6 +3,7 @@
  * and the tool executor that operates on a TipTap Editor instance.
  */
 import type { Editor } from '@tiptap/react'
+import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 
 // ─── OpenAI-compatible tool schemas ────────────────────────────────────────
 
@@ -604,6 +605,7 @@ export async function executeTool(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   args: Record<string, any>,
   editor: Editor,
+  onPageConfigChange?: (updater: (prev: PageConfig) => PageConfig) => void,
 ): Promise<string> {
   try {
     switch (toolName) {
@@ -796,12 +798,23 @@ export async function executeTool(
 
       case 'set_page_margins': {
         const { top, bottom, left, right } = args as { top: string; bottom: string; left: string; right: string }
-        const el = document.querySelector('.ProseMirror') as HTMLElement | null
-        if (el) {
-          el.style.paddingTop = top
-          el.style.paddingBottom = bottom
-          el.style.paddingLeft = left
-          el.style.paddingRight = right
+
+        /** Parse a CSS length value to centimetres */
+        const parseCm = (val: string): number => {
+          const n = parseFloat(val)
+          if (val.endsWith('mm')) return n / 10
+          if (val.endsWith('in')) return n * 2.54
+          return isNaN(n) ? 2.54 : n  // default: treat bare number as cm
+        }
+
+        if (onPageConfigChange) {
+          onPageConfigChange(prev => ({
+            ...prev,
+            marginTop:    parseCm(top),
+            marginBottom: parseCm(bottom),
+            marginLeft:   parseCm(left),
+            marginRight:  parseCm(right),
+          }))
         }
         return `已设置页边距：上${top} 下${bottom} 左${left} 右${right}`
       }

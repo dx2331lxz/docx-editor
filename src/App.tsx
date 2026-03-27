@@ -236,8 +236,8 @@ const App: React.FC = () => {
   const editor = useDocxEditor({ onStatsChange: setStats, onDocumentChange: setCurrentDoc })
   const { lastSaved, draftInfo, restoreDraft, dismissDraft } = useAutoSave(editor)
 
-  const handleExport = async () => {    if (!currentDoc) return
-    const blob = await exportDocx(currentDoc, pageConfig)
+  const handleExport = async () => {    if (!currentDoc || !editor) return
+    const blob = await exportDocx(currentDoc, pageConfig, editor.getHTML())
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url; a.download = 'document.docx'; a.click()
@@ -619,6 +619,7 @@ const App: React.FC = () => {
           onClose={() => setShowVibeEditing(false)}
           width={vibePanelWidth}
           onWidthChange={setVibePanelWidth}
+          onPageConfigChange={(updater) => setPageConfig(prev => updater(prev))}
         />
       )}
 

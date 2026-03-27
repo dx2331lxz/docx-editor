@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
 import { runVibeEditing } from '../../lib/vibeEditingEngine'
 import type { ProgressCallback } from '../../lib/vibeEditingEngine'
+import type { PageConfig } from '../PageSetup/PageSetupDialog'
 
 interface Props {
   editor: Editor | null
   onClose: () => void
   width?: number
   onWidthChange?: (w: number) => void
+  onPageConfigChange?: (updater: (prev: PageConfig) => PageConfig) => void
 }
 
 type StepEntry = {
@@ -95,7 +97,7 @@ function saveSessions(sessions: ChatSession[]) {
   localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 20)))
 }
 
-export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange }: Props) {
+export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange, onPageConfigChange }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
@@ -273,7 +275,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
         })
       } else {
         const effectiveInst = mode === 'edit' ? `【精确编辑模式】${inst}` : inst
-        summary = await runVibeEditing(effectiveInst, editor, onProgress, onAskContinue)
+        summary = await runVibeEditing(effectiveInst, editor, onProgress, onAskContinue, onPageConfigChange)
         setMessages(prev => {
           const next = [...prev]
           const aiMsg = next[next.length - 1]

@@ -2,6 +2,7 @@
  * Vibe Editing Engine — ReAct loop calling SiliconFlow API
  */
 import type { Editor } from '@tiptap/react'
+import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 import { VIBE_TOOLS, executeTool } from './vibeEditingTools'
 
 const API_ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions'
@@ -50,6 +51,7 @@ export async function runVibeEditing(
   editor: Editor,
   onProgress: ProgressCallback,
   onAskContinue?: () => Promise<boolean>,
+  onPageConfigChange?: (updater: (prev: PageConfig) => PageConfig) => void,
 ): Promise<string> {
   const messages: Message[] = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -184,7 +186,7 @@ export async function runVibeEditing(
 
       onProgress({ type: 'action', text: `调用工具：${toolName}` })
 
-      const observation = await executeTool(toolName, toolArgs, editor)
+      const observation = await executeTool(toolName, toolArgs, editor, onPageConfigChange)
       onProgress({ type: 'observation', text: observation.slice(0, 300) })
 
       // Add tool result to messages
