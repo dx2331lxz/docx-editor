@@ -570,6 +570,13 @@ function htmlNodeToRuns(el: Element, inherited: {
 
     // Derive formatting for this element
     const ctx = { ...inherited }
+
+    // <br> → hard line break
+    if (tag === 'br') {
+      runs.push(new TextRun({ break: 1 }))
+      return
+    }
+
     if (tag === 'strong' || tag === 'b' || css['font-weight'] === 'bold' || css['font-weight'] === '700') ctx.bold = true
     if (tag === 'em' || tag === 'i' || css['font-style'] === 'italic') ctx.italics = true
     if (tag === 'u' || css['text-decoration']?.includes('underline')) ctx.underline = true
@@ -646,6 +653,18 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       if (lhRaw) {
         const lh = parseFloat(lhRaw)
         if (!isNaN(lh) && lh > 0) spacing = { line: Math.round(lh * 240), lineRule: 'auto' }
+      }
+      // Fallback: line-height may live on inline spans (textStyle mark applied via toolbar)
+      if (!spacing) {
+        const firstSpan = node.querySelector('span')
+        if (firstSpan) {
+          const spanCss = parseInlineStyle(firstSpan.getAttribute('style') ?? '')
+          const spanLh = spanCss['line-height']
+          if (spanLh) {
+            const lh = parseFloat(spanLh)
+            if (!isNaN(lh) && lh > 0) spacing = { line: Math.round(lh * 240), lineRule: 'auto' }
+          }
+        }
       }
 
       // First-line indent from text-indent
