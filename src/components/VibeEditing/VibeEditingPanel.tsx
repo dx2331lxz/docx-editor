@@ -330,13 +330,13 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
 
   return (
     <div style={{
-      position: 'relative',
+      position: 'fixed',
+      top: 0,
+      right: 0,
+      bottom: 0,
       width,
-      flex: 1,
-      minHeight: 0,
-      alignSelf: 'stretch',
       flexShrink: 0,
-      zIndex: 100,
+      zIndex: 1100,
       display: 'flex',
       flexDirection: 'column',
       background: 'rgba(10, 14, 30, 0.97)',

@@ -34,6 +34,7 @@ const SYSTEM_PROMPT = `你是 DocxEditor 的核心 AI 编辑引擎，拥有完�
 type Message = {
   role: 'system' | 'user' | 'assistant' | 'tool'
   content: string | null
+  reasoning_content?: string
   tool_call_id?: string
   tool_calls?: Array<{
     id: string
@@ -148,6 +149,7 @@ export async function runVibeEditing(
     const assistantMsg: Message = {
       role: 'assistant',
       content: accumulatedContent || null,
+      reasoning_content: accumulatedThinking || undefined,
       ...(toolCallsList.length > 0 ? {
         tool_calls: toolCallsList.map(tc => ({
           id: tc.id,

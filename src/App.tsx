@@ -380,7 +380,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden" style={showVibeEditing ? { paddingRight: vibePanelWidth } : undefined}>
       {!printPreview && (
         <>
           {/* Font missing banner */}
@@ -597,16 +597,7 @@ const App: React.FC = () => {
               onDeleteComment={handleDeleteComment}
             />
           )}
-          {showVibeEditing && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', flexShrink: 0, minHeight: 0 }}>
-              <VibeEditingPanel
-                editor={editor}
-                onClose={() => setShowVibeEditing(false)}
-                width={vibePanelWidth}
-                onWidthChange={setVibePanelWidth}
-              />
-            </div>
-          )}
+          
         </div>
       )}
 
@@ -618,6 +609,16 @@ const App: React.FC = () => {
           syncStatus={syncStatus}
           lastSyncTime={lastSyncTime}
           onOpenCloudSync={() => setShowCloudSync(true)}
+        />
+      )}
+
+      {/* Vibe Editing panel — fixed full-height overlay */}
+      {showVibeEditing && (
+        <VibeEditingPanel
+          editor={editor}
+          onClose={() => setShowVibeEditing(false)}
+          width={vibePanelWidth}
+          onWidthChange={setVibePanelWidth}
         />
       )}
 
