@@ -632,8 +632,10 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
     // Headings
     if (tag in HTML_HEADING_LEVELS) {
       const paraStyle = parseInlineStyle(style)
+      // 如果标题没有显式设置颜色，强制使用黑色（避免 Word 标题样式默认蓝色）
+      const explicitColor = parseCssColor(paraStyle['color'])
       const paraInherited = {
-        ...(parseCssColor(paraStyle['color'])                                   ? { color:      parseCssColor(paraStyle['color'])! }      : {}),
+        color: explicitColor || '000000', // 强制黑色
         ...(paraStyle['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim() ? { fontFamily: paraStyle['font-family']!.replace(/['"]/g, '').split(',')[0].trim() } : {}),
         ...(parseFontSizeToHalfPt(paraStyle['font-size'])                       ? { sizeHalfPt: parseFontSizeToHalfPt(paraStyle['font-size'])! } : {}),
       }

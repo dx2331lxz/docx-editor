@@ -51,7 +51,7 @@ def analyze_paragraph(p, idx):
         'index': idx,
         'text': p.text[:60] + ('...' if len(p.text) > 60 else ''),
         'full_text': p.text,
-        'style': p.style.name,
+        'style': p.style.name if p.style else '无样式',
         'alignment': alignment_name(p.alignment),
         'runs': [],
         'paragraph_format': {},
