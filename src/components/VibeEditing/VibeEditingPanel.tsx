@@ -703,8 +703,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
             lineHeight: 1.7,
             minWidth: 120,
           }}>
-            {msg.steps.map(step => (
-              <div key={step.id} style={{ display: 'flex', gap: 6, marginBottom: 3, alignItems: 'flex-start' }}>
+            {msg.steps.map((step, si) => (
+              <div key={`${i}-${step.id}-${si}`} style={{ display: 'flex', gap: 6, marginBottom: 3, alignItems: 'flex-start' }}>
                 <span style={{ flexShrink: 0 }}>{STEP_ICON[step.type] || '•'}</span>
                 <span style={{
                   color: STEP_COLOR[step.type] || '#c8d8ff',
