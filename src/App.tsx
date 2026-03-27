@@ -237,7 +237,7 @@ const App: React.FC = () => {
   const { lastSaved, draftInfo, restoreDraft, dismissDraft } = useAutoSave(editor)
 
   const handleExport = async () => {    if (!currentDoc) return
-    const blob = await exportDocx(currentDoc)
+    const blob = await exportDocx(currentDoc, pageConfig)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url; a.download = 'document.docx'; a.click()

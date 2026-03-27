@@ -7,6 +7,7 @@ import {
   TextRun,
   HeadingLevel,
   AlignmentType,
+  PageOrientation,
   Table,
   TableRow,
   TableCell,
@@ -14,6 +15,7 @@ import {
   BorderStyle,
 } from 'docx'
 import type { AIDocument, AIDocumentNode } from '../types/editor'
+import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 
 // ── Import helpers ───────────────────────────────────────────────────────────
 
@@ -488,9 +490,31 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
   return (node.content ?? []).flatMap(nodeToParagraphs)
 }
 
+// 1 cm = 567 twips
+const CM_TO_TWIP = 567
+
+const PAPER_SIZES_TWIP: Record<string, { width: number; height: number }> = {
+  A4:     { width: 11906, height: 16838 },  // 210mm × 297mm
+  A3:     { width: 16838, height: 23811 },  // 297mm × 420mm
+  Letter: { width: 12240, height: 15840 },  // 8.5in × 11in
+}
+
 /** Export TipTap JSON document to a .docx Blob */
-export async function exportDocx(doc: AIDocument): Promise<Blob> {
+export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig): Promise<Blob> {
   const children = doc.content.flatMap(nodeToParagraphs)
+
+  const cfg: PageConfig = pageConfig ?? {
+    paperSize: 'A4',
+    orientation: 'portrait',
+    marginTop: 2.54,
+    marginBottom: 2.54,
+    marginLeft: 2.54,
+    marginRight: 2.54,
+  }
+
+  const { width, height } = PAPER_SIZES_TWIP[cfg.paperSize] ?? PAPER_SIZES_TWIP['A4']
+  const isLandscape = cfg.orientation === 'landscape'
+
   const document = new Document({
     numbering: {
       config: [{
@@ -503,7 +527,24 @@ export async function exportDocx(doc: AIDocument): Promise<Blob> {
         }],
       }],
     },
-    sections: [{ children }],
+    sections: [{
+      properties: {
+        page: {
+          size: {
+            width:  isLandscape ? height : width,
+            height: isLandscape ? width  : height,
+            orientation: isLandscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
+          },
+          margin: {
+            top:    Math.round(cfg.marginTop    * CM_TO_TWIP),
+            bottom: Math.round(cfg.marginBottom * CM_TO_TWIP),
+            left:   Math.round(cfg.marginLeft   * CM_TO_TWIP),
+            right:  Math.round(cfg.marginRight  * CM_TO_TWIP),
+          },
+        },
+      },
+      children,
+    }],
   })
   return Packer.toBlob(document)
 }

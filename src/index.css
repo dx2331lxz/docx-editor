@@ -39,7 +39,6 @@ body {
 .a4-page {
   width: 210mm;
   min-height: 297mm;
-  padding: 2.54cm;
   background: white;
   box-shadow: 0 2px 8px rgba(0,0,0,0.18);
   margin: 0 auto;
