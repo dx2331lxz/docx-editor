@@ -624,10 +624,16 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
 
     // Headings
     if (tag in HTML_HEADING_LEVELS) {
+      const paraStyle = parseInlineStyle(style)
+      const paraInherited = {
+        ...(parseCssColor(paraStyle['color'])                                   ? { color:      parseCssColor(paraStyle['color'])! }      : {}),
+        ...(paraStyle['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim() ? { fontFamily: paraStyle['font-family']!.replace(/['"]/g, '').split(',')[0].trim() } : {}),
+        ...(parseFontSizeToHalfPt(paraStyle['font-size'])                       ? { sizeHalfPt: parseFontSizeToHalfPt(paraStyle['font-size'])! } : {}),
+      }
       children.push(new Paragraph({
         heading: HTML_HEADING_LEVELS[tag],
         alignment: align,
-        children: htmlNodeToRuns(node),
+        children: htmlNodeToRuns(node, paraInherited),
       }))
       return
     }
@@ -641,10 +647,35 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         const lh = parseFloat(lhRaw)
         if (!isNaN(lh) && lh > 0) spacing = { line: Math.round(lh * 240), lineRule: 'auto' }
       }
+
+      // First-line indent from text-indent
+      let indent: { firstLine?: number } | undefined
+      const tiRaw = lineStyle['text-indent']
+      if (tiRaw) {
+        if (tiRaw.endsWith('em')) {
+          const em = parseFloat(tiRaw)
+          if (!isNaN(em)) indent = { firstLine: Math.round(em * 240) }
+        } else if (tiRaw.endsWith('px')) {
+          const px = parseFloat(tiRaw)
+          if (!isNaN(px)) indent = { firstLine: Math.round(px * 15) }
+        } else if (tiRaw.endsWith('cm')) {
+          const cm = parseFloat(tiRaw)
+          if (!isNaN(cm)) indent = { firstLine: Math.round(cm * 567) }
+        }
+      }
+
+      // Paragraph-level color/font/size as inherited defaults for runs
+      const paraInherited = {
+        ...(parseCssColor(lineStyle['color'])                                      ? { color:      parseCssColor(lineStyle['color'])! }      : {}),
+        ...(lineStyle['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim()   ? { fontFamily: lineStyle['font-family']!.replace(/['"]/g, '').split(',')[0].trim() } : {}),
+        ...(parseFontSizeToHalfPt(lineStyle['font-size'])                          ? { sizeHalfPt: parseFontSizeToHalfPt(lineStyle['font-size'])! } : {}),
+      }
+
       children.push(new Paragraph({
         alignment: align,
         spacing,
-        children: htmlNodeToRuns(node),
+        indent,
+        children: htmlNodeToRuns(node, paraInherited),
       }))
       return
     }
