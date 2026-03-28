@@ -1111,7 +1111,22 @@ export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlC
   const { width, height } = PAPER_SIZES_TWIP[cfg.paperSize] ?? PAPER_SIZES_TWIP['A4']
   const isLandscape = cfg.orientation === 'landscape'
 
+  // Default run style: match the editor's CSS defaults (14pt, SimSun)
+  // This ensures paragraphs without explicit font/size marks render consistently in Word.
+  const DEFAULT_FONT_NAME = 'SimSun'   // editor shows 宋体 as default
+  const DEFAULT_SIZE_HP   = 28         // 14pt × 2 = 28 half-points
+
   const document = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: { name: DEFAULT_FONT_NAME, eastAsia: DEFAULT_FONT_NAME },
+            size: DEFAULT_SIZE_HP,
+          },
+        },
+      },
+    },
     numbering: {
       config: [{
         reference: 'default-numbering',
