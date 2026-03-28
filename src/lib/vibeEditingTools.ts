@@ -1294,7 +1294,7 @@ export async function executeTool(
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SF_API_KEY}` },
           body: JSON.stringify({
-            model: 'Qwen/Qwen2.5-VL-72B-Instruct',
+            model: 'Pro/moonshotai/Kimi-K2.5',
             messages: [{
               role: 'user',
               content: [
