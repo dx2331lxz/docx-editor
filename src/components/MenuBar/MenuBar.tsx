@@ -173,6 +173,7 @@ const MenuDropdown: React.FC<MenuDropdownProps> = ({ menu, isOpen, isAnyOpen, on
             top: pos.top,
             left: pos.left,
             background: 'white',
+            color: '#1f2937',
             border: '1px solid #e5e7eb',
             borderRadius: 6,
             boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
@@ -182,6 +183,7 @@ const MenuDropdown: React.FC<MenuDropdownProps> = ({ menu, isOpen, isAnyOpen, on
             overflowY: 'auto',
             padding: '4px 0',
           }}
+          className="menu-dropdown-light"
         >
           {menu.items.map((item, idx) =>
             item.divider ? (

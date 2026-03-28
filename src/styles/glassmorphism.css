@@ -302,3 +302,17 @@ body::before {
 .ProseMirror {
   color: #1a1a2e !important;
 }
+
+/* ── 白底下拉菜单（Portal）：还原所有被全局覆盖的颜色 ── */
+.menu-dropdown-light,
+.menu-dropdown-light * {
+  color: #1f2937 !important;
+}
+.menu-dropdown-light button:hover {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+.menu-dropdown-light .text-gray-400,
+.menu-dropdown-light .shortcut {
+  color: #9ca3af !important;
+}
