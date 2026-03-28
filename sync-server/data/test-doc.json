@@ -4,12 +4,9 @@
     "type": "doc",
     "content": [
       {
-        "type": "pageBreak"
-      },
-      {
         "type": "heading",
         "attrs": {
-          "textAlign": "center",
+          "textAlign": null,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
@@ -20,20 +17,15 @@
         "content": [
           {
             "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "代码重构社会：从计算机专业视角看生产力与生产关系的矛盾运动"
+            "text": "欢迎使用 DocxEditor"
           }
         ]
       },
       {
         "type": "paragraph",
         "attrs": {
-          "textAlign": "center",
-          "firstLineIndent": 1,
+          "textAlign": null,
+          "firstLineIndent": 0,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
@@ -43,30 +35,7 @@
         "content": [
           {
             "type": "text",
-            "text": "3班 50 路修哲 软件工程 22020007067"
-          }
-        ]
-      },
-      {
-        "type": "heading",
-        "attrs": {
-          "textAlign": null,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null,
-          "level": 2
-        },
-        "content": [
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "摘要"
+            "text": "这是一个对标 WPS 的在线文档编辑器，基于 TipTap + React + TypeScript 构建。"
           }
         ]
       },
@@ -74,7 +43,7 @@
         "type": "paragraph",
         "attrs": {
           "textAlign": null,
-          "firstLineIndent": 1,
+          "firstLineIndent": 0,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
@@ -84,30 +53,236 @@
         "content": [
           {
             "type": "text",
-            "text": "马克思主义基本原理指出，生产力决定生产关系，生产关系反作用于生产力，二者的矛盾运动是社会发展的根本动力。作为一名软件工程专业的学生，身处数字化浪潮的中心，我深刻体会到算力、算法与数据作为新质生产力，正在剧烈地冲击着旧有的协作模式与分配机制。本文将立足专业视角，探讨技术变革如何重塑社会关系，以及我们应如何理解这一矛盾运动。"
+            "text": "主要特性："
           }
         ]
       },
       {
-        "type": "heading",
-        "attrs": {
-          "textAlign": null,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null,
-          "level": 2
-        },
+        "type": "bulletList",
         "content": [
           {
-            "type": "text",
-            "marks": [
+            "type": "listItem",
+            "content": [
               {
-                "type": "bold"
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "富文本格式"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：粗体、斜体、下划线、删除线、高亮"
+                  }
+                ]
               }
-            ],
-            "text": "正文"
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "段落对齐"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：左对齐、居中、右对齐、两端对齐"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "多级标题"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：H1 ~ H6"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "列表"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：无序列表、有序列表"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "表格"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：可调整大小的表格"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "DOCX 导入/导出"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：支持 .docx 格式"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null,
+                  "firstLineIndent": 0,
+                  "backgroundColor": null,
+                  "marginTop": null,
+                  "marginBottom": null,
+                  "paddingLeft": null,
+                  "paddingRight": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "字体/字号/颜色/行距"
+                  },
+                  {
+                    "type": "text",
+                    "text": "：完整排版控制"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -115,7 +290,7 @@
         "type": "paragraph",
         "attrs": {
           "textAlign": null,
-          "firstLineIndent": 1,
+          "firstLineIndent": 0,
           "backgroundColor": null,
           "marginTop": null,
           "marginBottom": null,
@@ -125,48 +300,7 @@
         "content": [
           {
             "type": "text",
-            "text": "马克思在《政治经济学批判》序言中写道：\"社会的物质生产力发展到一定阶段，便同它们一直在其中运动的现存生产关系……发生矛盾。\"这一\"生产力与生产关系的矛盾运动\"原理，初读时似乎抽象宏大，但当我真正深入计算机科学的世界，敲下一行行代码，目睹一次次技术迭代时，我发现这一真理在数字时代不仅没有过时，反而以前所未有的速度和烈度在现实中通过\"比特\"与\"字节\"演绎着。"
-          }
-        ]
-      },
-      {
-        "type": "heading",
-        "attrs": {
-          "textAlign": null,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null,
-          "level": 2
-        },
-        "content": [
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "一、核心变量的更替：数字时代的新质生产力"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "在传统的工业社会，生产力主要体现为蒸汽机、电力和流水线。而在我所学的计算机专业领域，生产力的内涵已经发生了质的飞跃。我认为，当前最活跃的生产力要素主要由三部分组成：以高性能芯片为代表的"
+            "text": "后续将接入 "
           },
           {
             "type": "text",
@@ -175,268 +309,11 @@
                 "type": "bold"
               }
             ],
-            "text": "算力"
+            "text": "AI 自动排版"
           },
           {
             "type": "text",
-            "text": "（劳动资料）、以海量互联网信息为代表的"
-          },
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "数据"
-          },
-          {
-            "type": "text",
-            "text": "（劳动对象）以及不断进化的"
-          },
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "算法"
-          },
-          {
-            "type": "text",
-            "text": "（劳动者技能的延伸）。"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "尤其是以ChatGPT为代表的大语言模型的爆发，标志着生产力的一次重大跃升。作为学生，我深有感触：过去需要耗费数天编写和调试的基础代码，现在通过AI辅助几分钟即可完成。这种效率的指数级增长，不仅仅是工具的升级，更是生产力本质的质变——人类的智力活动正在被部分\"外包\"给机器。这种强大的新质生产力，势必会要求生产关系发生相应的变革。"
-          }
-        ]
-      },
-      {
-        "type": "heading",
-        "attrs": {
-          "textAlign": null,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null,
-          "level": 2
-        },
-        "content": [
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "二、碰撞与重构：技术倒逼生产关系的变革"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "生产力决定生产关系。在计算机领域，最典型的案例莫过于\"开源运动\"。在软件发展初期，闭源、私有软件是主流，这对应的是私有制的生产关系。然而，随着软件复杂度的提升（生产力发展），单打独斗或封闭开发已无法满足需求。于是，Linux、GitHub等开源模式应运而生。这种打破了传统产权边界、强调\"共享、协作、共创\"的生产关系，极大地释放了程序员的创造力，反过来推动了互联网技术的爆发式增长。这正是生产力发展冲破旧有生产关系桎梏的生动体现。"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "然而，矛盾依然存在。在现实生活中，我们也能清晰地看到生产关系\"滞后\"于生产力发展所带来的阵痛。"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "例如，我们在专业课上讨论的\"算法伦理\"与\"平台经济\"。外卖算法（生产力）能够极致地压缩配送时间，提高效率，但现有的劳动雇佣关系（生产关系）往往难以保障骑手的权益，导致\"算法困在系统中\"的现象。"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "再如，AI绘画和AI编程的出现，极大地提高了内容生产效率，但现有的版权法（属于生产关系范畴的上层建筑）却难以界定AI生成物的归属权，引发了艺术家与技术开发者的激烈冲突。这些现实矛盾告诉我们，当先进的算法和算力出现时，如果分配机制、法律规范等生产关系不能及时调整，就会阻碍技术的进一步应用，甚至引发社会问题。"
-          }
-        ]
-      },
-      {
-        "type": "heading",
-        "attrs": {
-          "textAlign": null,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null,
-          "level": 2
-        },
-        "content": [
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "三、自身的感悟与未来的抉择"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "作为未来的互联网从业者，理解这一原理对我有着极大的现实指导意义。"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "首先，它让我客观看待\"技术性失业\"。很多同学担心：\"程序员会被AI取代吗？\"用马克思主义的视角看，这是生产力飞跃带来的必然分工调整。历史上每一次生产力革命（如工业革命）都会消灭旧岗位，但也会创造新岗位。我们不应抗拒技术，而应主动适应新的生产关系，从单纯的\"代码撰写者\"转变为\"技术驾驭者\"和\"系统设计者\"。"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "其次，它指导我不仅要关注技术本身，更要关注技术背后的社会属性。在未来的工作中，无论是设计一个推荐算法，还是开发一个管理系统，我不能只追求代码的运行效率（生产力指标），更要思考这套系统是否构建了公平、合理的交互关系（生产关系指标）。技术应当服务于人的全面发展，而不是成为异化人的工具。"
-          }
-        ]
-      },
-      {
-        "type": "heading",
-        "attrs": {
-          "textAlign": null,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null,
-          "level": 2
-        },
-        "content": [
-          {
-            "type": "text",
-            "marks": [
-              {
-                "type": "bold"
-              }
-            ],
-            "text": "结语"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "attrs": {
-          "textAlign": null,
-          "firstLineIndent": 1,
-          "backgroundColor": null,
-          "marginTop": null,
-          "marginBottom": null,
-          "paddingLeft": null,
-          "paddingRight": null
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "生产力与生产关系的矛盾运动，是贯穿人类社会发展的红线，也是理解数字时代的钥匙。从算力的指数级增长到代码共享模式的兴起，计算机技术的发展史就是一部鲜活的马克思主义哲学教科书。作为新时代的计算机专业学子，我们不仅是先进生产力的代表者，更应成为构建新型、和谐生产关系的推动者。唯有让生产关系适应并促进数字生产力的发展，技术的光芒才能真正普照人类社会。"
+            "text": "（/api/ai-format），实现 Vibe Editing。"
           }
         ]
       }
@@ -445,5 +322,5 @@
   "meta": {
     "title": "docx-editor"
   },
-  "updatedAt": "2026-03-27T09:19:20.187Z"
+  "updatedAt": "2026-03-28T09:18:15.407Z"
 }

@@ -109,6 +109,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
   const [askContinueResolver, setAskContinueResolver] = useState<((v: boolean) => void) | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const lastSavedAtRef = useRef(0) // 记录上次保存时间，防止重复保存
 
   // Drag-resize handle
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
@@ -163,6 +164,20 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     const existing = loadSessions()
     saveSessions([session, ...existing])
   }, [])
+
+  // 会话完成时保存（AI 消息有 done: true）——必须在 saveSession 定义之后
+  useEffect(() => {
+    if (messages.length < 2) return // 至少有用户消息 + AI 消息
+    const lastMsg = messages[messages.length - 1]
+    if (lastMsg.role !== 'ai' || !lastMsg.done) return
+
+    // 检查是否刚保存过（5秒内不重复保存）
+    const now = Date.now()
+    if (now - lastSavedAtRef.current < 5000) return
+    lastSavedAtRef.current = now
+
+    saveSession(messages, mode)
+  }, [messages, mode, saveSession])
 
   const runAskMode = async (
     question: string,
@@ -283,18 +298,13 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
           return [...next.slice(0, -1), { ...aiMsg, summary, done: true }]
         })
       }
-
-      setMessages(prev => {
-        saveSession(prev, mode)
-        return prev
-      })
     } catch (err) {
       gStepId++
       setMessages(prev => {
         const next = [...prev]
         const aiMsg = next[next.length - 1]
         if (aiMsg?.role !== 'ai') return prev
-        const updated = [
+        return [
           ...next.slice(0, -1),
           {
             ...aiMsg,
@@ -303,8 +313,6 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
             done: true,
           },
         ]
-        saveSession(updated, mode)
-        return updated
       })
     } finally {
       setRunning(false)
