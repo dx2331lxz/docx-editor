@@ -340,7 +340,6 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
         marks.find((m) => m.type === type)?.attrs ?? {}
 
       // All inline style attrs live in the single `textStyle` mark
-      // (TipTap Color, FontFamily, FontSize extensions all extend textStyle)
       const styleAttrs = markAttrs('textStyle') as Record<string, string | null>
       const fontFamily = styleAttrs.fontFamily?.replace(/"/g, '').split(',')[0]?.trim()
 
@@ -356,7 +355,7 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
         if (!isNaN(px)) sizeHalfPt = Math.round(px * 1.5)
       }
 
-      // Color: stored in textStyle.attrs.color as "#RRGGBB" or "rgb(r,g,b)"
+      // Color
       const rawColor = styleAttrs.color ?? undefined
       let color: string | undefined
       if (rawColor) {
@@ -373,15 +372,37 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
         }
       }
 
+      // Text background color (BackgroundColor extension)
+      const rawBg = styleAttrs.backgroundColor ?? undefined
+      const bgHex = rawBg ? parseCssColor(rawBg) : undefined
+
+      // Letter spacing: stored as bare number (px), e.g. "2" → 2px
+      // docx characterSpacing is in twentieths of a point; 1px ≈ 0.75pt = 15 twip
+      let characterSpacing: number | undefined
+      const lsRaw = styleAttrs.letterSpacing ?? ''
+      if (lsRaw) {
+        const lsPx = parseFloat(lsRaw)
+        if (!isNaN(lsPx)) characterSpacing = Math.round(lsPx * 15)
+      }
+
       return new TextRun({
-        text:      child.text ?? '',
-        bold:      hasMark('bold'),
-        italics:   hasMark('italic'),
-        underline: hasMark('underline') ? {} : undefined,
-        strike:    hasMark('strike'),
+        text:             child.text ?? '',
+        bold:             hasMark('bold'),
+        italics:          hasMark('italic'),
+        underline:        hasMark('underline') ? {} : undefined,
+        strike:           hasMark('strike'),
+        superScript:      hasMark('superscript'),
+        subScript:        hasMark('subscript'),
         color,
-        font:      fontFamily ? { name: fontFamily } : undefined,
-        size:      sizeHalfPt,
+        font:             fontFamily ? { name: fontFamily } : undefined,
+        size:             sizeHalfPt,
+        characterSpacing,
+        // Text highlight (Highlight mark with color attr)
+        ...(hasMark('highlight') ? { highlight: cssColorToHighlight(
+          (markAttrs('highlight') as Record<string, string>).color ?? '#ffff00'
+        ) } : {}),
+        // Text background shading
+        ...(bgHex ? { shading: { type: ShadingType.CLEAR, fill: bgHex } } : {}),
       })
     })
 }
@@ -413,31 +434,68 @@ function nodeToTable(node: AIDocumentNode): Table {
 function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
   const align = toAlignment(node.attrs?.textAlign as string | undefined)
 
+  // ── Shared spacing builder (used by heading + paragraph) ────────────────
+  const buildSpacing = (attrs: Record<string, unknown>): {
+    line: number; lineRule: 'auto'; before?: number; after?: number
+  } => {
+    const lineHeight = attrs.lineHeight as string | undefined
+    const lhNum = lineHeight ? parseFloat(lineHeight) : NaN
+    const line = !isNaN(lhNum) && lhNum > 0 ? Math.round(lhNum * 240) : Math.round(1.6 * 240)
+    const result: { line: number; lineRule: 'auto'; before?: number; after?: number } = {
+      line, lineRule: 'auto',
+    }
+    const mt = attrs.marginTop as number | undefined
+    const mb = attrs.marginBottom as number | undefined
+    if (mt != null && mt > 0) result.before = Math.round(mt * 20)
+    if (mb != null && mb > 0) result.after  = Math.round(mb * 20)
+    return result
+  }
+
+  // ── Shared indent builder ────────────────────────────────────────────────
+  const buildIndent = (attrs: Record<string, unknown>): {
+    firstLine?: number; left?: number; right?: number
+  } | undefined => {
+    const fi = attrs.firstLineIndent as number | undefined
+    const pl = attrs.paddingLeft     as number | undefined  // cm
+    const pr = attrs.paddingRight    as number | undefined  // cm
+    if (!fi && !pl && !pr) return undefined
+    const res: { firstLine?: number; left?: number; right?: number } = {}
+    if (fi) res.firstLine = Math.round(fi * 2 * 240)  // level → 2em → twip (12pt base)
+    if (pl) res.left      = Math.round(pl * 567)       // cm → twip
+    if (pr) res.right     = Math.round(pr * 567)
+    return res
+  }
+
+  // ── Shared shading builder ───────────────────────────────────────────────
+  const buildShading = (attrs: Record<string, unknown>) => {
+    const bg = attrs.backgroundColor as string | undefined
+    if (!bg) return {}
+    const hex = parseCssColor(bg)
+    return hex ? { shading: { type: ShadingType.CLEAR, fill: hex } } : {}
+  }
+
   if (node.type === 'heading') {
+    const attrs = (node.attrs ?? {}) as Record<string, unknown>
     return [
       new Paragraph({
-        heading: toHeadingLevel(node.attrs?.level as number | undefined),
+        heading: toHeadingLevel(attrs.level as number | undefined),
         alignment: align,
+        spacing: buildSpacing(attrs),
+        indent: buildIndent(attrs),
+        ...buildShading(attrs),
         children: buildRuns(node),
       }),
     ]
   }
 
   if (node.type === 'paragraph') {
-    // Extract line spacing
-    const lineHeight = node.attrs?.lineHeight as string | undefined
-    let spacing: { line?: number; lineRule?: 'auto' | 'atLeast' | 'exact' } | undefined
-    if (lineHeight) {
-      const lhNum = parseFloat(lineHeight)
-      if (!isNaN(lhNum)) {
-        spacing = { line: Math.round(lhNum * 240), lineRule: 'auto' }
-      }
-    }
-
+    const attrs = (node.attrs ?? {}) as Record<string, unknown>
     return [
       new Paragraph({
         alignment: align,
-        spacing,
+        spacing: buildSpacing(attrs),
+        indent: buildIndent(attrs),
+        ...buildShading(attrs),
         children: buildRuns(node),
       }),
     ]
@@ -448,8 +506,10 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
       (item.content ?? []).flatMap((child) => {
         if (child.type === 'paragraph') {
           const childAlign = toAlignment(child.attrs?.textAlign as string | undefined)
+          const childAttrs = (child.attrs ?? {}) as Record<string, unknown>
           return [new Paragraph({
             alignment: childAlign,
+            spacing: buildSpacing(childAttrs),
             children: buildRuns(child),
             bullet: { level: 0 },
           })]
@@ -464,8 +524,10 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
       (item.content ?? []).flatMap((child) => {
         if (child.type === 'paragraph') {
           const childAlign = toAlignment(child.attrs?.textAlign as string | undefined)
+          const childAttrs = (child.attrs ?? {}) as Record<string, unknown>
           return [new Paragraph({
             alignment: childAlign,
+            spacing: buildSpacing(childAttrs),
             children: buildRuns(child),
             numbering: { reference: 'default-numbering', level: 0 },
           })]
@@ -725,6 +787,15 @@ function htmlNodeToRuns(el: Element, inherited: {
   return runs
 }
 
+/** Parse CSS length value to twips (1/1440 inch). Supports em/px/cm/pt. */
+function parseToTwipSimple(val: string): number | undefined {
+  if (val.endsWith('em'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 240) }
+  if (val.endsWith('px'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 15) }
+  if (val.endsWith('cm'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 567) }
+  if (val.endsWith('pt'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 20) }
+  return undefined
+}
+
 /** Parse text-align from inline style string */
 function parseTextAlign(style: string): AlignmentType {
   const css = parseInlineStyle(style)
@@ -812,10 +883,19 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         shading: { type: ShadingType.CLEAR, fill: cssHexColor(hBgColor) ?? 'FFFFFF' }
       } : {}
 
+      // Heading indent: padding-left/right (ParagraphSpacing can apply to headings)
+      const hPlRaw = paraStyle['padding-left']
+      const hPrRaw = paraStyle['padding-right']
+      const hIndent = (hPlRaw || hPrRaw) ? {
+        ...(hPlRaw ? { left:  parseToTwipSimple(hPlRaw) } : {}),
+        ...(hPrRaw ? { right: parseToTwipSimple(hPrRaw) } : {}),
+      } : undefined
+
       children.push(new Paragraph({
         heading: HTML_HEADING_LEVELS[tag],
         alignment: align,
         spacing: headingSpacing,
+        indent: hIndent,
         ...hShadingProp,
         children: htmlNodeToRuns(node, paraInherited),
       }))
@@ -880,19 +960,11 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       const plRaw = lineStyle['padding-left']
       const prRaw = lineStyle['padding-right']
 
-      const parseToTwip = (val: string): number | undefined => {
-        if (val.endsWith('em'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 240) }
-        if (val.endsWith('px'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 15) }
-        if (val.endsWith('cm'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 567) }
-        if (val.endsWith('pt'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 20) }
-        return undefined
-      }
-
       if (tiRaw || plRaw || prRaw) {
         indent = {}
-        if (tiRaw) { const v = parseToTwip(tiRaw); if (v !== undefined) indent.firstLine = v }
-        if (plRaw) { const v = parseToTwip(plRaw);  if (v !== undefined) indent.left = v }
-        if (prRaw) { const v = parseToTwip(prRaw);  if (v !== undefined) indent.right = v }
+        if (tiRaw) { const v = parseToTwipSimple(tiRaw); if (v !== undefined) indent.firstLine = v }
+        if (plRaw) { const v = parseToTwipSimple(plRaw);  if (v !== undefined) indent.left = v }
+        if (prRaw) { const v = parseToTwipSimple(prRaw);  if (v !== undefined) indent.right = v }
       }
 
       // ── Paragraph background color (ParagraphShading extension) ──────────
