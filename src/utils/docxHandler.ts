@@ -1143,7 +1143,6 @@ export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlC
         heading6: { run: { ...headingRunStyle, size: 20 } },  // 10pt
       },
     },
-    },
     numbering: {
       config: [{
         reference: 'default-numbering',
