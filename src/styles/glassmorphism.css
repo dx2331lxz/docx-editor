@@ -316,3 +316,16 @@ body::before {
 .menu-dropdown-light .shortcut {
   color: #9ca3af !important;
 }
+.menu-dropdown-light::-webkit-scrollbar {
+  width: 4px;
+}
+.menu-dropdown-light::-webkit-scrollbar-track {
+  background: transparent;
+}
+.menu-dropdown-light::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+.menu-dropdown-light::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
