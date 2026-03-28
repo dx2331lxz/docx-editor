@@ -639,9 +639,48 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         ...(paraStyle['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim() ? { fontFamily: paraStyle['font-family']!.replace(/['"]/g, '').split(',')[0].trim() } : {}),
         ...(parseFontSizeToHalfPt(paraStyle['font-size'])                       ? { sizeHalfPt: parseFontSizeToHalfPt(paraStyle['font-size'])! } : {}),
       }
+
+      // Scan spans for font/size/color fallback (same as paragraph)
+      if (!paraInherited.fontFamily || !paraInherited.sizeHalfPt) {
+        const firstSpan = node.querySelector('span')
+        if (firstSpan) {
+          const spanCss = parseInlineStyle(firstSpan.getAttribute('style') ?? '')
+          if (!paraInherited.fontFamily) {
+            const ff = spanCss['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim()
+            if (ff) paraInherited.fontFamily = ff
+          }
+          if (!paraInherited.sizeHalfPt) {
+            const sz = parseFontSizeToHalfPt(spanCss['font-size'])
+            if (sz) paraInherited.sizeHalfPt = sz
+          }
+        }
+      }
+
+      // Line spacing and paragraph spacing for headings
+      let headingSpacing: { line?: number; lineRule?: 'auto'; before?: number; after?: number } | undefined
+      // Check <p/h> own style first, then scan spans
+      let resolvedLh: number | undefined
+      const hLhRaw = paraStyle['line-height']
+      if (hLhRaw) { const v = parseFloat(hLhRaw); if (!isNaN(v) && v > 0) resolvedLh = v }
+      if (!resolvedLh) {
+        for (const span of Array.from(node.querySelectorAll('span'))) {
+          const sc = parseInlineStyle(span.getAttribute('style') ?? '')
+          if (sc['line-height']) { const v = parseFloat(sc['line-height']); if (!isNaN(v) && v > 0) { resolvedLh = v; break } }
+        }
+      }
+      const hmtRaw = paraStyle['margin-top']
+      const hmbRaw = paraStyle['margin-bottom']
+      if (resolvedLh || hmtRaw || hmbRaw) {
+        headingSpacing = {}
+        if (resolvedLh) { headingSpacing.line = Math.round(resolvedLh * 240); headingSpacing.lineRule = 'auto' }
+        if (hmtRaw) { const pt = parseFloat(hmtRaw); if (!isNaN(pt)) headingSpacing.before = Math.round(pt * 20) }
+        if (hmbRaw) { const pt = parseFloat(hmbRaw); if (!isNaN(pt)) headingSpacing.after = Math.round(pt * 20) }
+      }
+
       children.push(new Paragraph({
         heading: HTML_HEADING_LEVELS[tag],
         alignment: align,
+        spacing: headingSpacing,
         children: htmlNodeToRuns(node, paraInherited),
       }))
       return
@@ -650,26 +689,53 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
     // Paragraph
     if (tag === 'p') {
       const lineStyle = parseInlineStyle(style)
+
+      // ── Line spacing ──────────────────────────────────────────────────────
+      // Priority 1: line-height on <p> itself
+      let resolvedLineHeight: number | undefined
       const lhRaw = lineStyle['line-height']
-      let spacing: { line?: number; lineRule?: 'auto' | 'atLeast' | 'exact' } | undefined
       if (lhRaw) {
         const lh = parseFloat(lhRaw)
-        if (!isNaN(lh) && lh > 0) spacing = { line: Math.round(lh * 240), lineRule: 'auto' }
+        if (!isNaN(lh) && lh > 0) resolvedLineHeight = lh
       }
-      // Fallback: line-height may live on inline spans (textStyle mark applied via toolbar)
-      if (!spacing) {
-        const firstSpan = node.querySelector('span')
-        if (firstSpan) {
-          const spanCss = parseInlineStyle(firstSpan.getAttribute('style') ?? '')
+      // Priority 2: scan ALL spans — TipTap's setLineHeight stores it on textStyle spans
+      if (!resolvedLineHeight) {
+        const allSpans = Array.from(node.querySelectorAll('span'))
+        for (const span of allSpans) {
+          const spanCss = parseInlineStyle(span.getAttribute('style') ?? '')
           const spanLh = spanCss['line-height']
           if (spanLh) {
             const lh = parseFloat(spanLh)
-            if (!isNaN(lh) && lh > 0) spacing = { line: Math.round(lh * 240), lineRule: 'auto' }
+            if (!isNaN(lh) && lh > 0) {
+              resolvedLineHeight = lh
+              break
+            }
           }
         }
       }
+      const spacing: {
+        line?: number; lineRule?: 'auto' | 'atLeast' | 'exact'
+        before?: number; after?: number
+      } = {}
+      if (resolvedLineHeight) {
+        spacing.line = Math.round(resolvedLineHeight * 240)
+        spacing.lineRule = 'auto'
+      }
 
-      // First-line indent from text-indent
+      // Paragraph before/after spacing (from ParagraphSpacing extension)
+      // Stored as margin-top / margin-bottom in pt on the <p> element
+      const mtRaw = lineStyle['margin-top']
+      const mbRaw = lineStyle['margin-bottom']
+      if (mtRaw) {
+        const pt = parseFloat(mtRaw)
+        if (!isNaN(pt) && pt >= 0) spacing.before = Math.round(pt * 20) // pt → twip (1pt=20twip)
+      }
+      if (mbRaw) {
+        const pt = parseFloat(mbRaw)
+        if (!isNaN(pt) && pt >= 0) spacing.after = Math.round(pt * 20)
+      }
+
+      // ── First-line indent ─────────────────────────────────────────────────
       let indent: { firstLine?: number } | undefined
       const tiRaw = lineStyle['text-indent']
       if (tiRaw) {
@@ -685,16 +751,44 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         }
       }
 
-      // Paragraph-level color/font/size as inherited defaults for runs
-      const paraInherited = {
-        ...(parseCssColor(lineStyle['color'])                                      ? { color:      parseCssColor(lineStyle['color'])! }      : {}),
-        ...(lineStyle['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim()   ? { fontFamily: lineStyle['font-family']!.replace(/['"]/g, '').split(',')[0].trim() } : {}),
-        ...(parseFontSizeToHalfPt(lineStyle['font-size'])                          ? { sizeHalfPt: parseFontSizeToHalfPt(lineStyle['font-size'])! } : {}),
+      // ── Paragraph-level font/size/color — scan first span as fallback ─────
+      // When the whole paragraph uses one font/size set via toolbar, TipTap
+      // wraps all text in a single <span style="font-family:...; font-size:...">
+      // We use these as inherited defaults so bare text nodes also get styled.
+      const paraInherited: {
+        color?: string; fontFamily?: string; sizeHalfPt?: number
+      } = {}
+
+      // First pick up any p-level values
+      if (parseCssColor(lineStyle['color'])) paraInherited.color = parseCssColor(lineStyle['color'])!
+      const pFf = lineStyle['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim()
+      if (pFf) paraInherited.fontFamily = pFf
+      const pSz = parseFontSizeToHalfPt(lineStyle['font-size'])
+      if (pSz) paraInherited.sizeHalfPt = pSz
+
+      // Then try first span for font/size/color if not yet found on <p>
+      if (!paraInherited.fontFamily || !paraInherited.sizeHalfPt) {
+        const firstSpan = node.querySelector('span')
+        if (firstSpan) {
+          const spanCss = parseInlineStyle(firstSpan.getAttribute('style') ?? '')
+          if (!paraInherited.fontFamily) {
+            const ff = spanCss['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim()
+            if (ff) paraInherited.fontFamily = ff
+          }
+          if (!paraInherited.sizeHalfPt) {
+            const sz = parseFontSizeToHalfPt(spanCss['font-size'])
+            if (sz) paraInherited.sizeHalfPt = sz
+          }
+          if (!paraInherited.color) {
+            const col = parseCssColor(spanCss['color'])
+            if (col) paraInherited.color = col
+          }
+        }
       }
 
       children.push(new Paragraph({
         alignment: align,
-        spacing,
+        spacing: Object.keys(spacing).length > 0 ? spacing : undefined,
         indent,
         children: htmlNodeToRuns(node, paraInherited),
       }))
