@@ -58,14 +58,16 @@ export function generatePreviewHtml(editor: Editor, pageConfig: PageConfig): str
       min-height: ${pageH}mm;
       padding: ${mt}cm ${mr}cm ${mb}cm ${ml}cm;
       box-shadow: 0 2px 20px rgba(0,0,0,0.15);
-      font-size: 12pt;
+      font-size: 14pt;
       line-height: 1.6;
       color: #000;
     }
-    h1 { font-size: 18pt; font-weight: bold; margin: 0.5em 0; }
-    h2 { font-size: 16pt; font-weight: bold; margin: 0.5em 0; }
-    h3 { font-size: 14pt; font-weight: bold; margin: 0.4em 0; }
-    h4, h5, h6 { font-weight: bold; margin: 0.3em 0; }
+    h1 { font-size: 2em; font-weight: bold; margin: 0.67em 0; }
+    h2 { font-size: 1.5em; font-weight: bold; margin: 0.83em 0; }
+    h3 { font-size: 1.17em; font-weight: bold; margin: 1em 0; }
+    h4 { font-size: 1em; font-weight: bold; margin: 1.33em 0; }
+    h5 { font-size: 0.83em; font-weight: bold; margin: 1.67em 0; }
+    h6 { font-size: 0.67em; font-weight: bold; margin: 2.33em 0; }
     p { margin: 0 0 0.5em 0; }
     table { border-collapse: collapse; width: 100%; margin: 1em 0; }
     td, th { border: 1px solid #ccc; padding: 4px 8px; }
