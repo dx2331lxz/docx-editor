@@ -67,7 +67,8 @@ const HorizontalRuler: React.FC<HorizontalRulerProps> = ({
       const attrs = ed.getAttributes('paragraph')
       return {
         firstLineIndentEm: (attrs.firstLineIndent as number) ?? 0,
-        leftIndentCm: parseFloat((attrs.marginLeft as string) ?? '0') || 0,
+        // paddingLeft is stored in cm (ParagraphSpacing extension)
+        leftIndentCm: (attrs.paddingLeft as number) ?? 0,
       }
     },
   }) ?? { firstLineIndentEm: 0, leftIndentCm: 0 }
@@ -98,7 +99,7 @@ const HorizontalRuler: React.FC<HorizontalRulerProps> = ({
       if (dragRef.current.target === 'left') {
         const newCm = Math.max(0, dragRef.current.startValue + dCm)
         editor?.chain().focus().updateAttributes('paragraph', {
-          marginLeft: `${newCm.toFixed(2)}cm`,
+          paddingLeft: newCm,
         }).run()
       } else if (dragRef.current.target === 'firstLine') {
         const dEm = dx / PX_PER_EM
