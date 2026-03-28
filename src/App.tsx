@@ -620,6 +620,7 @@ const App: React.FC = () => {
           width={vibePanelWidth}
           onWidthChange={setVibePanelWidth}
           onPageConfigChange={(updater) => setPageConfig(prev => updater(prev))}
+          pageConfig={pageConfig}
         />
       )}
 

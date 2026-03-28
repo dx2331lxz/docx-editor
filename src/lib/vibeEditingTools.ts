@@ -4,6 +4,10 @@
  */
 import type { Editor } from '@tiptap/react'
 import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
+import html2canvas from 'html2canvas'
+
+// ─── Module-level state ─────────────────────────────────────────────────────
+let lastScreenshotBase64: string | null = null
 
 // ─── OpenAI-compatible tool schemas ────────────────────────────────────────
 
@@ -532,6 +536,60 @@ export const VIBE_TOOLS = [
       },
     },
   },
+  // ── Style query tools ─────────────────────────────────────────────────────
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_document_styles',
+      description: '获取文档当前排版样式，包括正文字号/字体/行高、各级标题样式、页边距等',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_selection_styles',
+      description: '获取当前选中文本或光标所在位置的样式（字号、字体、颜色、加粗等）',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  // ── Screenshot & multimodal analysis tools ───────────────────────────────
+  {
+    type: 'function' as const,
+    function: {
+      name: 'screenshot_document',
+      description: '对当前文档页面截图，返回 base64 图片，供多模态模型分析整体排版和审美',
+      parameters: {
+        type: 'object',
+        properties: {
+          area: {
+            type: 'string',
+            enum: ['full', 'top', 'first_screen'],
+            description: '截图范围：full=完整文档，top=文档顶部（前1000px），first_screen=首屏',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'analyze_document_aesthetics',
+      description: '调用多模态AI分析文档截图，评估排版美观度并给出改进建议。需先调用 screenshot_document',
+      parameters: {
+        type: 'object',
+        properties: {
+          focus: {
+            type: 'string',
+            enum: ['overall', 'typography', 'spacing', 'hierarchy'],
+            description: '分析重点：overall（整体）、typography（字体排版）、spacing（间距）、hierarchy（层级结构）',
+          },
+        },
+        required: [],
+      },
+    },
+  },
   // ── Finish ────────────────────────────────────────────────────────────────
   {
     type: 'function' as const,
@@ -606,6 +664,7 @@ export async function executeTool(
   args: Record<string, any>,
   editor: Editor,
   onPageConfigChange?: (updater: (prev: PageConfig) => PageConfig) => void,
+  pageConfig?: PageConfig,
 ): Promise<string> {
   try {
     switch (toolName) {
@@ -1124,6 +1183,135 @@ export async function executeTool(
 
         editor.chain().focus().setContent(html, true).run()
         return `智能排版完成：字体 ${font}、正文 ${bodySize}、行距 ${lineHeight}、${indent ? '首行缩进2em、' : ''}标题加粗`
+      }
+
+      case 'get_document_styles': {
+        const html = editor.getHTML()
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(html, 'text/html')
+
+        // Extract body (p) styles from first paragraph
+        const firstP = doc.querySelector('p')
+        const pStyle = firstP?.getAttribute('style') || ''
+        const getStyleProp = (style: string, prop: string) => {
+          const m = style.match(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`))
+          return m ? m[1].trim() : null
+        }
+        const bodyStyles = {
+          'font-size': getStyleProp(pStyle, 'font-size') ?? '14pt (default)',
+          'font-family': getStyleProp(pStyle, 'font-family') ?? '宋体 (default)',
+          'line-height': getStyleProp(pStyle, 'line-height') ?? '1.6 (default)',
+          'color': getStyleProp(pStyle, 'color') ?? '#000000 (default)',
+          'text-indent': getStyleProp(pStyle, 'text-indent') ?? 'none',
+        }
+
+        // Extract heading styles
+        const headingStyles: Record<string, Record<string, string>> = {}
+        for (const tag of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']) {
+          const el = doc.querySelector(tag)
+          if (el) {
+            const s = el.getAttribute('style') || ''
+            headingStyles[tag] = {
+              'font-size': getStyleProp(s, 'font-size') ?? 'default',
+              'font-weight': getStyleProp(s, 'font-weight') ?? 'bold',
+              'color': getStyleProp(s, 'color') ?? 'default',
+              'text-align': getStyleProp(s, 'text-align') ?? 'left',
+            }
+          }
+        }
+
+        // Page config
+        const page = pageConfig ? {
+          paperSize: pageConfig.paperSize,
+          orientation: pageConfig.orientation,
+          marginTop: `${pageConfig.marginTop}cm`,
+          marginBottom: `${pageConfig.marginBottom}cm`,
+          marginLeft: `${pageConfig.marginLeft}cm`,
+          marginRight: `${pageConfig.marginRight}cm`,
+        } : { note: 'pageConfig not available' }
+
+        return JSON.stringify({ body: bodyStyles, headings: headingStyles, page }, null, 2)
+      }
+
+      case 'get_selection_styles': {
+        const attrs = editor.getAttributes('textStyle')
+        const styles: Record<string, unknown> = {
+          fontSize: attrs.fontSize ?? null,
+          fontFamily: attrs.fontFamily ?? null,
+          color: attrs.color ?? null,
+          bold: editor.isActive('bold'),
+          italic: editor.isActive('italic'),
+          underline: editor.isActive('underline'),
+          strike: editor.isActive('strike'),
+          textAlign: editor.isActive({ textAlign: 'left' }) ? 'left'
+            : editor.isActive({ textAlign: 'center' }) ? 'center'
+            : editor.isActive({ textAlign: 'right' }) ? 'right'
+            : editor.isActive({ textAlign: 'justify' }) ? 'justify'
+            : 'left',
+          heading: editor.isActive('heading', { level: 1 }) ? 'h1'
+            : editor.isActive('heading', { level: 2 }) ? 'h2'
+            : editor.isActive('heading', { level: 3 }) ? 'h3'
+            : editor.isActive('heading', { level: 4 }) ? 'h4'
+            : 'paragraph',
+        }
+        return JSON.stringify(styles, null, 2)
+      }
+
+      case 'screenshot_document': {
+        const { area = 'first_screen' } = args as { area?: string }
+        const pageEl = document.querySelector('.a4-page') as HTMLElement
+        if (!pageEl) return '错误：未找到文档页面元素（.a4-page）'
+
+        const canvas = await html2canvas(pageEl, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          height: area === 'first_screen' ? 900 : area === 'top' ? 1000 : undefined,
+          windowHeight: area === 'first_screen' ? 900 : area === 'top' ? 1000 : undefined,
+        })
+
+        const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1]
+        lastScreenshotBase64 = base64
+        return `截图成功，尺寸：${canvas.width}×${canvas.height}px，base64已缓存供多模态分析使用`
+      }
+
+      case 'analyze_document_aesthetics': {
+        if (!lastScreenshotBase64) return '错误：请先调用 screenshot_document 获取截图'
+
+        const { focus = 'overall' } = args as { focus?: string }
+
+        const focusPrompts: Record<string, string> = {
+          overall: '请分析这份文档的整体排版和视觉效果。从以下角度评估：1）标题层级视觉差异是否清晰；2）正文行距和字号是否舒适；3）页面空白和密度是否合理；4）整体视觉风格（商务/学术/现代等）；5）最需要改进的2-3个排版问题，并给出具体建议（如"h1字号偏小，建议调大到X pt"）。请用中文简洁回答。',
+          typography: '请重点分析这份文档的字体排版，包括字号大小、字体选择、字重对比等，给出具体改进建议。请用中文简洁回答。',
+          spacing: '请重点分析这份文档的间距设置，包括行间距、段落间距、标题前后间距、页边距等，给出具体改进建议。请用中文简洁回答。',
+          hierarchy: '请重点分析这份文档的层级结构视觉效果，标题h1/h2/h3之间的视觉差异是否足够清晰，层级关系是否一目了然，给出具体改进建议。请用中文简洁回答。',
+        }
+
+        const visionPrompt = focusPrompts[focus] ?? focusPrompts.overall
+
+        const response = await fetch(SF_API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SF_API_KEY}` },
+          body: JSON.stringify({
+            model: 'Qwen/Qwen2.5-VL-72B-Instruct',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${lastScreenshotBase64}` } },
+                { type: 'text', text: visionPrompt },
+              ],
+            }],
+            max_tokens: 800,
+            stream: false,
+          }),
+        })
+        if (!response.ok) {
+          const errText = await response.text()
+          return `多模态分析失败 (${response.status}): ${errText.slice(0, 200)}`
+        }
+        const data = await response.json()
+        return data.choices?.[0]?.message?.content ?? '分析失败，未收到有效响应'
       }
 
       case 'finish': {

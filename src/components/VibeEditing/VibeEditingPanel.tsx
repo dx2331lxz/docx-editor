@@ -10,6 +10,7 @@ interface Props {
   width?: number
   onWidthChange?: (w: number) => void
   onPageConfigChange?: (updater: (prev: PageConfig) => PageConfig) => void
+  pageConfig?: PageConfig
 }
 
 type StepEntry = {
@@ -97,7 +98,7 @@ function saveSessions(sessions: ChatSession[]) {
   localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 20)))
 }
 
-export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange, onPageConfigChange }: Props) {
+export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange, onPageConfigChange, pageConfig }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversationHistory, setConversationHistory] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -294,7 +295,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
         })
       } else {
         const effectiveInst = mode === 'edit' ? `【精确编辑模式】${inst}` : inst
-        summary = await runVibeEditing(effectiveInst, editor, onProgress, onAskContinue, onPageConfigChange, conversationHistory)
+        summary = await runVibeEditing(effectiveInst, editor, onProgress, onAskContinue, onPageConfigChange, conversationHistory, pageConfig)
         setMessages(prev => {
           const next = [...prev]
           const aiMsg = next[next.length - 1]
