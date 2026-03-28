@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
 import { runVibeEditing } from '../../lib/vibeEditingEngine'
-import type { ProgressCallback } from '../../lib/vibeEditingEngine'
+import type { ProgressCallback, Message } from '../../lib/vibeEditingEngine'
 import type { PageConfig } from '../PageSetup/PageSetupDialog'
 
 interface Props {
@@ -99,6 +99,7 @@ function saveSessions(sessions: ChatSession[]) {
 
 export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange, onPageConfigChange }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [conversationHistory, setConversationHistory] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
   const [presetsOpen, setPresetsOpen] = useState(true)
@@ -183,6 +184,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     question: string,
     doc_text: string,
     _onChunk: (t: string) => void,
+    history?: Message[],
   ): Promise<string> => {
     const resp = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
@@ -197,6 +199,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
             role: 'system',
             content: `你是一个文档助手。以下是用户的文档内容：\n\n${doc_text.slice(0, 4000)}\n\n请根据文档内容回答用户的问题，不要修改文档，只提供信息和建议。`,
           },
+          ...(history ?? []),
           { role: 'user', content: question },
         ],
         max_tokens: 1000,
@@ -211,6 +214,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     if (newMode === mode) return
     if (messages.length > 0 && !confirm('切换模式将清空当前对话，确定吗？')) return
     setMessages([])
+    setConversationHistory([])
     setMode(newMode)
   }
 
@@ -281,7 +285,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
 
       if (mode === 'ask') {
         const docText = editor.getText()
-        summary = await runAskMode(inst, docText, () => {})
+        summary = await runAskMode(inst, docText, () => {}, conversationHistory)
         setMessages(prev => {
           const next = [...prev]
           const aiMsg = next[next.length - 1]
@@ -290,7 +294,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
         })
       } else {
         const effectiveInst = mode === 'edit' ? `【精确编辑模式】${inst}` : inst
-        summary = await runVibeEditing(effectiveInst, editor, onProgress, onAskContinue, onPageConfigChange)
+        summary = await runVibeEditing(effectiveInst, editor, onProgress, onAskContinue, onPageConfigChange, conversationHistory)
         setMessages(prev => {
           const next = [...prev]
           const aiMsg = next[next.length - 1]
@@ -298,6 +302,13 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
           return [...next.slice(0, -1), { ...aiMsg, summary, done: true }]
         })
       }
+
+      // Append this round to conversation history (keep max 20 entries = 10 rounds)
+      setConversationHistory(prev => [
+        ...prev,
+        { role: 'user' as const, content: inst },
+        { role: 'assistant' as const, content: summary },
+      ].slice(-20))
     } catch (err) {
       gStepId++
       setMessages(prev => {
@@ -320,7 +331,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       textareaRef.current?.focus()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, input, running, resizeTextarea, mode, saveSession])
+  }, [editor, input, running, resizeTextarea, mode, saveSession, conversationHistory])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -331,6 +342,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
 
   const startNewSession = () => {
     setMessages([])
+    setConversationHistory([])
     setViewingSession(null)
     setShowHistory(false)
   }
@@ -486,6 +498,16 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                     // Load history session as active context (not readonly)
                     setMessages(sess.messages)
                     setMode(sess.mode)
+                    // Reconstruct conversation history from saved messages
+                    const rebuilt: Message[] = []
+                    for (const m of sess.messages) {
+                      if (m.role === 'user') {
+                        rebuilt.push({ role: 'user', content: m.text })
+                      } else if (m.role === 'ai' && m.done && m.summary) {
+                        rebuilt.push({ role: 'assistant', content: m.summary })
+                      }
+                    }
+                    setConversationHistory(rebuilt.slice(-20))
                     setShowHistory(false)
                     setViewingSession(null)
                   }}
