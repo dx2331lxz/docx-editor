@@ -325,8 +325,8 @@ function toAlignment(align?: string): AlignmentType | undefined {
 }
 
 /** Map heading level → docx HeadingLevel */
-function toHeadingLevel(level?: number): HeadingLevel {
-  const map: Record<number, HeadingLevel> = {
+function toHeadingLevel(level?: number): typeof HeadingLevel[keyof typeof HeadingLevel] {
+  const map: Record<number, typeof HeadingLevel[keyof typeof HeadingLevel]> = {
     1: HeadingLevel.HEADING_1,
     2: HeadingLevel.HEADING_2,
     3: HeadingLevel.HEADING_3,
@@ -410,7 +410,7 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
         // Text highlight (Highlight mark with color attr)
         ...(hasMark('highlight') ? { highlight: cssColorToHighlight(
           (markAttrs('highlight') as Record<string, string>).color ?? '#ffff00'
-        ) } : {}),
+        ) as never } : {}),
         // Text background shading
         ...(bgHex ? { shading: { type: ShadingType.CLEAR, fill: bgHex } } : {}),
       })
@@ -728,7 +728,7 @@ function htmlNodeToRuns(el: Element, inherited: {
         superScript:      inherited.superScript,
         subScript:        inherited.subScript,
         // Text highlight (named color) — best-effort mapping
-        ...(inherited.highlight ? { highlight: cssColorToHighlight(inherited.highlight) } : {}),
+        ...(inherited.highlight ? { highlight: cssColorToHighlight(inherited.highlight) as never } : {}),
         // Text background via shading
         ...(inherited.backgroundColor ? {
           shading: { type: ShadingType.CLEAR, fill: cssHexColor(inherited.backgroundColor) ?? 'FFFFFF' }
@@ -807,7 +807,7 @@ function parseToTwipSimple(val: string): number | undefined {
 }
 
 /** Parse text-align from inline style string */
-function parseTextAlign(style: string): AlignmentType {
+function parseTextAlign(style: string): typeof AlignmentType[keyof typeof AlignmentType] {
   const css = parseInlineStyle(style)
   switch (css['text-align']) {
     case 'center':  return AlignmentType.CENTER
@@ -817,7 +817,7 @@ function parseTextAlign(style: string): AlignmentType {
   }
 }
 
-const HTML_HEADING_LEVELS: Record<string, HeadingLevel> = {
+const HTML_HEADING_LEVELS: Record<string, typeof HeadingLevel[keyof typeof HeadingLevel]> = {
   h1: HeadingLevel.HEADING_1,
   h2: HeadingLevel.HEADING_2,
   h3: HeadingLevel.HEADING_3,
