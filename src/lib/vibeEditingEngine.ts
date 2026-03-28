@@ -5,7 +5,7 @@ import type { Editor } from '@tiptap/react'
 import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 import { VIBE_TOOLS, executeTool } from './vibeEditingTools'
 
-const API_ENDPOINT = '/api/siliconflow/v1/chat/completions'
+const API_ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions'
 const API_KEY = 'sk-tsecqgrifovrucwvcdvcyzzjluxrpsehbishnwgamhjozwsw'
 const MODEL = 'Pro/moonshotai/Kimi-K2.5'
 const MAX_STEPS = 50

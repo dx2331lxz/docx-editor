@@ -638,7 +638,7 @@ const THEMES_MAP: Record<string, { h1: string; h2: string; h3: string; p: string
 }
 
 // SiliconFlow API helper for content rewriting
-const SF_API_ENDPOINT = '/api/siliconflow/v1/chat/completions'
+const SF_API_ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions'
 const SF_API_KEY = 'sk-tsecqgrifovrucwvcdvcyzzjluxrpsehbishnwgamhjozwsw'
 const SF_MODEL = 'Pro/moonshotai/Kimi-K2.5'
 
