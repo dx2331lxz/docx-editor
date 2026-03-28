@@ -98,7 +98,8 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
 
     const rFonts = wChild(rPr, 'rFonts')
     if (rFonts) {
-      const font = wAttr(rFonts, 'ascii') || wAttr(rFonts, 'hAnsi') || wAttr(rFonts, 'eastAsia')
+      // 优先取东亚字体（中文字体），避免西文字体（ascii/hAnsi）破坏中文渲染
+      const font = wAttr(rFonts, 'eastAsia') || wAttr(rFonts, 'ascii') || wAttr(rFonts, 'hAnsi')
       if (font) parts.push(`font-family:${font}`)
     }
 
