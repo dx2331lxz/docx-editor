@@ -387,12 +387,12 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
 
       return new TextRun({
         text:             child.text ?? '',
-        bold:             hasMark('bold'),
-        italics:          hasMark('italic'),
+        bold:             hasMark('bold') || undefined,
+        italics:          hasMark('italic') || undefined,
         underline:        hasMark('underline') ? {} : undefined,
-        strike:           hasMark('strike'),
-        superScript:      hasMark('superscript'),
-        subScript:        hasMark('subscript'),
+        strike:           hasMark('strike') || undefined,
+        superScript:      hasMark('superscript') || undefined,
+        subScript:        hasMark('subscript') || undefined,
         color,
         font:             fontFamily ? { name: fontFamily } : undefined,
         size:             sizeHalfPt,
