@@ -189,7 +189,7 @@ const MenuDropdown: React.FC<MenuDropdownProps> = ({ menu, isOpen, isAnyOpen, on
             ) : (
               <button
                 key={idx}
-                className="w-full text-left px-4 py-1.5 hover:bg-blue-50 flex justify-between items-center gap-8 whitespace-nowrap text-sm"
+                className="w-full text-left px-4 py-1.5 hover:bg-blue-50 flex justify-between items-center gap-8 whitespace-nowrap text-sm text-gray-800"
                 onClick={() => {
                   item.action?.()
                   onClose()
