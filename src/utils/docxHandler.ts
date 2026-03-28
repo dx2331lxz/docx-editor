@@ -1116,6 +1116,16 @@ export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlC
   const DEFAULT_FONT_NAME = 'SimSun'   // editor shows 宋体 as default
   const DEFAULT_SIZE_HP   = 28         // 14pt × 2 = 28 half-points
 
+  // Heading run style applied to all heading levels:
+  // - bold: true  (docx lib's default Heading styles omit <w:b/>, so Word renders them as non-bold)
+  // - color: 000000  (override the default blue color from docx lib's Heading styles)
+  // - font: SimSun  (consistent with document default font)
+  const headingRunStyle = {
+    bold:  true,
+    color: '000000',
+    font:  { name: DEFAULT_FONT_NAME, eastAsia: DEFAULT_FONT_NAME } as { name: string; eastAsia: string },
+  }
+
   const document = new Document({
     styles: {
       default: {
@@ -1125,7 +1135,14 @@ export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlC
             size: DEFAULT_SIZE_HP,
           },
         },
+        heading1: { run: { ...headingRunStyle, size: 32 } },  // 16pt
+        heading2: { run: { ...headingRunStyle, size: 28 } },  // 14pt
+        heading3: { run: { ...headingRunStyle, size: 26 } },  // 13pt
+        heading4: { run: { ...headingRunStyle, size: 24 } },  // 12pt
+        heading5: { run: { ...headingRunStyle, size: 22 } },  // 11pt
+        heading6: { run: { ...headingRunStyle, size: 20 } },  // 10pt
       },
+    },
     },
     numbering: {
       config: [{
