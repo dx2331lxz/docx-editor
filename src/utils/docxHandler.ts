@@ -5,9 +5,11 @@ import {
   Packer,
   Paragraph,
   TextRun,
+  ImageRun,
   HeadingLevel,
   AlignmentType,
   PageOrientation,
+  ShadingType,
   Table,
   TableRow,
   TableCell,
@@ -539,12 +541,104 @@ function parseCssColor(val?: string): string | undefined {
   return undefined
 }
 
+/** Alias for parseCssColor — explicit usage as hex color */
+function cssHexColor(val?: string): string | undefined {
+  return parseCssColor(val)
+}
+
+// Named highlight colors supported by docx (Word) — map CSS hex/name to closest
+const HIGHLIGHT_MAP: Array<{ hex: string; name: string }> = [
+  { hex: 'FFFF00', name: 'yellow' },
+  { hex: '00FF00', name: 'green' },
+  { hex: '00FFFF', name: 'cyan' },
+  { hex: 'FF00FF', name: 'magenta' },
+  { hex: '0000FF', name: 'blue' },
+  { hex: 'FF0000', name: 'red' },
+  { hex: '000080', name: 'darkBlue' },
+  { hex: '008080', name: 'darkCyan' },
+  { hex: '008000', name: 'darkGreen' },
+  { hex: '800080', name: 'darkMagenta' },
+  { hex: '800000', name: 'darkRed' },
+  { hex: '808000', name: 'darkYellow' },
+  { hex: '808080', name: 'darkGray' },
+  { hex: 'C0C0C0', name: 'lightGray' },
+  { hex: '000000', name: 'black' },
+  { hex: 'FFFFFF', name: 'white' },
+]
+
+/** Map a CSS color value to the nearest docx HighlightColor name */
+function cssColorToHighlight(cssColor: string): string {
+  const hex = parseCssColor(cssColor)
+  if (!hex) return 'yellow'
+
+  // Exact match first
+  const exact = HIGHLIGHT_MAP.find(h => h.hex === hex.toUpperCase())
+  if (exact) return exact.name
+
+  // Nearest color by Euclidean distance in RGB space
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  let best = 'yellow', bestDist = Infinity
+  for (const { hex: hh, name } of HIGHLIGHT_MAP) {
+    const dr = r - parseInt(hh.slice(0, 2), 16)
+    const dg = g - parseInt(hh.slice(2, 4), 16)
+    const db = b - parseInt(hh.slice(4, 6), 16)
+    const dist = dr * dr + dg * dg + db * db
+    if (dist < bestDist) { bestDist = dist; best = name }
+  }
+  return best
+}
+
+/** Build an ImageRun from an <img> element (base64 src supported) */
+function buildImageRun(img: HTMLImageElement): ImageRun | null {
+  const src = img.getAttribute('src') ?? ''
+  if (!src) return null
+
+  // Only handle data URLs for now (base64 embedded images)
+  const dataMatch = src.match(/^data:image\/(png|jpg|jpeg|gif|bmp);base64,(.+)$/i)
+  if (!dataMatch) return null
+
+  const rawType = dataMatch[1].toLowerCase()
+  const type = rawType === 'jpeg' ? 'jpg' : rawType as 'png' | 'jpg' | 'gif' | 'bmp'
+  const data = dataMatch[2]
+
+  // Read width from attribute or style
+  let widthPx = parseInt(img.getAttribute('width') ?? '0') || 0
+  if (!widthPx) {
+    const css = parseInlineStyle(img.getAttribute('style') ?? '')
+    const wRaw = css['width']
+    if (wRaw) widthPx = parseInt(wRaw) || 0
+  }
+
+  // Default to 400px wide if unknown
+  if (!widthPx || widthPx > 600) widthPx = 400
+
+  // Estimate height from aspect ratio if possible, else square
+  let heightPx = parseInt(img.getAttribute('height') ?? '0') || 0
+  if (!heightPx) heightPx = widthPx
+
+  // Convert px to EMU (English Metric Units): 1px ≈ 9525 EMU (96dpi)
+  const PX_TO_EMU = 9525
+  return new ImageRun({
+    type: type as 'jpg' | 'png' | 'gif' | 'bmp',
+    data: Uint8Array.from(atob(data), c => c.charCodeAt(0)),
+    transformation: {
+      width:  widthPx  * PX_TO_EMU,
+      height: heightPx * PX_TO_EMU,
+    },
+  })
+}
+
 /** Extract TextRuns from an Element, handling nested inline elements */
 function htmlNodeToRuns(el: Element, inherited: {
   bold?: boolean; italics?: boolean; underline?: boolean; strike?: boolean
   color?: string; fontFamily?: string; sizeHalfPt?: number
-} = {}): TextRun[] {
-  const runs: TextRun[] = []
+  superScript?: boolean; subScript?: boolean
+  highlight?: string; backgroundColor?: string
+  characterSpacing?: number
+} = {}): (TextRun | ImageRun)[] {
+  const runs: (TextRun | ImageRun)[] = []
 
   el.childNodes.forEach(node => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -552,13 +646,22 @@ function htmlNodeToRuns(el: Element, inherited: {
       if (!text) return
       runs.push(new TextRun({
         text,
-        bold:      inherited.bold,
-        italics:   inherited.italics,
-        underline: inherited.underline ? {} : undefined,
-        strike:    inherited.strike,
-        color:     inherited.color,
-        font:      inherited.fontFamily ? { name: inherited.fontFamily } : undefined,
-        size:      inherited.sizeHalfPt,
+        bold:             inherited.bold,
+        italics:          inherited.italics,
+        underline:        inherited.underline ? {} : undefined,
+        strike:           inherited.strike,
+        color:            inherited.color,
+        font:             inherited.fontFamily ? { name: inherited.fontFamily } : undefined,
+        size:             inherited.sizeHalfPt,
+        superScript:      inherited.superScript,
+        subScript:        inherited.subScript,
+        // Text highlight (named color) — best-effort mapping
+        ...(inherited.highlight ? { highlight: cssColorToHighlight(inherited.highlight) } : {}),
+        // Text background via shading
+        ...(inherited.backgroundColor ? {
+          shading: { type: ShadingType.CLEAR, fill: cssHexColor(inherited.backgroundColor) ?? 'FFFFFF' }
+        } : {}),
+        characterSpacing: inherited.characterSpacing,
       }))
       return
     }
@@ -577,10 +680,21 @@ function htmlNodeToRuns(el: Element, inherited: {
       return
     }
 
+    // Inline image
+    if (tag === 'img') {
+      const imgRun = buildImageRun(node as HTMLImageElement)
+      if (imgRun) runs.push(imgRun)
+      return
+    }
+
     if (tag === 'strong' || tag === 'b' || css['font-weight'] === 'bold' || css['font-weight'] === '700') ctx.bold = true
     if (tag === 'em' || tag === 'i' || css['font-style'] === 'italic') ctx.italics = true
     if (tag === 'u' || css['text-decoration']?.includes('underline')) ctx.underline = true
     if (tag === 's' || tag === 'strike' || css['text-decoration']?.includes('line-through')) ctx.strike = true
+    if (tag === 'sup') ctx.superScript = true
+    if (tag === 'sub') ctx.subScript = true
+    // <mark> element — highlight with inline color if present, else default yellow
+    if (tag === 'mark') ctx.highlight = css['background-color'] ?? '#ffff00'
 
     const colorVal = parseCssColor(css['color'])
     if (colorVal) ctx.color = colorVal
@@ -590,6 +704,19 @@ function htmlNodeToRuns(el: Element, inherited: {
 
     const sz = parseFontSizeToHalfPt(css['font-size'])
     if (sz) ctx.sizeHalfPt = sz
+
+    // Text background color (BackgroundColor extension / inline style)
+    const bgColor = css['background-color']
+    if (bgColor && tag !== 'mark') ctx.backgroundColor = bgColor
+
+    // Letter spacing: TipTap LetterSpacing stores value without "px" suffix,
+    // but renderHTML re-adds it → "2px". docx characterSpacing is in twentieths of a point.
+    // 1px ≈ 0.75pt → 1px ≈ 15 twentieths-of-pt
+    const lsRaw = css['letter-spacing']
+    if (lsRaw) {
+      const lsPx = parseFloat(lsRaw)
+      if (!isNaN(lsPx)) ctx.characterSpacing = Math.round(lsPx * 15)
+    }
 
     // Recurse into children
     runs.push(...htmlNodeToRuns(node, ctx))
@@ -677,10 +804,17 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         if (hmbRaw) { const pt = parseFloat(hmbRaw); if (!isNaN(pt)) headingSpacing.after = Math.round(pt * 20) }
       }
 
+      // Heading background color
+      const hBgColor = paraStyle['background-color'] ?? node.getAttribute('data-bg-color') ?? undefined
+      const hShadingProp = hBgColor ? {
+        shading: { type: ShadingType.CLEAR, fill: cssHexColor(hBgColor) ?? 'FFFFFF' }
+      } : {}
+
       children.push(new Paragraph({
         heading: HTML_HEADING_LEVELS[tag],
         alignment: align,
         spacing: headingSpacing,
+        ...hShadingProp,
         children: htmlNodeToRuns(node, paraInherited),
       }))
       return
@@ -735,21 +869,32 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         if (!isNaN(pt) && pt >= 0) spacing.after = Math.round(pt * 20)
       }
 
-      // ── First-line indent ─────────────────────────────────────────────────
-      let indent: { firstLine?: number } | undefined
+      // ── First-line indent + left/right indent ────────────────────────────
+      let indent: { firstLine?: number; left?: number; right?: number } | undefined
       const tiRaw = lineStyle['text-indent']
-      if (tiRaw) {
-        if (tiRaw.endsWith('em')) {
-          const em = parseFloat(tiRaw)
-          if (!isNaN(em)) indent = { firstLine: Math.round(em * 240) }
-        } else if (tiRaw.endsWith('px')) {
-          const px = parseFloat(tiRaw)
-          if (!isNaN(px)) indent = { firstLine: Math.round(px * 15) }
-        } else if (tiRaw.endsWith('cm')) {
-          const cm = parseFloat(tiRaw)
-          if (!isNaN(cm)) indent = { firstLine: Math.round(cm * 567) }
-        }
+      const plRaw = lineStyle['padding-left']
+      const prRaw = lineStyle['padding-right']
+
+      const parseToTwip = (val: string): number | undefined => {
+        if (val.endsWith('em'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 240) }
+        if (val.endsWith('px'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 15) }
+        if (val.endsWith('cm'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 567) }
+        if (val.endsWith('pt'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 20) }
+        return undefined
       }
+
+      if (tiRaw || plRaw || prRaw) {
+        indent = {}
+        if (tiRaw) { const v = parseToTwip(tiRaw); if (v !== undefined) indent.firstLine = v }
+        if (plRaw) { const v = parseToTwip(plRaw);  if (v !== undefined) indent.left = v }
+        if (prRaw) { const v = parseToTwip(prRaw);  if (v !== undefined) indent.right = v }
+      }
+
+      // ── Paragraph background color (ParagraphShading extension) ──────────
+      const pBgColor = lineStyle['background-color'] ?? node.getAttribute('data-bg-color') ?? undefined
+      const shadingProp = pBgColor ? {
+        shading: { type: ShadingType.CLEAR, fill: cssHexColor(pBgColor) ?? 'FFFFFF' }
+      } : {}
 
       // ── Paragraph-level font/size/color — scan first span as fallback ─────
       // When the whole paragraph uses one font/size set via toolbar, TipTap
@@ -790,6 +935,7 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         alignment: align,
         spacing: Object.keys(spacing).length > 0 ? spacing : undefined,
         indent,
+        ...shadingProp,
         children: htmlNodeToRuns(node, paraInherited),
       }))
       return
@@ -853,6 +999,15 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
     }
 
     // Blockquote / div — recurse into children
+    // Standalone image (block-level)
+    if (tag === 'img') {
+      const imgRun = buildImageRun(node as HTMLImageElement)
+      if (imgRun) {
+        children.push(new Paragraph({ children: [imgRun] }))
+      }
+      return
+    }
+
     Array.from(node.children).forEach(child => processNode(child as Element))
   }
 
