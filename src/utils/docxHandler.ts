@@ -1135,12 +1135,16 @@ export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlC
             size: DEFAULT_SIZE_HP,
           },
         },
-        heading1: { run: { ...headingRunStyle, size: 32 } },  // 16pt
-        heading2: { run: { ...headingRunStyle, size: 28 } },  // 14pt
-        heading3: { run: { ...headingRunStyle, size: 26 } },  // 13pt
-        heading4: { run: { ...headingRunStyle, size: 24 } },  // 12pt
-        heading5: { run: { ...headingRunStyle, size: 22 } },  // 11pt
-        heading6: { run: { ...headingRunStyle, size: 20 } },  // 10pt
+        // Heading sizes match editor CSS: base 14pt × em multiplier → half-points
+        // h1: 2em    = 28pt = 56hp  h2: 1.5em  = 21pt = 42hp
+        // h3: 1.17em ≈ 16.4pt = 33hp  h4: 1em = 14pt = 28hp
+        // h5: 0.83em ≈ 11.6pt = 23hp  h6: 0.67em ≈ 9.4pt = 19hp
+        heading1: { run: { ...headingRunStyle, size: 56 } },  // 28pt (2em × 14pt)
+        heading2: { run: { ...headingRunStyle, size: 42 } },  // 21pt (1.5em × 14pt)
+        heading3: { run: { ...headingRunStyle, size: 33 } },  // ~16.4pt (1.17em × 14pt)
+        heading4: { run: { ...headingRunStyle, size: 28 } },  // 14pt (1em × 14pt)
+        heading5: { run: { ...headingRunStyle, size: 23 } },  // ~11.6pt (0.83em × 14pt)
+        heading6: { run: { ...headingRunStyle, size: 19 } },  // ~9.4pt (0.67em × 14pt)
       },
     },
     numbering: {
