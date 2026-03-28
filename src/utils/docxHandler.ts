@@ -795,14 +795,16 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
           if (sc['line-height']) { const v = parseFloat(sc['line-height']); if (!isNaN(v) && v > 0) { resolvedLh = v; break } }
         }
       }
+      // Default heading line-height: match editor CSS (1.6)
+      if (!resolvedLh) resolvedLh = 1.6
+
       const hmtRaw = paraStyle['margin-top']
       const hmbRaw = paraStyle['margin-bottom']
-      if (resolvedLh || hmtRaw || hmbRaw) {
-        headingSpacing = {}
-        if (resolvedLh) { headingSpacing.line = Math.round(resolvedLh * 240); headingSpacing.lineRule = 'auto' }
-        if (hmtRaw) { const pt = parseFloat(hmtRaw); if (!isNaN(pt)) headingSpacing.before = Math.round(pt * 20) }
-        if (hmbRaw) { const pt = parseFloat(hmbRaw); if (!isNaN(pt)) headingSpacing.after = Math.round(pt * 20) }
-      }
+      headingSpacing = {}
+      headingSpacing.line = Math.round(resolvedLh * 240)
+      headingSpacing.lineRule = 'auto'
+      if (hmtRaw) { const pt = parseFloat(hmtRaw); if (!isNaN(pt)) headingSpacing.before = Math.round(pt * 20) }
+      if (hmbRaw) { const pt = parseFloat(hmbRaw); if (!isNaN(pt)) headingSpacing.after = Math.round(pt * 20) }
 
       // Heading background color
       const hBgColor = paraStyle['background-color'] ?? node.getAttribute('data-bg-color') ?? undefined
@@ -825,14 +827,14 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       const lineStyle = parseInlineStyle(style)
 
       // ── Line spacing ──────────────────────────────────────────────────────
-      // Priority 1: line-height on <p> itself
+      // Priority 1: line-height directly on <p> (LineHeight now configured for paragraph nodes)
       let resolvedLineHeight: number | undefined
       const lhRaw = lineStyle['line-height']
       if (lhRaw) {
         const lh = parseFloat(lhRaw)
         if (!isNaN(lh) && lh > 0) resolvedLineHeight = lh
       }
-      // Priority 2: scan ALL spans — TipTap's setLineHeight stores it on textStyle spans
+      // Priority 2: scan ALL spans — fallback for old data where line-height was on textStyle spans
       if (!resolvedLineHeight) {
         const allSpans = Array.from(node.querySelectorAll('span'))
         for (const span of allSpans) {
@@ -847,6 +849,9 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
           }
         }
       }
+      // Priority 3: match editor CSS default (1.6) so docx matches the preview
+      if (!resolvedLineHeight) resolvedLineHeight = 1.6
+
       const spacing: {
         line?: number; lineRule?: 'auto' | 'atLeast' | 'exact'
         before?: number; after?: number

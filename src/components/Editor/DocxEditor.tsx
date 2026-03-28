@@ -96,7 +96,7 @@ export function useDocxEditor(options: UseDocxEditorOptions = {}) {
       Color,
       FontFamily,
       FontSize,     // from @tiptap/extension-text-style
-      LineHeight,   // from @tiptap/extension-text-style
+      LineHeight.configure({ types: ['paragraph', 'heading'] }),   // paragraph-level line height
       Underline,
       Superscript,
       Subscript,
