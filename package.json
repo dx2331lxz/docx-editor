@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "sync-server": "node sync-server/server.cjs",
-    "dev:full": "concurrently \"npm run dev\" \"npm run sync-server\""
+    "server": "node server/index.cjs",
+    "dev:server": "node --watch server/index.cjs",
+    "dev:full": "concurrently \"npm run dev\" \"npm run dev:server\""
   },
   "dependencies": {
     "@tiptap/extension-character-count": "^3.20.5",
@@ -31,7 +33,9 @@
     "@tiptap/pm": "^3.20.5",
     "@tiptap/react": "^3.20.5",
     "@tiptap/starter-kit": "^3.20.5",
+    "cors": "^2.8.6",
     "docx": "^9.6.1",
+    "express": "^5.2.1",
     "html2canvas": "^1.4.1",
     "lucide-react": "^1.7.0",
     "mammoth": "^1.12.0",
@@ -45,6 +49,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",

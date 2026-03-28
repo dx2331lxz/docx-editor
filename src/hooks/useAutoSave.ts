@@ -65,6 +65,12 @@ export function useAutoSave(editor: Editor | null): AutoSaveState {
       if (cfg.enabled && cfg.provider === 'local') {
         pushToLocalServer(cfg.docId, content, { title: 'docx-editor' }).catch(() => {/* silent fail */})
       }
+      // Backend doc storage (always attempt, silent fail)
+      fetch('/api/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId: 'default', content, meta: { title: 'docx-editor' } }),
+      }).catch(() => {/* silent fail */})
     } catch { /* ignore */ }
   }, [editor])
 

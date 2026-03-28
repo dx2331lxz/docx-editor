@@ -187,11 +187,10 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     _onChunk: (t: string) => void,
     history?: Message[],
   ): Promise<string> => {
-    const resp = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+    const resp = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer sk-tsecqgrifovrucwvcdvcyzzjluxrpsehbishnwgamhjozwsw',
       },
       body: JSON.stringify({
         model: 'Pro/moonshotai/Kimi-K2.5',

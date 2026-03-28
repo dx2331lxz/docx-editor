@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  docx-editor:
+    build: .
+    ports:
+      - "3011:3011"
+    volumes:
+      - ./data:/app/server/data
+    environment:
+      - PORT=3011
+    restart: unless-stopped

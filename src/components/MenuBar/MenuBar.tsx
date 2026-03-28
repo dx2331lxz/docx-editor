@@ -106,6 +106,7 @@ interface MenuBarProps {
   onOpenFormFields?: () => void
   // Round 20 props
   onOpenVibeEditing?: () => void
+  onOpenAISettings?: () => void
 }
 
 interface MenuItem {
@@ -211,7 +212,7 @@ const MenuDropdown: React.FC<MenuDropdownProps> = ({ menu, isOpen, isAnyOpen, on
   )
 }
 
-const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter, onOpenPageSetup, onOpenSpecialSymbols, onInsertTOC, onInsertComment, onOpenPageBorder, onOpenWordCount, onPrintPreview, onExportPDF, onOpenWatermark, onOpenProtect, onToggleNavPane, showNavPane, trackingEnabled, onConvertToTraditional, onConvertToSimplified, onOpenBookmarks, onOpenDocGrid, onOpenStyleManager, onTableToText, onTextToTable, onSmartFormat, onRemoveBlankLines, onAddFirstLineIndent, onRemoveLeadingSpaces, onFullToHalf, onHalfToFull, onToggleVertical, isVertical, onOpenEnvelope, onToggleSplitView, isSplitView, onOpenTheme, onOpenChart, onOpenFormula, onOpenDocProps, onOpenPageBg, currentThemeName, onOpenCompare, onOpenWordFreq, onOpenTranslate, onToggleReadMode, readMode, onOpenPageNumber, onOpenCrossRef, onOpenContentControl, onOpenMailMerge, onOpenDropCap, onOpenSmartArt, onOpenAdvancedTOC, onOpenFootnoteSettings, onOpenExportOptions, onOpenDocInspector, onToggleOutlineView, showOutlineView, onOpenCitations, onOpenIndex, onOpenWordArt, onOpenShapes, onOpenGridPaper, onOpenTableAdvanced, onOpenTextBox, onOpenTemplate, onOpenBookFold, onOpenCalligraphy, onOpenShortcuts, onOpenHighlight, onOpenParaBorder, onOpenVersionHistory, onOpenMacro, onOpenAppTheme, onOpenPasteSettings, onToggleTwoPageView, isTwoPageView, onOpenTableChart, onOpenVideoEmbed, onOpenAdvancedFind, onOpenTTS, onOpenDocStats, onOpenGrammarLint, onOpenCustomShortcuts, onOpenCloudSync, onOpenAIAdvisor, onOpenTemplateGallery, onOpenDocDiff, onOpenFormFields, onOpenVibeEditing }) => {
+const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter, onOpenPageSetup, onOpenSpecialSymbols, onInsertTOC, onInsertComment, onOpenPageBorder, onOpenWordCount, onPrintPreview, onExportPDF, onOpenWatermark, onOpenProtect, onToggleNavPane, showNavPane, trackingEnabled, onConvertToTraditional, onConvertToSimplified, onOpenBookmarks, onOpenDocGrid, onOpenStyleManager, onTableToText, onTextToTable, onSmartFormat, onRemoveBlankLines, onAddFirstLineIndent, onRemoveLeadingSpaces, onFullToHalf, onHalfToFull, onToggleVertical, isVertical, onOpenEnvelope, onToggleSplitView, isSplitView, onOpenTheme, onOpenChart, onOpenFormula, onOpenDocProps, onOpenPageBg, currentThemeName, onOpenCompare, onOpenWordFreq, onOpenTranslate, onToggleReadMode, readMode, onOpenPageNumber, onOpenCrossRef, onOpenContentControl, onOpenMailMerge, onOpenDropCap, onOpenSmartArt, onOpenAdvancedTOC, onOpenFootnoteSettings, onOpenExportOptions, onOpenDocInspector, onToggleOutlineView, showOutlineView, onOpenCitations, onOpenIndex, onOpenWordArt, onOpenShapes, onOpenGridPaper, onOpenTableAdvanced, onOpenTextBox, onOpenTemplate, onOpenBookFold, onOpenCalligraphy, onOpenShortcuts, onOpenHighlight, onOpenParaBorder, onOpenVersionHistory, onOpenMacro, onOpenAppTheme, onOpenPasteSettings, onToggleTwoPageView, isTwoPageView, onOpenTableChart, onOpenVideoEmbed, onOpenAdvancedFind, onOpenTTS, onOpenDocStats, onOpenGrammarLint, onOpenCustomShortcuts, onOpenCloudSync, onOpenAIAdvisor, onOpenTemplateGallery, onOpenDocDiff, onOpenFormFields, onOpenVibeEditing, onOpenAISettings }) => {
   const [openMenu, setOpenMenu] = React.useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -411,6 +412,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
     {
       label: '工具',
       items: [
+        { label: 'AI 设置...', action: () => onOpenAISettings?.() },
         { label: '宏...', action: () => onOpenMacro?.() },
         { divider: true, label: '' },
         { label: 'AI排版建议...', action: () => onOpenAIAdvisor?.() },

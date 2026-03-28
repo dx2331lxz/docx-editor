@@ -102,6 +102,7 @@ import FormFieldDialog from './components/FormFields/FormFieldDialog'
 import './styles/mobile.css'
 // Round 20
 import VibeEditingPanel from './components/VibeEditing/VibeEditingPanel'
+import AISettingsDialog from './components/Settings/AISettingsDialog'
 // VibeFloatBar import removed (component kept for future use)
 
 const App: React.FC = () => {
@@ -215,6 +216,7 @@ const App: React.FC = () => {
   const [showFormFields, setShowFormFields] = useState(false)
   // Round 20 state
   const [showVibeEditing, setShowVibeEditing] = useState(false)
+  const [aiSettingsOpen, setAISettingsOpen] = useState(false)
   const [vibePanelWidth, setVibePanelWidth] = useState(360)
   // (tooltip removed — Vibe button now uses title attr)
   // Tab bar state
@@ -492,6 +494,7 @@ const App: React.FC = () => {
             onOpenDocDiff={() => setShowDocDiff(true)}
             onOpenFormFields={() => setShowFormFields(true)}
             onOpenVibeEditing={() => setShowVibeEditing(true)}
+            onOpenAISettings={() => setAISettingsOpen(true)}
             onExportPDF={handleExportPDF}
           />
           <ToolBar
@@ -1038,6 +1041,7 @@ const App: React.FC = () => {
       )}
       {showDocDiff && <DocDiffDialog editor={editor} onClose={() => setShowDocDiff(false)} />}
       {showFormFields && <FormFieldDialog editor={editor} onClose={() => setShowFormFields(false)} />}
+      <AISettingsDialog open={aiSettingsOpen} onClose={() => setAISettingsOpen(false)} />
       {/* Vibe Editing toggle button — fixed top-right */}
       <button
         onClick={() => setShowVibeEditing(v => !v)}
