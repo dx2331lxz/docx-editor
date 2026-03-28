@@ -98,8 +98,10 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
 
     const rFonts = wChild(rPr, 'rFonts')
     if (rFonts) {
-      // 优先取东亚字体（中文字体），避免西文字体（ascii/hAnsi）破坏中文渲染
-      const font = wAttr(rFonts, 'eastAsia') || wAttr(rFonts, 'ascii') || wAttr(rFonts, 'hAnsi')
+      // 优先东亚字体（中文），fallback 到西文字体，两者都接受（包括 sans-serif）
+      const eastAsia = wAttr(rFonts, 'eastAsia')
+      const ascii = wAttr(rFonts, 'ascii') || wAttr(rFonts, 'hAnsi')
+      const font = eastAsia || ascii
       if (font) parts.push(`font-family:${font}`)
     }
 
@@ -174,9 +176,16 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
     const spacing = wChild(pPr, 'spacing')
     if (spacing) {
       const line = wAttr(spacing, 'line')
+      const lineRule = wAttr(spacing, 'lineRule') // 'auto'|'exact'|'atLeast'|''
       if (line) {
-        const lh = parseInt(line) / 240
-        if (!isNaN(lh) && lh > 0) parts.push(`line-height:${lh.toFixed(2)}`)
+        // lineRule='auto'（默认）：line/240 = 行距倍率（如 276/240 = 1.15）
+        // lineRule='exact'/'atLeast'：line 是 twip 绝对值，不适合转为无单位倍率
+        // 对 exact/atLeast 跳过（交由 CSS 默认行高），避免极小值堆叠
+        if (!lineRule || lineRule === 'auto') {
+          const lh = parseInt(line) / 240
+          // 合理范围 0.8 ~ 5.0，超出则忽略（防御异常值）
+          if (!isNaN(lh) && lh >= 0.8 && lh <= 5.0) parts.push(`line-height:${lh.toFixed(2)}`)
+        }
       }
     }
 
