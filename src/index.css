@@ -510,3 +510,25 @@ span.track-delete {
 .para-collapsed {
   display: none !important;
 }
+
+/* ── Page break indicator lines ─────────────────────────────────────── */
+.a4-page {
+  position: relative;
+}
+
+.a4-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(297mm - 1px),
+    #b0b8c8 calc(297mm - 1px),
+    #b0b8c8 297mm,
+    transparent 297mm,
+    transparent 594mm
+  );
+  z-index: 10;
+}
