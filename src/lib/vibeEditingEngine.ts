@@ -6,7 +6,8 @@ import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 import { VIBE_TOOLS, executeTool } from './vibeEditingTools'
 import { TYPOGRAPHY_KNOWLEDGE } from './typographyKnowledge'
 
-const API_ENDPOINT = '/api/ai/chat'
+import { API } from './apiRoutes'
+const API_ENDPOINT = API.aiChat
 const API_KEY = ''
 const MODEL = 'Pro/moonshotai/Kimi-K2.5'
 const MAX_STEPS = 50

@@ -1,3 +1,4 @@
+import { API } from '../../lib/apiRoutes'
 import React, { useState, useEffect } from 'react'
 
 interface AIConfig {
@@ -30,7 +31,7 @@ export default function AISettingsContent() {
   const [apiKeyEditing, setApiKeyEditing] = useState(false)
 
   useEffect(() => {
-    fetch('/api/config')
+    fetch(API.config)
       .then(r => r.json())
       .then((cfg: AIConfig) => {
         setEndpoint(cfg.endpoint || DEFAULT_ENDPOINT)
@@ -57,7 +58,7 @@ export default function AISettingsContent() {
       if (!r.ok) throw new Error('保存失败')
       setSaved(true)
       setApiKeyEditing(false)
-      const cfg = await fetch('/api/config').then(x => x.json())
+      const cfg = await fetch(API.config).then(x => x.json())
       setApiKeyMasked(cfg.apiKey || '')
       setApiKey('')
       setTimeout(() => setSaved(false), 3000)
@@ -72,7 +73,7 @@ export default function AISettingsContent() {
     setTesting(true)
     setTestResult(null)
     try {
-      const r = await fetch('/api/ai/chat', {
+      const r = await fetch(API.aiChat, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 10, stream: false }),

@@ -1,3 +1,4 @@
+import { API, apiUrl } from '../../lib/apiRoutes'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   ChevronLeft, ChevronRight, FilePlus, Save, Trash2,
@@ -30,7 +31,7 @@ interface Props {
 // ── API helpers ───────────────────────────────────────────────────────────────
 
 async function fetchFiles(): Promise<DocFile[]> {
-  const res = await fetch('/api/files')
+  const res = await fetch(API.files')
   if (!res.ok) throw new Error('Failed to fetch files')
   return res.json()
 }
@@ -39,7 +40,7 @@ async function uploadDocx(blob: Blob, name: string): Promise<DocFile> {
   const fd = new FormData()
   fd.append('file', blob, `${name}.docx`)
   fd.append('name', name)
-  const res = await fetch('/api/files', { method: 'POST', body: fd })
+  const res = await fetch(API.files', { method: 'POST', body: fd })
   if (!res.ok) throw new Error('Upload failed')
   return res.json()
 }
@@ -50,7 +51,7 @@ async function overwriteDocx(id: string, blob: Blob, name: string): Promise<DocF
   const fd = new FormData()
   fd.append('file', blob, `${name}.docx`)
   fd.append('name', name)
-  const res = await fetch('/api/files', { method: 'POST', body: fd })
+  const res = await fetch(API.files', { method: 'POST', body: fd })
   if (!res.ok) throw new Error('Save failed')
   return res.json()
 }

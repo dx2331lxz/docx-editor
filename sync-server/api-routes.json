@@ -1,0 +1,14 @@
+{
+  "health":        "/api/health",
+  "config":        "/api/config",
+  "aiChat":        "/api/ai/chat",
+  "aiFormat":      "/api/ai-format",
+  "files":         "/api/files",
+  "fileById":      "/api/files/:id",
+  "fileRename":    "/api/files/:id/name",
+  "sessions":      "/api/sessions",
+  "sessionById":   "/api/sessions/:id",
+  "syncLegacy":    "/api/sync",
+  "syncByDocId":   "/api/sync/:docId",
+  "docsLegacy":    "/api/docs"
+}

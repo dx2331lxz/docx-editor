@@ -1,3 +1,4 @@
+import { API } from '../lib/apiRoutes'
 /**
  * Placeholder for the AI formatting API.
  * POST /api/ai-format
@@ -8,7 +9,7 @@
 import type { AIFormatRequest, AIFormatResponse } from '../types/editor'
 
 export async function requestAIFormat(payload: AIFormatRequest): Promise<AIFormatResponse> {
-  const res = await fetch('/api/ai-format', {
+  const res = await fetch(API.aiFormat, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

@@ -1,3 +1,4 @@
+import { API } from '../../lib/apiRoutes'
 import React, { useState, useEffect } from 'react'
 
 interface AIConfig {
@@ -35,7 +36,7 @@ export const AISettingsDialog: React.FC<Props> = ({ open, onClose }) => {
 
   useEffect(() => {
     if (!open) return
-    fetch('/api/config')
+    fetch(API.config)
       .then(r => r.json())
       .then((cfg: AIConfig) => {
         setEndpoint(cfg.endpoint || DEFAULT_ENDPOINT)
@@ -63,7 +64,7 @@ export const AISettingsDialog: React.FC<Props> = ({ open, onClose }) => {
       setSaved(true)
       setApiKeyEditing(false)
       // Refresh masked key
-      const cfg = await fetch('/api/config').then(x => x.json())
+      const cfg = await fetch(API.config).then(x => x.json())
       setApiKeyMasked(cfg.apiKey || '')
       setApiKey('')
       setTimeout(() => setSaved(false), 3000)
@@ -78,7 +79,7 @@ export const AISettingsDialog: React.FC<Props> = ({ open, onClose }) => {
     setTesting(true)
     setTestResult(null)
     try {
-      const r = await fetch('/api/ai/chat', {
+      const r = await fetch(API.aiChat, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

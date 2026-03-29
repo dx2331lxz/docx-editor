@@ -1,3 +1,4 @@
+import { API } from '../lib/apiRoutes'
 /**
  * useAutoSave — persists editor content to localStorage every 30s.
  * Also syncs to local server if cloud sync is enabled.
@@ -66,7 +67,7 @@ export function useAutoSave(editor: Editor | null): AutoSaveState {
         pushToLocalServer(cfg.docId, content, { title: 'docx-editor' }).catch(() => {/* silent fail */})
       }
       // Backend doc storage (always attempt, silent fail)
-      fetch('/api/docs', {
+      fetch(API.docsLegacy, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ docId: 'default', content, meta: { title: 'docx-editor' } }),

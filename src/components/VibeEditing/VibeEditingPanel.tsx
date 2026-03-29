@@ -1,3 +1,4 @@
+import { API, apiUrl } from '../../lib/apiRoutes'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import type { Editor } from '@tiptap/react'
 import { runVibeEditing } from '../../lib/vibeEditingEngine'
@@ -37,7 +38,7 @@ interface ChatSession {
 
 async function fetchServerSessions(): Promise<ChatSession[]> {
   try {
-    const res = await fetch('/api/sessions')
+    const res = await fetch(API.sessions')
     if (!res.ok) return []
     const list: Array<{ id: string; title: string; model: string; createdAt: string; updatedAt: string }> = await res.json()
     // We store mode in model field; createdAt is ISO string → convert to timestamp
@@ -72,7 +73,7 @@ async function loadServerSession(id: string): Promise<ChatSession | null> {
 
 async function createServerSession(session: ChatSession): Promise<string | null> {
   try {
-    const res = await fetch('/api/sessions', {
+    const res = await fetch(API.sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: session.title, model: session.mode, messages: session.messages }),
@@ -251,7 +252,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     _onChunk: (t: string) => void,
     history?: Message[],
   ): Promise<string> => {
-    const resp = await fetch('/api/ai/chat', {
+    const resp = await fetch(API.aiChat, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

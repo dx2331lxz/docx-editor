@@ -27,6 +27,7 @@
 const http = require('http')
 const fs = require('fs')
 const path = require('path')
+const ROUTES = require('./api-routes.json')
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3011
 const DATA_DIR = path.join(__dirname, 'data')
@@ -168,21 +169,21 @@ const server = http.createServer(async (req, res) => {
 
   try {
     // ── Health ──────────────────────────────────────────────────────────────
-    if (req.method === 'GET' && pathname === '/api/health') {
+    if (req.method === 'GET' && pathname === ROUTES.health) {
       return send(res, 200, { status: 'ok', time: Date.now() })
     }
 
     // ── Config API (/api/config) ────────────────────────────────────────────
     const DEFAULT_CONFIG = { endpoint: 'https://api.siliconflow.cn/v1/chat/completions', apiKey: '', model: 'Pro/moonshotai/Kimi-K2.5' }
 
-    if (req.method === 'GET' && pathname === '/api/config') {
+    if (req.method === 'GET' && pathname === ROUTES.config) {
       try {
         const cfg = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : DEFAULT_CONFIG
         return send(res, 200, { ...DEFAULT_CONFIG, ...cfg })
       } catch { return send(res, 200, DEFAULT_CONFIG) }
     }
 
-    if (req.method === 'POST' && pathname === '/api/config') {
+    if (req.method === 'POST' && pathname === ROUTES.config) {
       const body = await readBody(req)
       const current = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : DEFAULT_CONFIG
       const updated = { ...current, ...body }
@@ -191,7 +192,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ── AI Chat Proxy (/api/ai/chat) ────────────────────────────────────────
-    if (req.method === 'POST' && pathname === '/api/ai/chat') {
+    if (req.method === 'POST' && pathname === ROUTES.aiChat) {
       const body = await readBodyBuffer(req)
       const cfg = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : DEFAULT_CONFIG
       const endpoint = cfg.endpoint || DEFAULT_CONFIG.endpoint
@@ -228,7 +229,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ── Legacy docs (JSON) ──────────────────────────────────────────────────
-    if (req.method === 'GET' && pathname === '/api/docs') {
+    if (req.method === 'GET' && pathname === ROUTES.docsLegacy) {
       const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'))
       const docs = files.map(f => {
         try {
@@ -240,7 +241,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { docs })
     }
 
-    if (req.method === 'GET' && pathname.startsWith('/api/sync/')) {
+    if (req.method === 'GET' && pathname.startsWith(ROUTES.syncLegacy + '/')) {
       const docId = decodeURIComponent(pathname.replace('/api/sync/', ''))
       const safeId = docId.replace(/[^a-zA-Z0-9-_]/g, '_')
       const file = path.join(DATA_DIR, `${safeId}.json`)
@@ -248,7 +249,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, JSON.parse(fs.readFileSync(file, 'utf8')))
     }
 
-    if (req.method === 'POST' && pathname === '/api/sync') {
+    if (req.method === 'POST' && pathname === ROUTES.syncLegacy) {
       const body = await readBody(req)
       const docId = body.docId || 'default'
       const safeId = docId.replace(/[^a-zA-Z0-9-_]/g, '_')
@@ -261,7 +262,7 @@ const server = http.createServer(async (req, res) => {
     // ── File API (/api/files) ───────────────────────────────────────────────
 
     // GET /api/files — list all .docx files
-    if (req.method === 'GET' && pathname === '/api/files') {
+    if (req.method === 'GET' && pathname === ROUTES.files) {
       const files = fs.readdirSync(DOCS_DIR).filter(f => f.endsWith('.docx'))
       const list = files.map(f => {
         const stat = fs.statSync(path.join(DOCS_DIR, f))
@@ -279,7 +280,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // GET /api/files/:id — download .docx
-    if (req.method === 'GET' && pathname.startsWith('/api/files/')) {
+    if (req.method === 'GET' && pathname.startsWith(ROUTES.files + '/')) {
       const parts = pathname.split('/')
       if (parts.length === 4) {
         const id = decodeURIComponent(parts[3])
@@ -290,7 +291,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // POST /api/files — upload/save .docx (multipart/form-data or raw binary)
-    if (req.method === 'POST' && pathname === '/api/files') {
+    if (req.method === 'POST' && pathname === ROUTES.files) {
       const contentType = req.headers['content-type'] || ''
       let fileData, fileName
 
@@ -335,7 +336,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // DELETE /api/files/:id — delete
-    if (req.method === 'DELETE' && pathname.startsWith('/api/files/')) {
+    if (req.method === 'DELETE' && pathname.startsWith(ROUTES.files + '/')) {
       const parts = pathname.split('/')
       if (parts.length === 4) {
         const id = decodeURIComponent(parts[3])
@@ -351,7 +352,7 @@ const server = http.createServer(async (req, res) => {
     // ── Sessions API (/api/sessions) ────────────────────────────────────────
 
     // GET /api/sessions — list all sessions
-    if (req.method === 'GET' && pathname === '/api/sessions') {
+    if (req.method === 'GET' && pathname === ROUTES.sessions) {
       const files = fs.readdirSync(SESSIONS_DIR).filter(f => f.endsWith('.json'))
       const sessions = files.map(f => {
         try {
@@ -371,7 +372,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // GET /api/sessions/:id — get session detail
-    if (req.method === 'GET' && pathname.startsWith('/api/sessions/')) {
+    if (req.method === 'GET' && pathname.startsWith(ROUTES.sessions + '/')) {
       const parts = pathname.split('/')
       if (parts.length === 4) {
         const id = decodeURIComponent(parts[3])
@@ -382,7 +383,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // POST /api/sessions — create session
-    if (req.method === 'POST' && pathname === '/api/sessions') {
+    if (req.method === 'POST' && pathname === ROUTES.sessions) {
       const body = await readBody(req)
       const id = newSessionId()
       const now = new Date().toISOString()
@@ -399,7 +400,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // PUT /api/sessions/:id — update session
-    if (req.method === 'PUT' && pathname.startsWith('/api/sessions/')) {
+    if (req.method === 'PUT' && pathname.startsWith(ROUTES.sessions + '/')) {
       const parts = pathname.split('/')
       if (parts.length === 4) {
         const id = decodeURIComponent(parts[3])
@@ -419,7 +420,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // DELETE /api/sessions/:id — delete session
-    if (req.method === 'DELETE' && pathname.startsWith('/api/sessions/')) {
+    if (req.method === 'DELETE' && pathname.startsWith(ROUTES.sessions + '/')) {
       const parts = pathname.split('/')
       if (parts.length === 4) {
         const id = decodeURIComponent(parts[3])
