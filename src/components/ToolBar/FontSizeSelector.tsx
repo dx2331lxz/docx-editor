@@ -169,7 +169,7 @@ const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({ editor }) => {
       {open && ReactDOM.createPortal(
         <div
           ref={dropdownRef as React.RefObject<HTMLDivElement>}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, color: '#111827' }}
           className="w-[110px] bg-white border border-gray-200 shadow-xl rounded py-1 max-h-64 overflow-y-auto"
         >
           {/* Numeric preset sizes — show Chinese name where applicable */}

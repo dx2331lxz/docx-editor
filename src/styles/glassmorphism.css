@@ -329,3 +329,22 @@ body::before {
 .menu-dropdown-light::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
+/* ── Portal dropdowns (white bg, dark text override) ───── */
+/* Any portal div injected to body with white background should use dark text */
+body > div[style*="background: rgb(255, 255, 255)"],
+body > div[style*="background: #fff"],
+body > div[style*="background: white"],
+body > div[style*="background:#fff"] {
+  color: #111827 !important;
+}
+body > div[style*="background: rgb(255, 255, 255)"] button,
+body > div[style*="background: #fff"] button,
+body > div[style*="background: white"] button,
+body > div[style*="background:#fff"] button,
+body > div[style*="background: rgb(255, 255, 255)"] span,
+body > div[style*="background: #fff"] span,
+body > div[style*="background: white"] span,
+body > div[style*="background:#fff"] span {
+  color: inherit !important;
+}

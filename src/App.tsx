@@ -91,7 +91,6 @@ import DocStatsDashboard from './components/DocStats/DocStatsDashboard'
 import GrammarLintPanel from './components/GrammarLint/GrammarLintPanel'
 import CustomShortcutsDialog from './components/CustomShortcuts/CustomShortcutsDialog'
 import CloudSyncDialog from './components/CloudSync/CloudSyncDialog'
-import type { SyncStatus } from './components/CloudSync/CloudSyncDialog'
 // Round 18
 import AIAdvisorPanel from './components/AIAdvisor/AIAdvisorPanel'
 import { TabBar } from './components/TabBar/TabBar'
@@ -102,8 +101,10 @@ import FormFieldDialog from './components/FormFields/FormFieldDialog'
 import './styles/mobile.css'
 // Round 20
 import VibeEditingPanel from './components/VibeEditing/VibeEditingPanel'
-import AISettingsDialog from './components/Settings/AISettingsDialog'
-// VibeFloatBar import removed (component kept for future use)
+// Settings & File Manager
+import SettingsPanel from './components/Settings/SettingsPanel'
+import FileManagerSidebar from './components/FileManager/FileManagerSidebar'
+import type { DocFile } from './components/FileManager/FileManagerSidebar'
 
 const App: React.FC = () => {
   const [stats, setStats] = useState<EditorStats>({ characters: 0, words: 0, paragraphs: 0 })
@@ -216,15 +217,13 @@ const App: React.FC = () => {
   const [showFormFields, setShowFormFields] = useState(false)
   // Round 20 state
   const [showVibeEditing, setShowVibeEditing] = useState(false)
-  const [aiSettingsOpen, setAISettingsOpen] = useState(false)
   const [vibePanelWidth, setVibePanelWidth] = useState(360)
-  // (tooltip removed — Vibe button now uses title attr)
+  // File manager state
+  const [openFileId, setOpenFileId] = useState<string | null>(null)
   // Tab bar state
   const [tabs, setTabs] = useState<Tab[]>([{ id: 'tab-1', title: '新文档', content: '', isDirty: false }])
   const [activeTabId, setActiveTabId] = useState('tab-1')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced')
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(new Date())
 
   // Header / footer
   const [headerContent, setHeaderContent] = useState('')
@@ -494,7 +493,6 @@ const App: React.FC = () => {
             onOpenDocDiff={() => setShowDocDiff(true)}
             onOpenFormFields={() => setShowFormFields(true)}
             onOpenVibeEditing={() => setShowVibeEditing(true)}
-            onOpenAISettings={() => setAISettingsOpen(true)}
             onExportPDF={handleExportPDF}
           />
           <ToolBar
@@ -544,6 +542,19 @@ const App: React.FC = () => {
         </PrintPreviewOverlay>
       ) : (
         <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+          {/* File Manager Sidebar */}
+          <FileManagerSidebar
+            editor={editor}
+            currentDoc={currentDoc}
+            pageConfig={pageConfig}
+            openFileId={openFileId}
+            onDocOpened={(file: DocFile) => {
+              setOpenFileId(file.id || null)
+              if (file.name && file.id) {
+                setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, title: file.name } : t))
+              }
+            }}
+          />
           {showNavPane && editor && (
             <NavigationPane editor={editor} onClose={() => setShowNavPane(false)} />
           )}
@@ -609,11 +620,11 @@ const App: React.FC = () => {
           stats={stats}
           lastSaved={lastSaved}
           onOpenWordCount={() => setShowWordCount(true)}
-          syncStatus={syncStatus}
-          lastSyncTime={lastSyncTime}
-          onOpenCloudSync={() => setShowCloudSync(true)}
         />
       )}
+
+      {/* Settings panel — fixed bottom-left button + drawer */}
+      <SettingsPanel />
 
       {/* Vibe Editing panel — fixed full-height overlay */}
       {showVibeEditing && (
@@ -1023,10 +1034,6 @@ const App: React.FC = () => {
       )}
       {showCloudSync && (
         <CloudSyncDialog
-          status={syncStatus}
-          lastSyncTime={lastSyncTime}
-          onStatusChange={setSyncStatus}
-          onSyncTimeChange={setLastSyncTime}
           getContent={() => editor?.getJSON() ?? {}}
           onClose={() => setShowCloudSync(false)}
         />
@@ -1041,7 +1048,6 @@ const App: React.FC = () => {
       )}
       {showDocDiff && <DocDiffDialog editor={editor} onClose={() => setShowDocDiff(false)} />}
       {showFormFields && <FormFieldDialog editor={editor} onClose={() => setShowFormFields(false)} />}
-      <AISettingsDialog open={aiSettingsOpen} onClose={() => setAISettingsOpen(false)} />
       {/* Vibe Editing toggle button — fixed top-right */}
       <button
         onClick={() => setShowVibeEditing(v => !v)}

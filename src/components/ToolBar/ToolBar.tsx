@@ -97,7 +97,7 @@ const ColumnDropdown: React.FC<{
       {open && ReactDOM.createPortal(
         <div
           ref={dropdownRef as React.RefObject<HTMLDivElement>}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, color: '#111827' }}
           className="bg-white border border-gray-200 shadow-lg rounded py-1 w-28"
         >
           {COLUMN_OPTIONS.map((opt) => (
@@ -146,7 +146,7 @@ const LineSpacingDropdown: React.FC<{ editor: Editor; onOpenParagraphDialog?: ()
       {open && ReactDOM.createPortal(
         <div
           ref={dropdownRef as React.RefObject<HTMLDivElement>}
-          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, color: '#111827' }}
           className="bg-white border border-gray-200 shadow-xl rounded py-1 w-24"
         >
           {LINE_SPACINGS.map((s) => (
@@ -386,6 +386,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
                 right: morePos.right,
                 zIndex: 9999,
                 background: '#fff',
+                color: '#111827',
                 border: '1px solid #e5e7eb',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
                 borderRadius: 6,
@@ -406,13 +407,13 @@ const ToolBar: React.FC<ToolBarProps> = ({
 
               {/* Letter spacing */}
               <div className="flex items-center gap-1 px-2 py-1">
-                <span className="text-xs text-gray-500 w-14 flex-shrink-0">字间距</span>
+                <span className="text-xs text-gray-700 w-14 flex-shrink-0">字间距</span>
                 <LetterSpacingDropdown editor={editor} />
               </div>
 
               {/* Line spacing */}
               <div className="flex items-center gap-1 px-2 py-1">
-                <span className="text-xs text-gray-500 w-14 flex-shrink-0">行间距</span>
+                <span className="text-xs text-gray-700 w-14 flex-shrink-0">行间距</span>
                 <LineSpacingDropdown editor={editor} onOpenParagraphDialog={onOpenParagraphDialog} />
               </div>
 
@@ -455,7 +456,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
 
               {/* Border & shading */}
               <div className="flex items-center gap-1 px-2 py-1">
-                <span className="text-xs text-gray-500 w-14 flex-shrink-0">边框底纹</span>
+                <span className="text-xs text-gray-700 w-14 flex-shrink-0">边框底纹</span>
                 <BorderShadingPanel editor={editor} />
               </div>
 
@@ -463,7 +464,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
 
               {/* Column layout */}
               <div className="flex items-center gap-1 px-2 py-1">
-                <span className="text-xs text-gray-500 w-14 flex-shrink-0">分栏</span>
+                <span className="text-xs text-gray-700 w-14 flex-shrink-0">分栏</span>
                 <ColumnDropdown columns={columns} onColumnsChange={onColumnsChange} />
               </div>
 

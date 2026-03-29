@@ -33,7 +33,81 @@ interface ChatSession {
   messages: ChatMessage[]
 }
 
-const SESSIONS_KEY = 'vibe-editing-sessions'
+// ── Server session API helpers ────────────────────────────────────────────────
+
+async function fetchServerSessions(): Promise<ChatSession[]> {
+  try {
+    const res = await fetch('/api/sessions')
+    if (!res.ok) return []
+    const list: Array<{ id: string; title: string; model: string; createdAt: string; updatedAt: string }> = await res.json()
+    // We store mode in model field; createdAt is ISO string → convert to timestamp
+    return list.map(s => ({
+      id: s.id,
+      mode: (s.model as Mode) || 'agent',
+      title: s.title,
+      createdAt: new Date(s.createdAt).getTime(),
+      messages: [],
+    }))
+  } catch {
+    return []
+  }
+}
+
+async function loadServerSession(id: string): Promise<ChatSession | null> {
+  try {
+    const res = await fetch(`/api/sessions/${encodeURIComponent(id)}`)
+    if (!res.ok) return null
+    const s = await res.json()
+    return {
+      id: s.id,
+      mode: (s.model as Mode) || 'agent',
+      title: s.title,
+      createdAt: new Date(s.createdAt).getTime(),
+      messages: s.messages || [],
+    }
+  } catch {
+    return null
+  }
+}
+
+async function createServerSession(session: ChatSession): Promise<string | null> {
+  try {
+    const res = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: session.title, model: session.mode, messages: session.messages }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.id
+  } catch {
+    return null
+  }
+}
+
+async function updateServerSession(id: string, session: Partial<{ title: string; messages: ChatMessage[] }>): Promise<void> {
+  try {
+    await fetch(`/api/sessions/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(session),
+    })
+  } catch { /* ignore */ }
+}
+
+async function deleteServerSession(id: string): Promise<void> {
+  await fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+function relativeTime(ts: number): string {
+  const diff = Date.now() - ts
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return '刚刚'
+  if (m < 60) return `${m} 分钟前`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} 小时前`
+  return `${Math.floor(h / 24)} 天前`
+}
 
 const PRESETS = [
   { label: '🏛️ 正式公文风格', value: '将这篇文章改写为正式公文风格：使用规范的公文标题格式，段落缩进两字符，措辞正式严谨，去除口语化表达，标题层级规范化（主标题用 h1，小标题用 h2/h3）' },
@@ -86,17 +160,8 @@ function relativeTime(ts: number): string {
   return `${Math.floor(h / 24)} 天前`
 }
 
-function loadSessions(): ChatSession[] {
-  try {
-    return JSON.parse(localStorage.getItem(SESSIONS_KEY) ?? '[]')
-  } catch {
-    return []
-  }
-}
-
-function saveSessions(sessions: ChatSession[]) {
-  localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 20)))
-}
+function loadSessions(): ChatSession[] { return [] } // replaced by server API
+function saveSessions(_sessions: ChatSession[]) {} // replaced by server API
 
 export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange, onPageConfigChange, pageConfig }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -107,6 +172,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
   const [mode, setMode] = useState<Mode>('agent')
   const [showHistory, setShowHistory] = useState(false)
   const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [viewingSession, setViewingSession] = useState<ChatSession | null>(null)
   const [askContinueResolver, setAskContinueResolver] = useState<((v: boolean) => void) | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -131,7 +197,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
   }, [width, onWidthChange])
 
   useEffect(() => {
-    setSessions(loadSessions())
+    if (!showHistory) return
+    fetchServerSessions().then(setSessions)
   }, [showHistory])
 
   useEffect(() => {
@@ -150,21 +217,28 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     resizeTextarea()
   }, [input, resizeTextarea])
 
-  const saveSession = useCallback((msgs: ChatMessage[], sessionMode: Mode) => {
+  const saveSession = useCallback((msgs: ChatMessage[], sessionMode: Mode, sessId: string | null) => {
     if (msgs.length === 0) return
     const firstUserMsg = msgs.find(m => m.role === 'user')
     const title = firstUserMsg
       ? (firstUserMsg as { role: 'user'; text: string }).text.slice(0, 20)
       : '无标题'
-    const session: ChatSession = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      mode: sessionMode,
-      title,
-      createdAt: Date.now(),
-      messages: msgs,
+    if (sessId) {
+      // Update existing session
+      updateServerSession(sessId, { title, messages: msgs })
+    } else {
+      // Create new session and store id
+      const session: ChatSession = {
+        id: '',
+        mode: sessionMode,
+        title,
+        createdAt: Date.now(),
+        messages: msgs,
+      }
+      createServerSession(session).then(newId => {
+        if (newId) setCurrentSessionId(newId)
+      })
     }
-    const existing = loadSessions()
-    saveSessions([session, ...existing])
   }, [])
 
   // 会话完成时保存（AI 消息有 done: true）——必须在 saveSession 定义之后
@@ -178,8 +252,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     if (now - lastSavedAtRef.current < 5000) return
     lastSavedAtRef.current = now
 
-    saveSession(messages, mode)
-  }, [messages, mode, saveSession])
+    saveSession(messages, mode, currentSessionId)
+  }, [messages, mode, saveSession, currentSessionId])
 
   const runAskMode = async (
     question: string,
@@ -345,6 +419,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
     setConversationHistory([])
     setViewingSession(null)
     setShowHistory(false)
+    setCurrentSessionId(null)
   }
 
   const displayedMessages = viewingSession ? viewingSession.messages : messages
@@ -491,60 +566,81 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                   暂无历史记录
                 </div>
               )}
-              {sessions.slice(0, 10).map(sess => (
-                <button
+              {sessions.slice(0, 20).map(sess => (
+                <div
                   key={sess.id}
-                  onClick={() => {
-                    // Load history session as active context (not readonly)
-                    setMessages(sess.messages)
-                    setMode(sess.mode)
-                    // Reconstruct conversation history from saved messages
-                    const rebuilt: Message[] = []
-                    for (const m of sess.messages) {
-                      if (m.role === 'user') {
-                        rebuilt.push({ role: 'user', content: m.text })
-                      } else if (m.role === 'ai' && m.done && m.summary) {
-                        rebuilt.push({ role: 'assistant', content: m.summary })
-                      }
-                    }
-                    setConversationHistory(rebuilt.slice(-20))
-                    setShowHistory(false)
-                    setViewingSession(null)
-                  }}
                   style={{
-                    width: '100%',
-                    background: 'none',
-                    border: 'none',
+                    display: 'flex', alignItems: 'center',
                     borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    padding: '10px 14px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    textAlign: 'left',
-                    transition: 'background 0.12s',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                 >
-                  <span style={{
-                    flexShrink: 0,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    background: `${MODE_BADGE_COLOR[sess.mode]}22`,
-                    color: MODE_BADGE_COLOR[sess.mode],
-                    border: `1px solid ${MODE_BADGE_COLOR[sess.mode]}44`,
-                    letterSpacing: '0.04em',
-                  }}>
-                    {MODE_LABELS[sess.mode]}
-                  </span>
-                  <span style={{ flex: 1, fontSize: 12, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {sess.title}
-                  </span>
-                  <span style={{ flexShrink: 0, fontSize: 10, color: '#445577' }}>{relativeTime(sess.createdAt)}</span>
-                </button>
+                  <button
+                    onClick={async () => {
+                      // Load full session from server
+                      const full = await loadServerSession(sess.id)
+                      if (!full) return
+                      setMessages(full.messages)
+                      setMode(full.mode)
+                      setCurrentSessionId(full.id)
+                      // Reconstruct conversation history from saved messages
+                      const rebuilt: Message[] = []
+                      for (const m of full.messages) {
+                        if (m.role === 'user') {
+                          rebuilt.push({ role: 'user', content: m.text })
+                        } else if (m.role === 'ai' && m.done && m.summary) {
+                          rebuilt.push({ role: 'assistant', content: m.summary })
+                        }
+                      }
+                      setConversationHistory(rebuilt.slice(-20))
+                      setShowHistory(false)
+                      setViewingSession(null)
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'none',
+                      border: 'none',
+                      padding: '10px 14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      textAlign: 'left',
+                      transition: 'background 0.12s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span style={{
+                      flexShrink: 0,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      background: `${MODE_BADGE_COLOR[sess.mode]}22`,
+                      color: MODE_BADGE_COLOR[sess.mode],
+                      border: `1px solid ${MODE_BADGE_COLOR[sess.mode]}44`,
+                      letterSpacing: '0.04em',
+                    }}>
+                      {MODE_LABELS[sess.mode]}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 12, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {sess.title}
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 10, color: '#445577' }}>{relativeTime(sess.createdAt)}</span>
+                  </button>
+                  <button
+                    title="删除会话"
+                    onClick={async () => {
+                      if (!confirm('删除此会话？')) return
+                      await deleteServerSession(sess.id)
+                      setSessions(prev => prev.filter(s => s.id !== sess.id))
+                      if (currentSessionId === sess.id) setCurrentSessionId(null)
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#445577', padding: '0 10px', fontSize: 14 }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#ff6b6b')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#445577')}
+                  >✕</button>
+                </div>
               ))}
             </div>
         </div>

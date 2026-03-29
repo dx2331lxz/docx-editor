@@ -79,14 +79,10 @@ export function CloudSyncIndicator({ status, lastSyncTime, onClick }: {
 
 interface Props {
   onClose: () => void
-  status?: SyncStatus
-  lastSyncTime?: Date | null
-  onStatusChange?: (s: SyncStatus) => void
-  onSyncTimeChange?: (d: Date | null) => void
   getContent?: () => object   // callback to get current editor content
 }
 
-export default function CloudSyncDialog({ onClose, onStatusChange, onSyncTimeChange, getContent }: Props) {
+export default function CloudSyncDialog({ onClose, getContent }: Props) {
   const [cfg, setCfg] = useState<CloudSyncConfig>(loadCloudSyncConfig)
   const [syncing, setSyncing] = useState(false)
   const [lastSync, setLastSync] = useState<Date | null>(null)
@@ -119,7 +115,6 @@ export default function CloudSyncDialog({ onClose, onStatusChange, onSyncTimeCha
 
   async function doSync() {
     setSyncing(true)
-    onStatusChange?.('syncing')
     let ok = false
     if (cfg.provider === 'local') {
       const content = getContent?.() ?? {}
@@ -135,11 +130,7 @@ export default function CloudSyncDialog({ onClose, onStatusChange, onSyncTimeCha
     const now = new Date()
     if (ok) {
       setLastSync(now)
-      onStatusChange?.('synced')
-      onSyncTimeChange?.(now)
       fetchDocList()
-    } else {
-      onStatusChange?.(cfg.provider === 'local' && serverOnline === false ? 'offline' : 'error')
     }
   }
 

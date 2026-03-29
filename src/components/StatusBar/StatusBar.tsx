@@ -1,7 +1,5 @@
 import React from 'react'
 import type { EditorStats } from '../../types/editor'
-import { CloudSyncIndicator } from '../CloudSync/CloudSyncDialog'
-import type { SyncStatus } from '../CloudSync/CloudSyncDialog'
 
 interface StatusBarProps {
   stats: EditorStats
@@ -9,9 +7,6 @@ interface StatusBarProps {
   totalPages?: number
   lastSaved?: Date | null
   onOpenWordCount?: () => void
-  syncStatus?: SyncStatus
-  lastSyncTime?: Date | null
-  onOpenCloudSync?: () => void
 }
 
 function formatSaveTime(d: Date) {
@@ -24,9 +19,6 @@ const StatusBar: React.FC<StatusBarProps> = ({
   totalPages = 1,
   lastSaved,
   onOpenWordCount,
-  syncStatus,
-  lastSyncTime,
-  onOpenCloudSync,
 }) => {
   return (
     <div className="glass-statusbar flex items-center justify-between px-4 py-1 bg-blue-600 text-white text-xs select-none">
@@ -44,21 +36,21 @@ const StatusBar: React.FC<StatusBarProps> = ({
         <span>段落：{stats.paragraphs}</span>
       </div>
       <div className="flex items-center gap-4">
-        {lastSaved && (
-          <span className="text-blue-200 text-xs">✓ 已自动保存 {formatSaveTime(lastSaved)}</span>
+        {lastSaved ? (
+          <span
+            className="text-blue-200 text-xs"
+            title={`上次保存时间：${lastSaved.toLocaleString('zh-CN')}`}
+          >
+            ✓ 已保存 {formatSaveTime(lastSaved)}
+          </span>
+        ) : (
+          <span className="text-blue-300 text-xs">未保存</span>
         )}
         <span>
           第 {currentPage} 页 / 共 {totalPages} 页
         </span>
         <span>A4 · 210mm×297mm</span>
         <span>中文(中国)</span>
-        {syncStatus && (
-          <CloudSyncIndicator
-            status={syncStatus}
-            lastSyncTime={lastSyncTime ?? null}
-            onClick={onOpenCloudSync}
-          />
-        )}
       </div>
     </div>
   )

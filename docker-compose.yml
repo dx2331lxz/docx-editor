@@ -5,7 +5,8 @@ services:
     ports:
       - "3011:3011"
     volumes:
-      - ./data:/app/server/data
+      - ./data/docs:/app/sync-server/docs
+      - ./data/config:/app/sync-server/config
     environment:
       - PORT=3011
     restart: unless-stopped
