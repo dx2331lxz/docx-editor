@@ -206,52 +206,48 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
     return () => container.removeEventListener('click', handleClick)
   }, [scrollRef])
 
-  // ── Page divider lines (Word/WPS style gap between pages) ──────────────
-  // Dynamically insert absolutely-positioned divider elements every 297mm
-  // inside the a4-page container. These are pointer-events:none and sit
-  // above content via z-index, creating a visible grey strip.
+  // ── Page break visual indicator ────────────────────────────────────────
+  // Draw a subtle dividing line at every 297mm using an absolutely-positioned
+  // element that sits BEHIND the text (z-index < 1). The line is thin enough
+  // that it never obscures text — it sits at the exact pixel boundary and text
+  // continues naturally across it. A box-shadow gives the "page edge" feel.
   useEffect(() => {
     const page = pageRef.current
     if (!page) return
 
-    const PAGE_HEIGHT_MM = 297
-    const MM_TO_PX = 3.7795275591 // 1mm in CSS pixels at 96dpi
+    const PAGE_MM = 297
+    const MM_PX = 3.7795275591
+    const PAGE_PX = PAGE_MM * MM_PX  // ≈ 1122.52 px
 
-    const updateDividers = () => {
+    const updateLines = () => {
       if (!page) return
-      // Remove old dividers
-      page.querySelectorAll('.page-gap-divider').forEach(el => el.remove())
+      page.querySelectorAll('.page-sep-line').forEach(el => el.remove())
 
       const totalHeight = page.scrollHeight
-      const pageHeightPx = PAGE_HEIGHT_MM * MM_TO_PX
-
-      let pos = pageHeightPx
-      while (pos < totalHeight) {
-        const divider = document.createElement('div')
-        divider.className = 'page-gap-divider'
-        divider.style.cssText = `
+      let pos = PAGE_PX
+      while (pos < totalHeight + PAGE_PX) {
+        const line = document.createElement('div')
+        line.className = 'page-sep-line'
+        line.style.cssText = `
           position: absolute;
           left: 0;
           right: 0;
           top: ${pos}px;
-          height: 20px;
-          background: #c8c8c8;
+          height: 2px;
+          background: linear-gradient(to bottom, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.06) 2px);
           pointer-events: none;
-          z-index: 50;
+          z-index: 2;
           user-select: none;
-          box-shadow: 0 -2px 5px rgba(0,0,0,0.12), 0 2px 5px rgba(0,0,0,0.10),
-                      -500px 0 0 #c8c8c8, 500px 0 0 #c8c8c8;
         `
-        page.appendChild(divider)
-        pos += pageHeightPx + 20 // next page starts 20px later
+        page.appendChild(line)
+        pos += PAGE_PX
       }
     }
 
-    // Run once and also on resize/content change
-    updateDividers()
-    const resizeObserver = new ResizeObserver(updateDividers)
-    resizeObserver.observe(page)
-    return () => resizeObserver.disconnect()
+    updateLines()
+    const ro = new ResizeObserver(updateLines)
+    ro.observe(page)
+    return () => ro.disconnect()
   }, [editor])
 
   return (

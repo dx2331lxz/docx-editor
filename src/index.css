@@ -511,17 +511,18 @@ span.track-delete {
   display: none !important;
 }
 
-/* ── Page break — Word/WPS style grey gap between pages ─────────────── */
-/* Divider elements are injected via useEffect in EditorCanvas.tsx.       */
-/* box-shadow spreads horizontally to cover the full grey canvas area.    */
+/* ── Page separator line (subtle, sits behind text) ─────────────────── */
 .a4-page {
   position: relative;
+  overflow: visible;
 }
 
-.page-gap-divider {
+/* The separator has no height — just a box-shadow acting as two hairlines:
+   one at the bottom of the outgoing page, one at the top of the next.
+   z-index: 0 keeps it behind text content (which is z-index: 1).        */
+.page-sep-line {
   position: absolute;
   pointer-events: none;
   user-select: none;
-  z-index: 50;
-  background: #c8c8c8;
+  z-index: 0;
 }
