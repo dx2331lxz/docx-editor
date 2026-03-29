@@ -5,6 +5,7 @@
 import type { Editor } from '@tiptap/react'
 import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 import html2canvas from 'html2canvas'
+import { DOMParser as PMDOMParser } from '@tiptap/pm/model'
 
 // ─── Module-level state ─────────────────────────────────────────────────────
 let lastScreenshotBase64: string | null = null
@@ -590,6 +591,71 @@ export const VIBE_TOOLS = [
       },
     },
   },
+  // ── Precision node editing tools ──────────────────────────────────────────
+  {
+    type: 'function' as const,
+    function: {
+      name: 'find_and_style_node',
+      description: '找到包含指定文字的段落/标题，对其应用行内样式（字号/字体/颜色/加粗）。比 replace_document_html 更精准，不影响其他内容，支持 undo',
+      parameters: {
+        type: 'object',
+        properties: {
+          searchText: { type: 'string', description: '要查找的文字片段（模糊匹配，取段落前20字即可）' },
+          styles: {
+            type: 'object',
+            description: '要应用的样式，如 {"font-size":"12pt","font-family":"SimHei","font-weight":"700","color":"#333"}',
+          },
+          scope: {
+            type: 'string',
+            enum: ['node', 'all-matching'],
+            description: 'node=只改第一个匹配，all-matching=改所有匹配段落',
+          },
+        },
+        required: ['searchText', 'styles'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_node_block_style',
+      description: '修改指定段落的块级样式（对齐/行高/首行缩进/左内边距），按文字内容定位，支持 undo',
+      parameters: {
+        type: 'object',
+        properties: {
+          searchText: { type: 'string', description: '要查找的文字片段' },
+          styles: {
+            type: 'object',
+            description: '块级样式，如 {"text-align":"center","line-height":"2","text-indent":"2em","padding-left":"1"}',
+          },
+          scope: {
+            type: 'string',
+            enum: ['node', 'all-matching'],
+            description: 'node=只改第一个匹配，all-matching=改所有匹配段落',
+          },
+        },
+        required: ['searchText', 'styles'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'replace_node_content',
+      description: '替换指定段落的内容（当需要改变段落内部结构时使用，如修改 span 包裹）。比 replace_document_html 精准，只替换单个节点，支持 undo',
+      parameters: {
+        type: 'object',
+        properties: {
+          searchText: { type: 'string', description: '要查找的文字片段（唯一定位该段落）' },
+          newContent: {
+            type: 'string',
+            description: '新的段落内容 HTML（只含内联元素，如 <span>...</span><strong>...</strong>）',
+          },
+        },
+        required: ['searchText', 'newContent'],
+      },
+    },
+  },
   // ── Finish ────────────────────────────────────────────────────────────────
   {
     type: 'function' as const,
@@ -742,7 +808,15 @@ export async function executeTool(
       case 'replace_document_html': {
         const { html } = args as { html: string }
         if (!html) return '错误：html 参数为空'
-        editor.chain().focus().setContent(html, true).run()
+        // Parse new HTML via ProseMirror and dispatch a single transaction so
+        // the change is recorded in the undo/redo history stack.
+        const { state } = editor.view
+        const domNode = document.createElement('div')
+        domNode.innerHTML = html
+        const parser = PMDOMParser.fromSchema(state.schema)
+        const newDoc = parser.parse(domNode)
+        const tr = state.tr.replaceWith(0, state.doc.content.size, newDoc.content)
+        editor.view.dispatch(tr)
         return '文档已替换，字符数：' + html.length
       }
 
@@ -1374,6 +1448,120 @@ export async function executeTool(
         }
         const data = await response.json()
         return data.choices?.[0]?.message?.content ?? '分析失败，未收到有效响应'
+      }
+
+      // ── Precision node editing ─────────────────────────────────────────
+      case 'find_and_style_node': {
+        const { searchText, styles, scope = 'node' } = args as {
+          searchText: string
+          styles: Record<string, string>
+          scope?: string
+        }
+        const { state } = editor.view
+        const tr = state.tr
+        let count = 0
+
+        state.doc.descendants((node, pos) => {
+          if (!['paragraph', 'heading'].includes(node.type.name)) return
+          if (!node.textContent.includes(searchText)) return
+          if (scope === 'node' && count > 0) return
+
+          const from = pos + 1
+          const to = pos + node.nodeSize - 1
+
+          // Collect textStyle attrs (fontSize, fontFamily, color)
+          const textStyleAttrs: Record<string, string> = {}
+          if (styles['font-size']) textStyleAttrs.fontSize = styles['font-size']
+          if (styles['font-family']) textStyleAttrs.fontFamily = styles['font-family']
+          if (styles['color']) textStyleAttrs.color = styles['color']
+
+          if (Object.keys(textStyleAttrs).length > 0) {
+            const textStyleMark = state.schema.marks.textStyle?.create(textStyleAttrs)
+            if (textStyleMark) tr.addMark(from, to, textStyleMark)
+          }
+
+          if (
+            styles['font-weight'] === '700' ||
+            styles['font-weight'] === 'bold' ||
+            styles['bold'] === 'true'
+          ) {
+            const boldMark = state.schema.marks.bold?.create()
+            if (boldMark) tr.addMark(from, to, boldMark)
+          }
+
+          count++
+        })
+
+        if (count > 0) editor.view.dispatch(tr)
+        return count > 0
+          ? `已对 ${count} 个匹配段落应用样式`
+          : `未找到包含 "${searchText}" 的段落`
+      }
+
+      case 'set_node_block_style': {
+        const { searchText, styles, scope = 'node' } = args as {
+          searchText: string
+          styles: Record<string, string>
+          scope?: string
+        }
+        const { state } = editor.view
+        const tr = state.tr
+        let count = 0
+
+        state.doc.descendants((node, pos) => {
+          if (!['paragraph', 'heading'].includes(node.type.name)) return
+          if (!node.textContent.includes(searchText)) return
+          if (scope === 'node' && count > 0) return
+
+          const newAttrs: Record<string, unknown> = { ...node.attrs }
+
+          if (styles['text-align']) newAttrs.textAlign = styles['text-align']
+          if (styles['line-height']) newAttrs.lineHeight = styles['line-height']
+          if (styles['text-indent'] !== undefined) {
+            const indentVal = styles['text-indent']
+            if (indentVal === '0' || indentVal === '0em') {
+              newAttrs.firstLineIndent = 0
+            } else {
+              const em = parseFloat(indentVal)
+              if (!isNaN(em)) newAttrs.firstLineIndent = Math.round(em / 2)
+            }
+          }
+          if (styles['padding-left'] !== undefined) {
+            const val = parseFloat(styles['padding-left'])
+            newAttrs.paddingLeft = isNaN(val) ? null : val
+          }
+
+          tr.setNodeMarkup(pos, null, newAttrs)
+          count++
+        })
+
+        if (count > 0) editor.view.dispatch(tr)
+        return count > 0
+          ? `已对 ${count} 个匹配段落应用块级样式`
+          : `未找到包含 "${searchText}" 的段落`
+      }
+
+      case 'replace_node_content': {
+        const { searchText, newContent } = args as {
+          searchText: string
+          newContent: string
+        }
+        const { state } = editor.view
+        let targetFrom = -1
+        let targetTo = -1
+
+        state.doc.descendants((node, pos) => {
+          if (targetFrom !== -1) return
+          if (!['paragraph', 'heading'].includes(node.type.name)) return
+          if (!node.textContent.includes(searchText)) return
+          targetFrom = pos + 1
+          targetTo = pos + node.nodeSize - 1
+        })
+
+        if (targetFrom === -1) return `未找到包含 "${searchText}" 的段落`
+
+        editor.commands.insertContentAt({ from: targetFrom, to: targetTo }, newContent)
+        return `已替换段落内容（搜索词："${searchText.slice(0, 30)}"）`
       }
 
       case 'finish': {
