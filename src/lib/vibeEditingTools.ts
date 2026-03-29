@@ -676,6 +676,31 @@ export const VIBE_TOOLS = [
 // ─── Tool executor ──────────────────────────────────────────────────────────
 
 // Helper: apply inline styles to all matching elements in HTML string
+// ── Font family cross-platform mapping ──────────────────────────────────────
+// Windows font names → cross-platform font stacks with Linux Noto CJK fallback
+const FONT_MAP: Record<string, string> = {
+  'simsun':          'SimSun, "Noto Serif CJK SC", serif',
+  '宋体':             'SimSun, "Noto Serif CJK SC", serif',
+  'simhei':          'SimHei, "Noto Sans CJK SC", sans-serif',
+  '黑体':             'SimHei, "Noto Sans CJK SC", sans-serif',
+  'fangsong':        'FangSong, "Noto Serif CJK SC", serif',
+  '仿宋':             'FangSong, "Noto Serif CJK SC", serif',
+  'kaiti':           'KaiTi, "Noto Serif CJK SC", serif',
+  '楷体':             'KaiTi, "Noto Serif CJK SC", serif',
+  'microsoft yahei': '"Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
+  '微软雅黑':          '"Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
+  'pingfang sc':     '"PingFang SC", "Noto Sans CJK SC", sans-serif',
+  'noto sans cjk sc': '"Noto Sans CJK SC", sans-serif',
+  'noto serif cjk sc': '"Noto Serif CJK SC", serif',
+  'wenquanyi micro hei': '"WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif',
+  '文泉驿微米黑':       '"WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif',
+}
+
+function resolveFontFamily(input: string): string {
+  const key = input.toLowerCase().replace(/['"]/g, '').trim()
+  return FONT_MAP[key] ?? input
+}
+
 function applyStylesToHTML(
   html: string,
   selector: string,
@@ -847,7 +872,7 @@ export async function executeTool(
 
       case 'set_font_family': {
         const { selector, family } = args as { selector: string; family: string }
-        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), selector, 'font-family', family)
+        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), selector, 'font-family', resolveFontFamily(family))
         editor.chain().focus().setContent(newHtml, true).run()
         return `已设置 ${count} 个元素字体为 ${family}`
       }
@@ -978,7 +1003,7 @@ export async function executeTool(
         }
         applyThemeStyles('h1', t.h1); applyThemeStyles('h2', t.h2); applyThemeStyles('h3', t.h3); applyThemeStyles('p', t.p)
         if (t.font) {
-          html = applySpanStyleToHTML(html, 'h1,h2,h3,h4,p,li', 'font-family', t.font).newHtml
+          html = applySpanStyleToHTML(html, 'h1,h2,h3,h4,p,li', 'font-family', resolveFontFamily(t.font!)).newHtml
         }
         editor.chain().focus().setContent(html, true).run()
         return `已应用"${theme}"主题`
@@ -986,7 +1011,7 @@ export async function executeTool(
 
       case 'set_document_font': {
         const { font } = args as { font: string }
-        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), 'h1,h2,h3,h4,h5,h6,p,li,td,th', 'font-family', font)
+        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), 'h1,h2,h3,h4,h5,h6,p,li,td,th', 'font-family', resolveFontFamily(font))
         editor.chain().focus().setContent(newHtml, true).run()
         return `已将 ${count} 个元素字体统一为"${font}"`
       }
@@ -1265,7 +1290,7 @@ export async function executeTool(
         const { newHtml, count } = applySpanStyleToHTML(
           editor.getHTML(),
           'p,li,td,th',
-          'font-family', font
+          'font-family', resolveFontFamily(font)
         )
         editor.chain().focus().setContent(newHtml, true).run()
         return `已将 ${count} 个正文元素字体设为 ${font}`
@@ -1305,7 +1330,7 @@ export async function executeTool(
 
         let html = editor.getHTML()
         // Step 1: unified body font (span-level)
-        html = applySpanStyleToHTML(html, 'p,li,td,th', 'font-family', font).newHtml
+        html = applySpanStyleToHTML(html, 'p,li,td,th', 'font-family', resolveFontFamily(font)).newHtml
         // Step 2: unified body font size (span-level)
         html = applySpanStyleToHTML(html, 'p,li,td,th', 'font-size', bodySize).newHtml
         // Step 3: line height for all blocks (block-level — correct)
@@ -1485,7 +1510,7 @@ export async function executeTool(
 
           // Then apply new styles on top
           if (styles['font-size']) textStyleAttrs.fontSize = styles['font-size']
-          if (styles['font-family']) textStyleAttrs.fontFamily = styles['font-family']
+          if (styles['font-family']) textStyleAttrs.fontFamily = resolveFontFamily(styles['font-family'])
           if (styles['color']) textStyleAttrs.color = styles['color']
 
           if (Object.keys(textStyleAttrs).length > 0) {

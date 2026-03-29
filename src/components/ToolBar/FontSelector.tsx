@@ -10,12 +10,12 @@ interface FontSelectorProps {
 }
 
 const FONT_FAMILIES = [
-  { label: '宋体',             value: 'SimSun, serif' },
-  { label: '黑体',             value: 'SimHei, sans-serif' },
-  { label: '楷体',             value: 'KaiTi, serif' },
-  { label: '仿宋',             value: 'FangSong, serif' },
-  { label: '微软雅黑',         value: '"Microsoft YaHei", sans-serif' },
-  { label: '方正书宋',         value: '"FangZhengShuSong", serif' },
+  { label: '宋体',             value: 'SimSun, "Noto Serif CJK SC", serif' },
+  { label: '黑体',             value: 'SimHei, "Noto Sans CJK SC", sans-serif' },
+  { label: '楷体',             value: 'KaiTi, "Noto Serif CJK SC", serif' },
+  { label: '仿宋',             value: 'FangSong, "Noto Serif CJK SC", serif' },
+  { label: '微软雅黑',         value: '"Microsoft YaHei", "Noto Sans CJK SC", sans-serif' },
+  { label: '方正书宋',         value: '"FangZhengShuSong", "Noto Serif CJK SC", serif' },
   { label: 'Calibri',         value: 'Calibri, sans-serif' },
   { label: 'Arial',           value: 'Arial, sans-serif' },
   { label: 'Times New Roman', value: '"Times New Roman", serif' },
