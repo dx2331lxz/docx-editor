@@ -68,6 +68,18 @@ async function deleteFile(id: string): Promise<void> {
   await fetch(`/api/files/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getDocumentTitle(editor: Editor): string {
+  const html = editor.getHTML()
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const h1 = doc.querySelector('h1')
+  if (h1?.textContent?.trim()) return h1.textContent.trim().slice(0, 50)
+  const text = editor.getText().trim()
+  return text ? text.slice(0, 30) : '新文档'
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function FileManagerSidebar({
@@ -86,6 +98,8 @@ export default function FileManagerSidebar({
   const [renameValue, setRenameValue] = useState('')
   const [menuId, setMenuId] = useState<string | null>(null)
   const [currentFileId, setCurrentFileId] = useState<string | null>(openFileId ?? null)
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [saveDialogDefaultName, setSaveDialogDefaultName] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
 
   const refresh = useCallback(async () => {
@@ -147,14 +161,20 @@ export default function FileManagerSidebar({
     onDocOpened?.({ id: '', name: '新文档', size: 0, updatedAt: new Date().toISOString() })
   }
 
-  const handleSave = async () => {
+  const handleSave = async (nameOverride?: string) => {
     if (!editor || !currentDoc) return
+    // First save: show naming dialog
+    if (!currentFileId && nameOverride === undefined) {
+      setSaveDialogDefaultName(getDocumentTitle(editor))
+      setShowSaveDialog(true)
+      return
+    }
     setSaving(true)
     setError(null)
     try {
       const html = editor.getHTML()
       const blob = await exportDocx(currentDoc, pageConfig, html)
-      const name = currentDoc.title || '新文档'
+      const name = nameOverride ?? currentDoc.title ?? '新文档'
       let saved: DocFile
       if (currentFileId) {
         saved = await overwriteDocx(currentFileId, blob, name)
@@ -164,6 +184,9 @@ export default function FileManagerSidebar({
       setCurrentFileId(saved.id)
       onDocOpened?.(saved)
       await refresh()
+      document.dispatchEvent(
+        new CustomEvent('autosave:manualsave', { detail: { fileName: saved.name, isAuto: false } }),
+      )
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存失败')
     } finally {
@@ -225,7 +248,10 @@ export default function FileManagerSidebar({
           const html = editor.getHTML()
           const blob = await exportDocx(currentDoc, pageConfig, html)
           const name = currentDoc.title || '新文档'
-          await overwriteDocx(currentFileId, blob, name)
+          const saved = await overwriteDocx(currentFileId, blob, name)
+          document.dispatchEvent(
+            new CustomEvent('autosave:manualsave', { detail: { fileName: saved.name, isAuto: true } }),
+          )
         } catch { /* silent auto-save failure */ }
       }, 2000)
     }
@@ -342,6 +368,15 @@ export default function FileManagerSidebar({
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
       `}</style>
+
+      {/* Save naming dialog */}
+      {showSaveDialog && (
+        <SaveDialog
+          defaultName={saveDialogDefaultName}
+          onConfirm={name => { setShowSaveDialog(false); handleSave(name) }}
+          onCancel={() => setShowSaveDialog(false)}
+        />
+      )}
     </div>
   )
 }
@@ -412,7 +447,7 @@ function FileItem({
           flex: 1, fontSize: 12, color: isActive ? '#1e40af' : '#374151',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
-          {file.name}
+          {file.name || '未命名文档'}
         </span>
       )}
 
@@ -477,5 +512,110 @@ function MenuItem({ children, onClick, danger }: { children: React.ReactNode; on
     >
       {children}
     </button>
+  )
+}
+
+// ── SaveDialog ────────────────────────────────────────────────────────────────
+
+interface SaveDialogProps {
+  defaultName: string
+  onConfirm: (name: string) => void
+  onCancel: () => void
+}
+
+function SaveDialog({ defaultName, onConfirm, onCancel }: SaveDialogProps) {
+  const [name, setName] = useState(defaultName)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [])
+
+  const confirm = () => {
+    const trimmed = name.trim()
+    if (trimmed) onConfirm(trimmed)
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          width: 340,
+          background: 'rgba(13, 10, 30, 0.94)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(178, 75, 255, 0.3)',
+          borderRadius: 12,
+          boxShadow: '0 8px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(178, 75, 255, 0.1)',
+          padding: '24px',
+          color: '#e0e8ff',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 600, color: '#e0e8ff' }}>
+          保存文档
+        </h3>
+        <input
+          ref={inputRef}
+          value={name}
+          onChange={e => setName(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') confirm()
+            if (e.key === 'Escape') onCancel()
+          }}
+          placeholder="请输入文件名"
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: 6, padding: '8px 10px',
+            fontSize: 13, color: '#e0e8ff', outline: 'none',
+            marginBottom: 16, display: 'block',
+          }}
+          onFocus={e => {
+            e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.5)'
+            e.currentTarget.style.boxShadow = '0 0 0 2px rgba(0, 212, 255, 0.15)'
+          }}
+          onBlur={e => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+        />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '7px 16px', fontSize: 13, borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'transparent', color: '#a0aec0', cursor: 'pointer',
+            }}
+          >
+            取消
+          </button>
+          <button
+            onClick={confirm}
+            disabled={!name.trim()}
+            style={{
+              padding: '7px 16px', fontSize: 13, borderRadius: 6,
+              border: 'none',
+              background: name.trim() ? 'rgba(0, 212, 255, 0.85)' : 'rgba(0, 212, 255, 0.25)',
+              color: name.trim() ? '#0a0e1a' : '#5a8a9a',
+              cursor: name.trim() ? 'pointer' : 'not-allowed',
+              fontWeight: 600,
+            }}
+          >
+            确认
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
