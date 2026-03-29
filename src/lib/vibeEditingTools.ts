@@ -628,6 +628,49 @@ function applyStylesToHTML(
   return { newHtml: docNode.body.innerHTML, count: els.length }
 }
 
+/**
+ * Apply font-size to matching elements in a way TipTap can read.
+ * TipTap's FontSize extension stores size on <span style="font-size:..."> (textStyle mark),
+ * NOT on block-level tags. So we must set font-size on all child spans (or wrap text nodes).
+ */
+function applyFontSizeToHTML(
+  html: string,
+  selector: string,
+  size: string,
+): { newHtml: string; count: number } {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const realSelector = selector === '.all' ? 'h1,h2,h3,h4,h5,h6,p,li,blockquote,td,th' : selector
+  const els = doc.querySelectorAll(realSelector)
+  let count = 0
+  els.forEach(el => {
+    count++
+    // Set font-size on all existing spans inside
+    el.querySelectorAll('span').forEach(span => {
+      const s = span.getAttribute('style') || ''
+      // Remove existing font-size
+      const cleaned = s.replace(/(?:^|;)\s*font-size\s*:[^;]*/g, '').replace(/^;/, '')
+      span.setAttribute('style', cleaned ? `${cleaned};font-size:${size}` : `font-size:${size}`)
+    })
+    // Also wrap bare text nodes in a span
+    Array.from(el.childNodes).forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+        const span = doc.createElement('span')
+        span.style.fontSize = size
+        el.insertBefore(span, node)
+        span.appendChild(node)
+      }
+    })
+    // If no spans or text nodes were processed, set on the element itself as fallback
+    if (!el.querySelector('span') && !el.textContent?.trim()) {
+      const s = el.getAttribute('style') || ''
+      const cleaned = s.replace(/(?:^|;)\s*font-size\s*:[^;]*/g, '').replace(/^;/, '')
+      el.setAttribute('style', cleaned ? `${cleaned};font-size:${size}` : `font-size:${size}`)
+    }
+  })
+  return { newHtml: doc.body.innerHTML, count }
+}
+
 // Themes map
 const THEMES_MAP: Record<string, { h1: string; h2: string; h3: string; p: string; font?: string }> = {
   default: { h1: 'color:#1a1a1a;font-size:22px;font-weight:700', h2: 'color:#333;font-size:18px;font-weight:600', h3: 'color:#555;font-size:15px;font-weight:600', p: 'color:#333;line-height:1.8' },
@@ -716,7 +759,7 @@ export async function executeTool(
       // ── Text format tools ────────────────────────────────────────────
       case 'set_font_size': {
         const { selector, size } = args as { selector: string; size: string }
-        const { newHtml, count } = applyStylesToHTML(editor.getHTML(), selector, { 'font-size': size })
+        const { newHtml, count } = applyFontSizeToHTML(editor.getHTML(), selector, size)
         editor.chain().focus().setContent(newHtml, true).run()
         return `已设置 ${count} 个元素字号为 ${size}`
       }
