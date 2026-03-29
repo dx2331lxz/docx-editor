@@ -24,9 +24,7 @@ import DocProtectDialog, { DEFAULT_PROTECTION, UnlockDialog } from './components
 import type { DocProtectionConfig } from './components/DocProtect/DocProtectDialog'
 import NavigationPane from './components/NavigationPane/NavigationPane'
 import type { Comment } from './extensions/CommentMark'
-import { useAutoSave } from './hooks/useAutoSave'
-import SaveToast from './components/SaveToast/SaveToast'
-import DraftRecoveryBanner from './components/SaveToast/DraftRecoveryBanner'
+import { useAutoSave } from './hooks/useAutoSave'import SaveToast from './components/SaveToast/SaveToast'
 import type { EditorStats, AIDocument } from './types/editor'
 import BookmarkDialog from './components/Bookmark/BookmarkDialog'
 import DocGridDialog, { DEFAULT_DOC_GRID } from './components/DocGrid/DocGridDialog'
@@ -107,6 +105,12 @@ import FileManagerSidebar from './components/FileManager/FileManagerSidebar'
 import type { DocFile } from './components/FileManager/FileManagerSidebar'
 
 const App: React.FC = () => {
+  // Clear legacy localStorage draft on startup (replaced by server-side file storage)
+  useEffect(() => {
+    localStorage.removeItem('docx-editor-autosave')
+    localStorage.removeItem('docx-editor-normal-exit')
+  }, [])
+
   const [stats, setStats] = useState<EditorStats>({ characters: 0, words: 0, paragraphs: 0 })
   const [currentDoc, setCurrentDoc] = useState<AIDocument | null>(null)
   const [showFindReplace, setShowFindReplace] = useState(false)
@@ -235,7 +239,7 @@ const App: React.FC = () => {
   const [showRuler, setShowRuler] = useState(false)
 
   const editor = useDocxEditor({ onStatsChange: setStats, onDocumentChange: setCurrentDoc })
-  const { lastSaved, draftInfo, restoreDraft, dismissDraft } = useAutoSave(editor)
+  const { lastSaved } = useAutoSave(editor)
 
   const handleExport = async () => {    if (!currentDoc || !editor) return
     const blob = await exportDocx(currentDoc, pageConfig, editor.getHTML())
@@ -780,14 +784,6 @@ const App: React.FC = () => {
 
       {/* Auto-save UI */}
       <SaveToast />
-      {draftInfo && (
-        <DraftRecoveryBanner
-          savedAt={draftInfo.savedAt}
-          onRestore={restoreDraft}
-          onDismiss={dismissDraft}
-        />
-      )}
-
       {/* Round 10 dialogs */}
       {showCompare && (
         <CompareDialog
