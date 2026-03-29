@@ -156,7 +156,9 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const pageStyle = pageConfig ? getPageStyle(pageConfig) : undefined
   const borderStyle = pageBorder ? getBorderStyle(pageBorder) : {}
   const scrollRef = useRef<HTMLDivElement>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
 
+  // Word/WPS-style inter-page gap — handled by absolute-positioned dividers via useEffect
   // Compute page background style
   const pageBgStyle: React.CSSProperties = (() => {
     if (!pageBg || pageBg.type === 'none') return { background: 'white' }
@@ -204,6 +206,54 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
     return () => container.removeEventListener('click', handleClick)
   }, [scrollRef])
 
+  // ── Page divider lines (Word/WPS style gap between pages) ──────────────
+  // Dynamically insert absolutely-positioned divider elements every 297mm
+  // inside the a4-page container. These are pointer-events:none and sit
+  // above content via z-index, creating a visible grey strip.
+  useEffect(() => {
+    const page = pageRef.current
+    if (!page) return
+
+    const PAGE_HEIGHT_MM = 297
+    const MM_TO_PX = 3.7795275591 // 1mm in CSS pixels at 96dpi
+
+    const updateDividers = () => {
+      if (!page) return
+      // Remove old dividers
+      page.querySelectorAll('.page-gap-divider').forEach(el => el.remove())
+
+      const totalHeight = page.scrollHeight
+      const pageHeightPx = PAGE_HEIGHT_MM * MM_TO_PX
+
+      let pos = pageHeightPx
+      while (pos < totalHeight) {
+        const divider = document.createElement('div')
+        divider.className = 'page-gap-divider'
+        divider.style.cssText = `
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: ${pos}px;
+          height: 20px;
+          background: #c8c8c8;
+          pointer-events: none;
+          z-index: 50;
+          user-select: none;
+          box-shadow: 0 -2px 5px rgba(0,0,0,0.12), 0 2px 5px rgba(0,0,0,0.10),
+                      -500px 0 0 #c8c8c8, 500px 0 0 #c8c8c8;
+        `
+        page.appendChild(divider)
+        pos += pageHeightPx + 20 // next page starts 20px later
+      }
+    }
+
+    // Run once and also on resize/content change
+    updateDividers()
+    const resizeObserver = new ResizeObserver(updateDividers)
+    resizeObserver.observe(page)
+    return () => resizeObserver.disconnect()
+  }, [editor])
+
   return (
     <div className="glass-canvas-bg flex-1 overflow-auto bg-gray-300 flex flex-col">
       {/* ── Ruler ──────────────────────────────────────────── */}
@@ -218,6 +268,7 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
       {/* ── Scrollable page area ───────────────────────────── */}
       <div ref={scrollRef} className="flex-1 overflow-auto py-8 px-4">
         <div
+          ref={pageRef}
           className={`a4-page ${columnClass} ${themeClass}`}
           style={pageStyle ? {
             ...pageStyle,

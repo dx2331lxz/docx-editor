@@ -511,24 +511,17 @@ span.track-delete {
   display: none !important;
 }
 
-/* ── Page break indicator lines ─────────────────────────────────────── */
+/* ── Page break — Word/WPS style grey gap between pages ─────────────── */
+/* Divider elements are injected via useEffect in EditorCanvas.tsx.       */
+/* box-shadow spreads horizontally to cover the full grey canvas area.    */
 .a4-page {
   position: relative;
 }
 
-.a4-page::after {
-  content: '';
+.page-gap-divider {
   position: absolute;
-  inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent calc(297mm - 1px),
-    #b0b8c8 calc(297mm - 1px),
-    #b0b8c8 297mm,
-    transparent 297mm,
-    transparent 594mm
-  );
-  z-index: 10;
+  user-select: none;
+  z-index: 50;
+  background: #c8c8c8;
 }
