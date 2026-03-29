@@ -166,71 +166,90 @@ export default function SettingsPanel({ defaultTab = 'ai' }: Props) {
 
 // ── Storage tab ───────────────────────────────────────────────────────────────
 
+const CLOUD_PROVIDERS = [
+  {
+    id: 'baidu',
+    name: '百度网盘',
+    icon: '☁️',
+    desc: '绑定百度网盘账号，自动同步文档到云端',
+    color: '#2468f2',
+    comingSoon: true,
+  },
+  {
+    id: 'quark',
+    name: '夸克网盘',
+    icon: '⚡',
+    desc: '绑定夸克网盘账号，支持自动备份',
+    color: '#fa6400',
+    comingSoon: true,
+  },
+  {
+    id: 'aliyun',
+    name: '阿里云盘',
+    icon: '🗂️',
+    desc: '绑定阿里云盘，文档实时同步',
+    color: '#ff6a00',
+    comingSoon: true,
+  },
+  {
+    id: 'webdav',
+    name: 'WebDAV',
+    icon: '🔗',
+    desc: '自定义 WebDAV 服务器（坚果云、Nextcloud 等）',
+    color: '#6366f1',
+    comingSoon: true,
+  },
+]
+
 function StorageTab() {
-  const [serverUrl, setServerUrl] = useState(() =>
-    localStorage.getItem('docx-editor-server-url') || 'http://localhost:3011'
-  )
-  const [saved, setSaved] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'checking' | 'ok' | 'fail'>('idle')
-
-  const handleSave = () => {
-    localStorage.setItem('docx-editor-server-url', serverUrl)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const handleCheck = async () => {
-    setStatus('checking')
-    try {
-      const res = await fetch(`${serverUrl}/api/health`, { signal: AbortSignal.timeout(3000) })
-      setStatus(res.ok ? 'ok' : 'fail')
-    } catch {
-      setStatus('fail')
-    }
-  }
-
   return (
     <div>
-      <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 600, color: '#1e293b' }}>存储配置</h3>
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
-          本地服务器地址
-        </label>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="url"
-            value={serverUrl}
-            onChange={e => setServerUrl(e.target.value)}
+      <h3 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: '#1e293b' }}>云端存储</h3>
+      <p style={{ margin: '0 0 20px', fontSize: 12, color: '#6b7280' }}>
+        文档默认保存在本地服务器。绑定云端存储后可实现跨设备同步与备份。
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {CLOUD_PROVIDERS.map(p => (
+          <div
+            key={p.id}
             style={{
-              flex: 1, padding: '7px 10px', border: '1px solid #d1d5db',
-              borderRadius: 6, fontSize: 13, outline: 'none',
-            }}
-            placeholder="http://localhost:3011"
-          />
-          <button
-            onClick={handleCheck}
-            style={{
-              padding: '7px 12px', background: '#f1f5f9', border: '1px solid #d1d5db',
-              borderRadius: 6, cursor: 'pointer', fontSize: 12, color: '#374151',
-              whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px',
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              background: '#fff',
+              opacity: p.comingSoon ? 0.7 : 1,
             }}
           >
-            {status === 'checking' ? '检测中…' : status === 'ok' ? '✅ 在线' : status === 'fail' ? '❌ 离线' : '测试连接'}
-          </button>
-        </div>
-        <p style={{ margin: '6px 0 0', fontSize: 11, color: '#6b7280' }}>
-          文档和会话将保存到此服务器，支持 Docker volume 持久化。
-        </p>
+            <span style={{ fontSize: 24 }}>{p.icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {p.name}
+                {p.comingSoon && (
+                  <span style={{
+                    fontSize: 10, padding: '1px 6px', borderRadius: 10,
+                    background: '#f1f5f9', color: '#94a3b8', fontWeight: 500,
+                  }}>即将推出</span>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{p.desc}</div>
+            </div>
+            <button
+              disabled={p.comingSoon}
+              style={{
+                padding: '5px 14px',
+                background: p.comingSoon ? '#f1f5f9' : p.color,
+                color: p.comingSoon ? '#9ca3af' : '#fff',
+                border: 'none', borderRadius: 6,
+                cursor: p.comingSoon ? 'not-allowed' : 'pointer',
+                fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
+              }}
+            >
+              {p.comingSoon ? '待接入' : '绑定'}
+            </button>
+          </div>
+        ))}
       </div>
-      <button
-        onClick={handleSave}
-        style={{
-          padding: '7px 20px', background: '#2563eb', color: '#fff',
-          border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13,
-        }}
-      >
-        {saved ? '✓ 已保存' : '保存'}
-      </button>
     </div>
   )
 }
