@@ -32,9 +32,11 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3011
 const DATA_DIR = path.join(__dirname, 'data')
 const DOCS_DIR = path.join(__dirname, 'docs')
 const SESSIONS_DIR = path.join(__dirname, 'sessions')
+const CONFIG_DIR = path.join(__dirname, 'config')
+const CONFIG_FILE = path.join(CONFIG_DIR, 'ai.json')
 
 // Ensure directories exist
-for (const dir of [DATA_DIR, DOCS_DIR, SESSIONS_DIR]) {
+for (const dir of [DATA_DIR, DOCS_DIR, SESSIONS_DIR, CONFIG_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 }
 
@@ -168,6 +170,24 @@ const server = http.createServer(async (req, res) => {
     // ── Health ──────────────────────────────────────────────────────────────
     if (req.method === 'GET' && pathname === '/api/health') {
       return send(res, 200, { status: 'ok', time: Date.now() })
+    }
+
+    // ── Config API (/api/config) ────────────────────────────────────────────
+    const DEFAULT_CONFIG = { endpoint: 'https://api.siliconflow.cn/v1/chat/completions', apiKey: '', model: 'Pro/moonshotai/Kimi-K2.5' }
+
+    if (req.method === 'GET' && pathname === '/api/config') {
+      try {
+        const cfg = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : DEFAULT_CONFIG
+        return send(res, 200, { ...DEFAULT_CONFIG, ...cfg })
+      } catch { return send(res, 200, DEFAULT_CONFIG) }
+    }
+
+    if (req.method === 'POST' && pathname === '/api/config') {
+      const body = await readBody(req)
+      const current = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : DEFAULT_CONFIG
+      const updated = { ...current, ...body }
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2))
+      return send(res, 200, { ok: true })
     }
 
     // ── Legacy docs (JSON) ──────────────────────────────────────────────────
