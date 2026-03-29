@@ -289,9 +289,9 @@ body::before {
   background: rgba(0, 0, 0, 0.75) !important;
 }
 
-/* Keep A4 page white for readability */
+/* Keep A4 page white for readability (no !important — allows inline gradient to override) */
 .a4-page {
-  background: #ffffff !important;
+  background: #ffffff;
   color: #1a1a2e !important;
 }
 

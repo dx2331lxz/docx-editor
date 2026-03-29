@@ -511,18 +511,10 @@ span.track-delete {
   display: none !important;
 }
 
-/* ── Page separator line (subtle, sits behind text) ─────────────────── */
+/* ── Word-style page gap ─────────────────────────────────────────────── */
+/* Background gradient (white page + grey gap) applied via inline style   */
+/* in EditorCanvas.tsx. Block elements are pushed out of grey bands by    */
+/* injected padding-top. No overlay divs needed.                          */
 .a4-page {
   position: relative;
-  overflow: visible;
-}
-
-/* The separator has no height — just a box-shadow acting as two hairlines:
-   one at the bottom of the outgoing page, one at the top of the next.
-   z-index: 0 keeps it behind text content (which is z-index: 1).        */
-.page-sep-line {
-  position: absolute;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
 }

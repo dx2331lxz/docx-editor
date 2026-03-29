@@ -157,15 +157,32 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const borderStyle = pageBorder ? getBorderStyle(pageBorder) : {}
   const scrollRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
+  // Stable unique ID per editor instance — used to scope injected CSS rules
+  const editorIdRef = useRef(`pg-${Math.random().toString(36).slice(2, 9)}`)
 
-  // Word/WPS-style inter-page gap — handled by absolute-positioned dividers via useEffect
+  // Word-style page gap constants (shared between pageBgStyle and pushBlocks effect)
+  const PAGE_MM  = 297
+  const MM_PX    = 3.7795275591
+  const PAGE_PX  = PAGE_MM * MM_PX   // ≈ 1122.52 px
+  const GAP_PX   = 24
+  const UNIT_PX  = PAGE_PX + GAP_PX
+
+  // Page gap gradient: grey band every 297mm, white page content in between.
+  // This is the FIRST background layer; the page color is the SECOND layer.
+  // Because the gradient uses opaque colors, it fully overrides the second
+  // layer in grey zones and lets white show through in page zones.
+  const pageGapGradient = (pageColor: string) =>
+    `repeating-linear-gradient(to bottom, ${pageColor} 0px, ${pageColor} ${PAGE_PX}px, #d4d4d4 ${PAGE_PX}px, #d4d4d4 ${UNIT_PX}px)`
+
   // Compute page background style
   const pageBgStyle: React.CSSProperties = (() => {
-    if (!pageBg || pageBg.type === 'none') return { background: 'white' }
-    if (pageBg.type === 'solid') return { background: pageBg.color || '#ffffff' }
-    if (pageBg.type === 'gradient1') return { background: `linear-gradient(135deg, ${pageBg.color || '#e8f4f8'} 0%, #ffffff 100%)` }
-    if (pageBg.type === 'gradient2') return { background: `linear-gradient(to bottom, ${pageBg.color || '#fff9e6'} 0%, #ffffff 100%)` }
-    return { background: 'white' }
+    if (!pageBg || pageBg.type === 'none') return { background: pageGapGradient('#ffffff') }
+    if (pageBg.type === 'solid') return { background: pageGapGradient(pageBg.color || '#ffffff') }
+    // For gradient backgrounds, fall back to simple colour for the page-gap gradient
+    // (mixing two gradients in repeating-linear-gradient is not straightforward)
+    if (pageBg.type === 'gradient1') return { background: pageGapGradient(pageBg.color || '#e8f4f8') }
+    if (pageBg.type === 'gradient2') return { background: pageGapGradient(pageBg.color || '#fff9e6') }
+    return { background: pageGapGradient('#ffffff') }
   })()
 
   // Watermark overlay (absolute positioned inside A4 page)
@@ -206,49 +223,138 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
     return () => container.removeEventListener('click', handleClick)
   }, [scrollRef])
 
-  // ── Page break visual indicator ────────────────────────────────────────
-  // Draw a subtle dividing line at every 297mm using an absolutely-positioned
-  // element that sits BEHIND the text (z-index < 1). The line is thin enough
-  // that it never obscures text — it sits at the exact pixel boundary and text
-  // continues naturally across it. A box-shadow gives the "page edge" feel.
+  // ── Word-style page gap: push paragraphs out of grey bands ───────────
+  // Background gradient is in pageBgStyle. Rather than setting inline styles
+  // on ProseMirror's own DOM nodes (which PM resets on its next render cycle),
+  // we inject a scoped <style> tag in <head>. PM never touches <head>, so
+  // our margin rules survive indefinitely. MutationObserver on ProseMirror
+  // fires on content changes (childList/characterData) but NOT on our own
+  // style-tag mutations, preventing any infinite loop.
   useEffect(() => {
     const page = pageRef.current
     if (!page) return
 
-    const PAGE_MM = 297
-    const MM_PX = 3.7795275591
-    const PAGE_PX = PAGE_MM * MM_PX  // ≈ 1122.52 px
+    const styleId = `page-gap-${editorIdRef.current}`
 
-    const updateLines = () => {
-      if (!page) return
-      page.querySelectorAll('.page-sep-line').forEach(el => el.remove())
+    // Inject or reuse a scoped <style> tag
+    const getStyleEl = (): HTMLStyleElement => {
+      let el = document.getElementById(styleId) as HTMLStyleElement | null
+      if (!el) {
+        el = document.createElement('style')
+        el.id = styleId
+        document.head.appendChild(el)
+      }
+      return el
+    }
 
-      const totalHeight = page.scrollHeight
-      let pos = PAGE_PX
-      while (pos < totalHeight + PAGE_PX) {
-        const line = document.createElement('div')
-        line.className = 'page-sep-line'
-        line.style.cssText = `
-          position: absolute;
-          left: 0;
-          right: 0;
-          top: ${pos}px;
-          height: 2px;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.06) 2px);
-          pointer-events: none;
-          z-index: 2;
-          user-select: none;
-        `
-        page.appendChild(line)
-        pos += PAGE_PX
+    const pushBlocks = () => {
+      const pm = page.querySelector('.ProseMirror') as HTMLElement | null
+      if (!pm) { getStyleEl().textContent = ''; return }
+
+      const getOffsetFromPage = (el: HTMLElement): number => {
+        let top = 0
+        let cur: HTMLElement | null = el
+        while (cur && cur !== page) {
+          top += cur.offsetTop
+          cur = cur.offsetParent as HTMLElement | null
+        }
+        return top
+      }
+
+      const eid = editorIdRef.current
+
+      // Build list of pushable targets with their CSS selectors.
+      // UL/OL children that span > PAGE_PX can't be pushed as a whole;
+      // instead we push their individual list items.
+      type PushTarget = { el: HTMLElement; sel: string }
+      const targets: PushTarget[] = []
+      ;(Array.from(pm.children) as HTMLElement[]).forEach((pmChild, pi) => {
+        const tag = pmChild.tagName
+        if ((tag === 'UL' || tag === 'OL') && pmChild.offsetHeight > PAGE_PX) {
+          ;(Array.from(pmChild.children) as HTMLElement[]).forEach((li, li_i) => {
+            targets.push({
+              el: li,
+              sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1}) > :nth-child(${li_i + 1})`,
+            })
+          })
+        } else {
+          targets.push({
+            el: pmChild,
+            sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1})`,
+          })
+        }
+      })
+
+      // Clear previous rules so pass 1 reads natural (unpushed) positions.
+      getStyleEl().textContent = ''
+
+      // Accumulate push amounts across passes. Each pass reads positions
+      // WITH already-accumulated CSS applied (forced reflow via offsetTop).
+      // We only look for NEW straddlers (not already in the map).
+      const pushMap = new Map<string, number>() // selector → push px
+
+      for (let pass = 0; pass < 8; pass++) {
+        let foundNew = false
+
+        for (const { el, sel } of targets) {
+          if (pushMap.has(sel)) continue  // already handled
+
+          const topRel    = getOffsetFromPage(el)
+          const bottomRel = topRel + el.offsetHeight
+          let boundary    = PAGE_PX
+          while (boundary < topRel) boundary += UNIT_PX
+          if (topRel < boundary && bottomRel > boundary) {
+            const push = boundary + GAP_PX - topRel
+            if (push > 0) {
+              pushMap.set(sel, push)
+              foundNew = true
+            }
+          }
+        }
+
+        if (!foundNew) break  // layout is stable — no new straddlers
+
+        const rules = Array.from(pushMap.entries()).map(
+          ([sel, push]) => `${sel}{margin-top:${push}px!important}`
+        )
+        getStyleEl().textContent = rules.join('\n')
       }
     }
 
-    updateLines()
-    const ro = new ResizeObserver(updateLines)
-    ro.observe(page)
-    return () => ro.disconnect()
-  }, [editor])
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    const schedule = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(pushBlocks, 150)
+    }
+
+    let mo: MutationObserver | null = null
+
+    const tryAttach = () => {
+      const pm = page.querySelector('.ProseMirror')
+      if (!pm || mo) return
+
+      mo = new MutationObserver((mutations) => {
+        if (mutations.some(m => m.type === 'childList' || m.type === 'characterData'))
+          schedule()
+      })
+      mo.observe(pm, { childList: true, subtree: true, characterData: true })
+      editor?.on('update', schedule)
+      schedule()
+    }
+
+    tryAttach()
+    const t1 = setTimeout(tryAttach, 300)
+    const t2 = setTimeout(tryAttach, 800)
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      clearTimeout(t1)
+      clearTimeout(t2)
+      mo?.disconnect()
+      editor?.off('update', schedule)
+      document.getElementById(styleId)?.remove()
+    }
+  }, [editor, pageConfig])
 
   return (
     <div className="glass-canvas-bg flex-1 overflow-auto bg-gray-300 flex flex-col">
@@ -265,6 +371,7 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
       <div ref={scrollRef} className="flex-1 overflow-auto py-8 px-4">
         <div
           ref={pageRef}
+          data-pgid={editorIdRef.current}
           className={`a4-page ${columnClass} ${themeClass}`}
           style={pageStyle ? {
             ...pageStyle,

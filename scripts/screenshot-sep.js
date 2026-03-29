@@ -41,7 +41,7 @@ const info = await page.evaluate(() => {
 console.log('Info:', JSON.stringify(info))
 
 // Scroll to just before the first separator
-const scrollTo = Math.max(0, info.firstSepTop !== 'none' ? parseInt(info.firstSepTop) - 250 : 800)
+const scrollTo = Math.max(0, info.firstSepTop !== 'none' ? parseInt(info.firstSepTop) - 100 : 1020)
 await page.evaluate((top) => {
   const scroller = document.querySelector('.a4-page')?.parentElement
   if (scroller) scroller.scrollTop = top
