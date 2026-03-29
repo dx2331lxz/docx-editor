@@ -15,6 +15,7 @@ const FONT_FAMILIES = [
   { label: '楷体',             value: 'KaiTi, "Noto Serif CJK SC", serif' },
   { label: '仿宋',             value: 'FangSong, "Noto Serif CJK SC", serif' },
   { label: '微软雅黑',         value: '"Microsoft YaHei", "Noto Sans CJK SC", sans-serif' },
+  { label: '苹方-简',          value: '"PingFang SC", "Noto Sans CJK SC", sans-serif' },
   { label: '方正书宋',         value: '"FangZhengShuSong", "Noto Serif CJK SC", serif' },
   { label: 'Calibri',         value: 'Calibri, sans-serif' },
   { label: 'Arial',           value: 'Arial, sans-serif' },
