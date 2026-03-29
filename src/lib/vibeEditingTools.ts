@@ -1469,8 +1469,21 @@ export async function executeTool(
           const from = pos + 1
           const to = pos + node.nodeSize - 1
 
-          // Collect textStyle attrs (fontSize, fontFamily, color)
+          // Collect textStyle attrs — merge with existing marks to avoid overwriting
           const textStyleAttrs: Record<string, string> = {}
+
+          // First collect existing textStyle attrs from all text nodes in range
+          node.descendants((child) => {
+            if (child.isText) {
+              child.marks.forEach(m => {
+                if (m.type.name === 'textStyle') {
+                  Object.assign(textStyleAttrs, m.attrs)
+                }
+              })
+            }
+          })
+
+          // Then apply new styles on top
           if (styles['font-size']) textStyleAttrs.fontSize = styles['font-size']
           if (styles['font-family']) textStyleAttrs.fontFamily = styles['font-family']
           if (styles['color']) textStyleAttrs.color = styles['color']
