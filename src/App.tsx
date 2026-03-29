@@ -629,7 +629,7 @@ const App: React.FC = () => {
       )}
 
       {/* Settings panel — fixed bottom-left button + drawer */}
-      <SettingsPanel />
+      <SettingsPanel currentFileId={openFileId} />
 
       {/* Vibe Editing panel — fixed full-height overlay */}
       {showVibeEditing && (

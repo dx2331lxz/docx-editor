@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Settings, X, Bot, HardDrive, Palette, Keyboard, ChevronRight } from 'lucide-react'
+import { Settings, X, Bot, HardDrive, Palette, Keyboard, ChevronRight, ChevronDown, Loader2 } from 'lucide-react'
 import AISettingsContent from './AISettingsContent'
 
 type TabId = 'ai' | 'storage' | 'appearance' | 'shortcuts'
@@ -19,9 +19,10 @@ const TABS: Tab[] = [
 
 interface Props {
   defaultTab?: TabId
+  currentFileId?: string | null
 }
 
-export default function SettingsPanel({ defaultTab = 'ai' }: Props) {
+export default function SettingsPanel({ defaultTab = 'ai', currentFileId }: Props) {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabId>(defaultTab)
 
@@ -154,13 +155,237 @@ export default function SettingsPanel({ defaultTab = 'ai' }: Props) {
           {/* Right content */}
           <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
             {activeTab === 'ai' && <AISettingsContent />}
-            {activeTab === 'storage' && <StorageTab />}
+            {activeTab === 'storage' && <StorageTab currentFileId={currentFileId} />}
             {activeTab === 'appearance' && <ComingSoonTab label="外观" />}
             {activeTab === 'shortcuts' && <ComingSoonTab label="快捷键" />}
           </div>
         </div>
       </div>
     </>
+  )
+}
+
+// ── Quark binding panel ────────────────────────────────────────────────────────
+
+const API_BASE = 'http://localhost:3011'
+
+interface QuarkConfig {
+  hasCookie: boolean
+  cookiePreview?: string
+  folderId?: string
+  folderName?: string
+}
+
+interface QuarkFolder {
+  fid: string
+  name: string
+}
+
+function QuarkBindingPanel({ onBound }: { onBound: () => void }) {
+  const [cookie, setCookie] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<'idle' | 'ok' | 'fail'>('idle')
+  const [folders, setFolders] = useState<QuarkFolder[]>([])
+  const [loadingFolders, setLoadingFolders] = useState(false)
+  const [selectedFolderId, setSelectedFolderId] = useState('0')
+  const [selectedFolderName, setSelectedFolderName] = useState('根目录')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  async function handleTest() {
+    setTesting(true)
+    setTestResult('idle')
+    setFolders([])
+    try {
+      const r = await fetch(`${API_BASE}/api/cloud/quark/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cookie }),
+      })
+      const d = await r.json()
+      if (d.valid) {
+        setTestResult('ok')
+        setLoadingFolders(true)
+        try {
+          // Save cookie temporarily so /api/cloud/quark/folders can use it
+          await fetch(`${API_BASE}/api/cloud/quark/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cookie, folderId: '0', folderName: '根目录' }),
+          })
+          const fr = await fetch(`${API_BASE}/api/cloud/quark/folders`)
+          const fd = await fr.json()
+          setFolders(fd.folders || [])
+        } finally { setLoadingFolders(false) }
+      } else {
+        setTestResult('fail')
+      }
+    } catch { setTestResult('fail') }
+    finally { setTesting(false) }
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    setSaveError('')
+    try {
+      const r = await fetch(`${API_BASE}/api/cloud/quark/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cookie, folderId: selectedFolderId, folderName: selectedFolderName }),
+      })
+      if (r.ok) { onBound() }
+      else { setSaveError('保存失败，请重试') }
+    } catch { setSaveError('保存失败，请重试') }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{ marginTop: 12, padding: 14, background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+      <div style={{ fontSize: 12, color: '#374151', marginBottom: 6, fontWeight: 500 }}>
+        粘贴夸克网盘 Cookie
+      </div>
+      <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
+        打开 pan.quark.cn → 按 F12 → Network → 任意请求 → 复制 Cookie 请求头
+      </div>
+      <textarea
+        value={cookie}
+        onChange={e => { setCookie(e.target.value); setTestResult('idle') }}
+        rows={3}
+        placeholder="kps=xxx; kpf=xxx; ..."
+        style={{
+          width: '100%', boxSizing: 'border-box', padding: '8px 10px',
+          border: '1px solid #d1d5db', borderRadius: 6, fontSize: 11,
+          fontFamily: 'monospace', resize: 'vertical', color: '#1e293b',
+          outline: 'none',
+        }}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <button
+          onClick={handleTest}
+          disabled={testing || !cookie.trim()}
+          style={{
+            padding: '5px 12px', background: '#2563eb', color: '#fff',
+            border: 'none', borderRadius: 6, fontSize: 12, cursor: testing || !cookie.trim() ? 'not-allowed' : 'pointer',
+            opacity: testing || !cookie.trim() ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 4,
+          }}
+        >
+          {testing && <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />}
+          测试连接
+        </button>
+        {testResult === 'ok' && <span style={{ fontSize: 12, color: '#16a34a' }}>✅ 连接成功</span>}
+        {testResult === 'fail' && <span style={{ fontSize: 12, color: '#dc2626' }}>❌ Cookie 无效或已过期</span>}
+      </div>
+
+      {testResult === 'ok' && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 4 }}>选择同步目标文件夹</div>
+          {loadingFolders ? (
+            <div style={{ fontSize: 12, color: '#9ca3af' }}>加载文件夹列表...</div>
+          ) : (
+            <select
+              value={selectedFolderId}
+              onChange={e => {
+                const opt = e.target.options[e.target.selectedIndex]
+                setSelectedFolderId(e.target.value)
+                setSelectedFolderName(opt.text)
+              }}
+              style={{
+                padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6,
+                fontSize: 12, background: '#fff', color: '#1e293b', width: '100%',
+              }}
+            >
+              <option value="0">根目录</option>
+              {folders.map(f => (
+                <option key={f.fid} value={f.fid}>{f.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {testResult === 'ok' && (
+        <div style={{ marginTop: 12 }}>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              padding: '6px 16px', background: '#fa6400', color: '#fff',
+              border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600,
+              cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            {saving && <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />}
+            保存绑定
+          </button>
+          {saveError && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>{saveError}</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function QuarkBoundCard({
+  config, currentFileId, onUnbind,
+}: { config: QuarkConfig; currentFileId?: string | null; onUnbind: () => void }) {
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
+
+  async function handleSync() {
+    if (!currentFileId) { setSyncMsg('请先打开一个文档'); return }
+    setSyncing(true)
+    setSyncMsg('')
+    try {
+      const r = await fetch(`${API_BASE}/api/cloud/quark/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId: currentFileId }),
+      })
+      const d = await r.json()
+      setSyncMsg(d.success ? `✅ ${d.message || '同步成功'}` : `❌ ${d.message || '同步失败'}`)
+    } catch { setSyncMsg('❌ 同步请求失败') }
+    finally { setSyncing(false) }
+  }
+
+  return (
+    <div style={{ marginTop: 12, padding: 14, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d', marginBottom: 4 }}>
+        ✅ 已绑定夸克网盘
+      </div>
+      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>
+        Cookie: <span style={{ fontFamily: 'monospace' }}>{config.cookiePreview}</span>
+      </div>
+      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 10 }}>
+        同步目录：{config.folderName || '根目录'}
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          onClick={handleSync}
+          disabled={syncing || !currentFileId}
+          title={!currentFileId ? '请先打开一个文档' : ''}
+          style={{
+            padding: '5px 12px', background: '#fa6400', color: '#fff',
+            border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500,
+            cursor: syncing || !currentFileId ? 'not-allowed' : 'pointer',
+            opacity: syncing || !currentFileId ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}
+        >
+          {syncing && <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />}
+          ⬆ 立即同步当前文档
+        </button>
+        <button
+          onClick={onUnbind}
+          style={{
+            padding: '5px 12px', background: '#f1f5f9', color: '#64748b',
+            border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+          }}
+        >
+          解除绑定
+        </button>
+      </div>
+      {syncMsg && <div style={{ fontSize: 12, marginTop: 8, color: syncMsg.startsWith('✅') ? '#15803d' : '#dc2626' }}>{syncMsg}</div>}
+    </div>
   )
 }
 
@@ -173,14 +398,6 @@ const CLOUD_PROVIDERS = [
     icon: '☁️',
     desc: '绑定百度网盘账号，自动同步文档到云端',
     color: '#2468f2',
-    comingSoon: true,
-  },
-  {
-    id: 'quark',
-    name: '夸克网盘',
-    icon: '⚡',
-    desc: '绑定夸克网盘账号，支持自动备份',
-    color: '#fa6400',
     comingSoon: true,
   },
   {
@@ -201,7 +418,29 @@ const CLOUD_PROVIDERS = [
   },
 ]
 
-function StorageTab() {
+function StorageTab({ currentFileId }: { currentFileId?: string | null }) {
+  const [quarkConfig, setQuarkConfig] = useState<QuarkConfig | null>(null)
+  const [quarkExpanded, setQuarkExpanded] = useState(false)
+  const [loadingConfig, setLoadingConfig] = useState(true)
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/cloud/quark/config`)
+      .then(r => r.json())
+      .then(d => setQuarkConfig(d))
+      .catch(() => setQuarkConfig({ hasCookie: false }))
+      .finally(() => setLoadingConfig(false))
+  }, [])
+
+  async function handleUnbind() {
+    await fetch(`${API_BASE}/api/cloud/quark/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookie: '', folderId: '0', folderName: '根目录' }),
+    })
+    setQuarkConfig({ hasCookie: false })
+    setQuarkExpanded(false)
+  }
+
   return (
     <div>
       <h3 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: '#1e293b' }}>云端存储</h3>
@@ -209,6 +448,50 @@ function StorageTab() {
         文档默认保存在本地服务器。绑定云端存储后可实现跨设备同步与备份。
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* Quark */}
+        <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+            <span style={{ fontSize: 24 }}>⚡</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>夸克网盘</div>
+              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>绑定夸克网盘账号，支持自动备份</div>
+            </div>
+            {loadingConfig ? (
+              <Loader2 size={14} style={{ color: '#9ca3af', animation: 'spin 1s linear infinite' }} />
+            ) : quarkConfig?.hasCookie ? (
+              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: '#dcfce7', color: '#16a34a', fontWeight: 500 }}>已绑定</span>
+            ) : (
+              <button
+                onClick={() => setQuarkExpanded(v => !v)}
+                style={{
+                  padding: '5px 14px', background: '#fa6400', color: '#fff',
+                  border: 'none', borderRadius: 6, cursor: 'pointer',
+                  fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                绑定
+                <ChevronDown size={12} style={{ transform: quarkExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+              </button>
+            )}
+          </div>
+          {(quarkExpanded || quarkConfig?.hasCookie) && (
+            <div style={{ padding: '0 14px 14px' }}>
+              {quarkConfig?.hasCookie ? (
+                <QuarkBoundCard config={quarkConfig} currentFileId={currentFileId} onUnbind={handleUnbind} />
+              ) : (
+                <QuarkBindingPanel onBound={() => {
+                  fetch(`${API_BASE}/api/cloud/quark/config`)
+                    .then(r => r.json())
+                    .then(d => { setQuarkConfig(d); setQuarkExpanded(false) })
+                    .catch(() => {})
+                }} />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Other providers (coming soon) */}
         {CLOUD_PROVIDERS.map(p => (
           <div
             key={p.id}
@@ -218,34 +501,29 @@ function StorageTab() {
               border: '1px solid #e5e7eb',
               borderRadius: 8,
               background: '#fff',
-              opacity: p.comingSoon ? 0.7 : 1,
+              opacity: 0.7,
             }}
           >
             <span style={{ fontSize: 24 }}>{p.icon}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {p.name}
-                {p.comingSoon && (
-                  <span style={{
-                    fontSize: 10, padding: '1px 6px', borderRadius: 10,
-                    background: '#f1f5f9', color: '#94a3b8', fontWeight: 500,
-                  }}>即将推出</span>
-                )}
+                <span style={{
+                  fontSize: 10, padding: '1px 6px', borderRadius: 10,
+                  background: '#f1f5f9', color: '#94a3b8', fontWeight: 500,
+                }}>即将推出</span>
               </div>
               <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{p.desc}</div>
             </div>
             <button
-              disabled={p.comingSoon}
+              disabled
               style={{
-                padding: '5px 14px',
-                background: p.comingSoon ? '#f1f5f9' : p.color,
-                color: p.comingSoon ? '#9ca3af' : '#fff',
-                border: 'none', borderRadius: 6,
-                cursor: p.comingSoon ? 'not-allowed' : 'pointer',
+                padding: '5px 14px', background: '#f1f5f9', color: '#9ca3af',
+                border: 'none', borderRadius: 6, cursor: 'not-allowed',
                 fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
               }}
             >
-              {p.comingSoon ? '待接入' : '绑定'}
+              待接入
             </button>
           </div>
         ))}

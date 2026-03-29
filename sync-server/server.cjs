@@ -21,12 +21,21 @@
  *   PUT    /api/sessions/:id    → update session (body: { title?, messages? })
  *   DELETE /api/sessions/:id    → delete session
  *
+ * Cloud Sync — Quark:
+ *   GET    /api/cloud/quark/config   → get current config (cookie preview)
+ *   POST   /api/cloud/quark/config   → save cookie + folder
+ *   POST   /api/cloud/quark/test     → test cookie validity
+ *   GET    /api/cloud/quark/folders  → list root folders
+ *   POST   /api/cloud/quark/sync     → sync a docx file to Quark
+ *
  * Port: 3011
  */
 
 const http = require('http')
+const https = require('https')
 const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
 const ROUTES = require('./api-routes.json')
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3011
@@ -149,6 +158,233 @@ function sendFile(res, filePath, contentType) {
   } catch (e) {
     send(res, 500, { error: e.message })
   }
+}
+
+// ── Quark Cloud Drive helpers ─────────────────────────────────────────────────
+
+const QUARK_CONFIG_FILE = path.join(CONFIG_DIR, 'quark.json')
+
+function readQuarkConfig() {
+  if (!fs.existsSync(QUARK_CONFIG_FILE)) return { cookie: '', folderId: '0', folderName: '根目录' }
+  try { return JSON.parse(fs.readFileSync(QUARK_CONFIG_FILE, 'utf8')) } catch { return { cookie: '', folderId: '0', folderName: '根目录' } }
+}
+
+function writeQuarkConfig(cfg) {
+  fs.writeFileSync(QUARK_CONFIG_FILE, JSON.stringify(cfg, null, 2))
+}
+
+const QUARK_BASE_PARAMS = 'pr=ucpro&fr=pc&uc_param_str='
+
+function quarkHeaders(cookie) {
+  return {
+    'Cookie': cookie,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Content-Type': 'application/json',
+    'Origin': 'https://pan.quark.cn',
+    'Referer': 'https://pan.quark.cn/',
+  }
+}
+
+function quarkRequest(method, urlStr, cookie, body) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(urlStr)
+    const bodyStr = body ? JSON.stringify(body) : null
+    const headers = {
+      ...quarkHeaders(cookie),
+      ...(bodyStr ? { 'Content-Length': Buffer.byteLength(bodyStr) } : {}),
+    }
+    const options = {
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname + url.search,
+      method,
+      headers,
+    }
+    const req = https.request(options, (res) => {
+      const chunks = []
+      res.on('data', c => chunks.push(c))
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString())) }
+        catch { resolve({}) }
+      })
+    })
+    req.on('error', reject)
+    if (bodyStr) req.write(bodyStr)
+    req.end()
+  })
+}
+
+async function testQuarkCookie(cookie) {
+  try {
+    const data = await quarkRequest(
+      'GET',
+      `https://drive-pc.quark.cn/1/clouddrive/file/sort?${QUARK_BASE_PARAMS}&pdir_fid=0&_page=1&_size=1`,
+      cookie
+    )
+    return data.code === 0
+  } catch { return false }
+}
+
+async function getQuarkFolders(cookie, folderId = '0') {
+  try {
+    const data = await quarkRequest(
+      'GET',
+      `https://drive-pc.quark.cn/1/clouddrive/file/sort?${QUARK_BASE_PARAMS}&pdir_fid=${folderId}&_page=1&_size=100&_sort=file_type:asc,file_name:asc`,
+      cookie
+    )
+    if (data.code !== 0 || !Array.isArray(data.data?.list)) return []
+    return data.data.list
+      .filter(f => f.file_type === 'folder' || f.dir)
+      .map(f => ({ fid: f.fid, name: f.file_name || f.name }))
+  } catch { return [] }
+}
+
+/** Upload a local file to Quark Drive using multipart OSS upload */
+async function uploadToQuark(cookie, filePath, fileName, folderId) {
+  const fileBuffer = fs.readFileSync(filePath)
+  const fileSize = fileBuffer.length
+  const stat = fs.statSync(filePath)
+  const lCreatedAt = Math.floor(stat.birthtimeMs || stat.mtimeMs)
+  const lUpdatedAt = Math.floor(stat.mtimeMs)
+
+  // ── Step 1: Pre-upload ──────────────────────────────────────────────────
+  const preData = await quarkRequest(
+    'POST',
+    `https://drive-pc.quark.cn/1/clouddrive/file/upload/pre?${QUARK_BASE_PARAMS}`,
+    cookie,
+    {
+      pdir_fid: folderId,
+      file_name: fileName,
+      format_type: 'docx',
+      size: fileSize,
+      l_created_at: lCreatedAt,
+      l_updated_at: lUpdatedAt,
+      ccp_hash_update: true,
+      parallel_upload: true,
+      dir_name: '',
+    }
+  )
+  if (preData.code !== 0) {
+    return { success: false, message: `预上传失败: ${preData.message || preData.code}` }
+  }
+  const { task_id, upload_id, obj_key, bucket, callback } = preData.data
+  const region = preData.data.fstore_loc || preData.data.region || 'cn-hangzhou'
+  const partSize = preData.data.metadata?.part_size || (4 * 1024 * 1024)
+
+  // ── Step 2: Hash check (秒传) ───────────────────────────────────────────
+  const md5 = crypto.createHash('md5').update(fileBuffer).digest('hex')
+  const sha1 = crypto.createHash('sha1').update(fileBuffer).digest('hex')
+  const hashData = await quarkRequest(
+    'POST',
+    `https://drive-pc.quark.cn/1/clouddrive/file/update/hash?${QUARK_BASE_PARAMS}`,
+    cookie,
+    { task_id, md5, sha1 }
+  )
+  if (hashData.code === 0 && hashData.data?.finish) {
+    return { success: true, quarkFileId: hashData.data.fid || '', message: '秒传成功' }
+  }
+
+  // ── Step 3: Split into parts and upload to OSS ──────────────────────────
+  const parts = []
+  for (let i = 0; i * partSize < fileSize; i++) {
+    parts.push(fileBuffer.slice(i * partSize, (i + 1) * partSize))
+  }
+
+  const ossHost = `${bucket}.oss-${region}.aliyuncs.com`
+  const ossBase = `https://${ossHost}/${obj_key}`
+
+  const etags = []
+  for (let i = 0; i < parts.length; i++) {
+    const partNum = i + 1
+    const partBuf = parts[i]
+    const ossDate = new Date().toUTCString()
+    const contentMd5 = crypto.createHash('md5').update(partBuf).digest('base64')
+    const contentType = 'application/octet-stream'
+
+    // Build OSS signing string
+    const canonicalHeaders = `x-oss-date:${ossDate}\nx-oss-user-agent:aliyun-sdk-js/6.16.0`
+    const canonicalResource = `/${obj_key}?partNumber=${partNum}&uploadId=${upload_id}`
+    const stringToSign = `PUT\n${contentMd5}\n${contentType}\n\n${canonicalHeaders}\n/${bucket}${canonicalResource}`
+
+    // Get auth from Quark
+    const authData = await quarkRequest(
+      'POST',
+      `https://drive-pc.quark.cn/1/clouddrive/file/upload/auth?${QUARK_BASE_PARAMS}`,
+      cookie,
+      { task_id, auth_meta: stringToSign }
+    )
+    if (authData.code !== 0) {
+      return { success: false, message: `获取OSS授权失败: ${authData.message || authData.code}` }
+    }
+    const authKey = authData.data.auth_key
+
+    // Upload part to OSS
+    const etag = await new Promise((resolve, reject) => {
+      const url = new URL(`${ossBase}?partNumber=${partNum}&uploadId=${upload_id}`)
+      const ossReq = https.request({
+        hostname: url.hostname,
+        port: 443,
+        path: url.pathname + url.search,
+        method: 'PUT',
+        headers: {
+          'Content-Type': contentType,
+          'Content-MD5': contentMd5,
+          'Content-Length': partBuf.length,
+          'x-oss-date': ossDate,
+          'x-oss-user-agent': 'aliyun-sdk-js/6.16.0',
+          'Authorization': authKey,
+        },
+      }, (res) => {
+        const chunks = []
+        res.on('data', c => chunks.push(c))
+        res.on('end', () => resolve(res.headers.etag || ''))
+      })
+      ossReq.on('error', reject)
+      ossReq.write(partBuf)
+      ossReq.end()
+    })
+    etags.push(etag)
+  }
+
+  // ── Step 4: Complete multipart upload ───────────────────────────────────
+  const partsXml = etags.map((e, i) =>
+    `<Part><PartNumber>${i + 1}</PartNumber><ETag>${e}</ETag></Part>`
+  ).join('')
+  const completeXml = `<?xml version="1.0" encoding="UTF-8"?><CompleteMultipartUpload>${partsXml}</CompleteMultipartUpload>`
+
+  await new Promise((resolve, reject) => {
+    const url = new URL(`${ossBase}?uploadId=${upload_id}`)
+    const xmlBuf = Buffer.from(completeXml)
+    const ossReq = https.request({
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/xml',
+        'Content-Length': xmlBuf.length,
+      },
+    }, (res) => {
+      res.resume()
+      res.on('end', resolve)
+    })
+    ossReq.on('error', reject)
+    ossReq.write(xmlBuf)
+    ossReq.end()
+  })
+
+  // ── Step 5: Notify Quark upload complete ────────────────────────────────
+  const finishData = await quarkRequest(
+    'POST',
+    `https://drive-pc.quark.cn/1/clouddrive/file/upload/finish?${QUARK_BASE_PARAMS}`,
+    cookie,
+    { task_id, obj_key }
+  )
+  if (finishData.code === 0 && finishData.data?.finish) {
+    return { success: true, quarkFileId: finishData.data.fid || '', message: '上传成功' }
+  }
+  return { success: false, message: `上传完成通知失败: ${finishData.message || finishData.code}` }
 }
 
 // ── Request handler ───────────────────────────────────────────────────────────
@@ -429,6 +665,66 @@ const server = http.createServer(async (req, res) => {
         fs.unlinkSync(file)
         return send(res, 200, { ok: true })
       }
+    }
+
+    // ── Quark Cloud Sync API ─────────────────────────────────────────────────
+
+    // GET /api/cloud/quark/config — get current config (cookie preview)
+    if (req.method === 'GET' && pathname === ROUTES.quarkConfig) {
+      const cfg = readQuarkConfig()
+      if (!cfg.cookie) return send(res, 200, { hasCookie: false })
+      return send(res, 200, {
+        hasCookie: true,
+        cookiePreview: cfg.cookie.slice(0, 20) + '...',
+        folderId: cfg.folderId || '0',
+        folderName: cfg.folderName || '根目录',
+      })
+    }
+
+    // POST /api/cloud/quark/config — save cookie + folder
+    if (req.method === 'POST' && pathname === ROUTES.quarkConfig) {
+      const body = await readBody(req)
+      if (!body.cookie) return send(res, 400, { error: 'Missing cookie' })
+      writeQuarkConfig({
+        cookie: body.cookie,
+        folderId: body.folderId || '0',
+        folderName: body.folderName || '根目录',
+      })
+      return send(res, 200, { ok: true })
+    }
+
+    // POST /api/cloud/quark/test — test cookie validity
+    if (req.method === 'POST' && pathname === ROUTES.quarkTest) {
+      const body = await readBody(req)
+      const cookie = body.cookie || readQuarkConfig().cookie
+      if (!cookie) return send(res, 400, { error: 'No cookie provided' })
+      const valid = await testQuarkCookie(cookie)
+      return send(res, 200, { valid })
+    }
+
+    // GET /api/cloud/quark/folders — list root folders
+    if (req.method === 'GET' && pathname === ROUTES.quarkFolders) {
+      const cfg = readQuarkConfig()
+      if (!cfg.cookie) return send(res, 400, { error: 'No cookie configured' })
+      const folders = await getQuarkFolders(cfg.cookie, '0')
+      return send(res, 200, { folders })
+    }
+
+    // POST /api/cloud/quark/sync — sync a docx file to Quark
+    if (req.method === 'POST' && pathname === ROUTES.quarkSync) {
+      const body = await readBody(req)
+      if (!body.fileId) return send(res, 400, { error: 'Missing fileId' })
+      const cfg = readQuarkConfig()
+      if (!cfg.cookie) return send(res, 400, { error: 'No cookie configured' })
+      const filePath = path.join(DOCS_DIR, `${body.fileId}.docx`)
+      if (!fs.existsSync(filePath)) return send(res, 404, { error: 'File not found' })
+      const metaPath = path.join(DOCS_DIR, `${body.fileId}.meta.json`)
+      let fileName = body.fileId + '.docx'
+      if (fs.existsSync(metaPath)) {
+        try { fileName = JSON.parse(fs.readFileSync(metaPath, 'utf8')).name + '.docx' } catch {}
+      }
+      const result = await uploadToQuark(cfg.cookie, filePath, fileName, cfg.folderId || '0')
+      return send(res, result.success ? 200 : 500, result)
     }
 
     // ── Static file serving (production) / Dev proxy (development) ────────
