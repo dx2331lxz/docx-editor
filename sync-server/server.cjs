@@ -28,7 +28,7 @@ const http = require('http')
 const fs = require('fs')
 const path = require('path')
 
-const PORT = 3011
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3011
 const DATA_DIR = path.join(__dirname, 'data')
 const DOCS_DIR = path.join(__dirname, 'docs')
 const SESSIONS_DIR = path.join(__dirname, 'sessions')
@@ -370,6 +370,25 @@ const server = http.createServer(async (req, res) => {
         if (!fs.existsSync(file)) return send(res, 404, { error: 'Session not found' })
         fs.unlinkSync(file)
         return send(res, 200, { ok: true })
+      }
+    }
+
+    // ── Static file serving (production) ──────────────────────────────────
+    const DIST_DIR = path.join(__dirname, '../dist')
+    if (req.method === 'GET' && fs.existsSync(DIST_DIR)) {
+      let filePath = path.join(DIST_DIR, pathname === '/' ? 'index.html' : pathname)
+      if (!filePath.startsWith(DIST_DIR)) return send(res, 403, { error: 'Forbidden' })
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const ext = path.extname(filePath).toLowerCase()
+        const mime = { '.html':'text/html', '.js':'application/javascript', '.css':'text/css',
+          '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.ico':'image/x-icon',
+          '.woff':'font/woff', '.woff2':'font/woff2', '.json':'application/json', '.txt':'text/plain' }
+        res.writeHead(200, { 'Content-Type': mime[ext] || 'application/octet-stream' })
+        return fs.createReadStream(filePath).pipe(res)
+      } else {
+        // SPA fallback → index.html
+        res.writeHead(200, { 'Content-Type': 'text/html' })
+        return fs.createReadStream(path.join(DIST_DIR, 'index.html')).pipe(res)
       }
     }
 

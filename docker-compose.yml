@@ -3,10 +3,11 @@ services:
   docx-editor:
     build: .
     ports:
-      - "3011:3011"
+      - "3000:3000"
     volumes:
       - ./data/docs:/app/sync-server/docs
+      - ./data/sessions:/app/sync-server/sessions
       - ./data/config:/app/sync-server/config
     environment:
-      - PORT=3011
+      - PORT=3000
     restart: unless-stopped

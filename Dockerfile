@@ -6,14 +6,15 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Run backend
+# Stage 2: Production — single Node.js process serves frontend + API
 FROM node:20-alpine
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY server/ ./server/
+COPY sync-server/ ./sync-server/
 COPY --from=builder /app/dist ./dist
-RUN mkdir -p server/data/docs
 
-EXPOSE 3011
-CMD ["node", "server/index.cjs"]
+# Create persistent directories
+RUN mkdir -p sync-server/docs sync-server/sessions sync-server/data sync-server/config
+
+EXPOSE 3000
+ENV PORT=3000
+CMD ["node", "sync-server/server.cjs"]
