@@ -167,7 +167,7 @@ export default function SettingsPanel({ defaultTab = 'ai', currentFileId }: Prop
 
 // ── Quark binding panel ────────────────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:3011'
+const API_BASE = ''  // 使用相对路径，兼容任意域名/端口访问
 
 interface QuarkConfig {
   hasCookie: boolean
