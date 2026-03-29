@@ -212,6 +212,30 @@ export default function FileManagerSidebar({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, currentDoc, pageConfig, currentFileId])
 
+  // 2-second debounce auto-save when a file is open
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!editor || !currentDoc || !currentFileId) return
+    const triggerAutoSave = () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+      autoSaveTimer.current = setTimeout(async () => {
+        if (!editor || !currentDoc || !currentFileId) return
+        try {
+          const html = editor.getHTML()
+          const blob = await exportDocx(currentDoc, pageConfig, html)
+          const name = currentDoc.title || '新文档'
+          await overwriteDocx(currentFileId, blob, name)
+        } catch { /* silent auto-save failure */ }
+      }, 2000)
+    }
+    editor.on('update', triggerAutoSave)
+    return () => {
+      editor.off('update', triggerAutoSave)
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, currentDoc, pageConfig, currentFileId])
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
