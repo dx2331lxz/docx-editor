@@ -190,6 +190,43 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true })
     }
 
+    // ── AI Chat Proxy (/api/ai/chat) ────────────────────────────────────────
+    if (req.method === 'POST' && pathname === '/api/ai/chat') {
+      const body = await readBodyBuffer(req)
+      const cfg = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : DEFAULT_CONFIG
+      const endpoint = cfg.endpoint || DEFAULT_CONFIG.endpoint
+      const apiKey = cfg.apiKey || ''
+
+      // Parse target URL
+      const targetUrl = new URL(endpoint)
+      const isHttps = targetUrl.protocol === 'https:'
+      const lib = isHttps ? require('https') : require('http')
+
+      const options = {
+        hostname: targetUrl.hostname,
+        port: targetUrl.port || (isHttps ? 443 : 80),
+        path: targetUrl.pathname + (targetUrl.search || ''),
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Length': Buffer.byteLength(body),
+        },
+      }
+
+      const proxyReq = lib.request(options, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, {
+          'Content-Type': proxyRes.headers['content-type'] || 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        })
+        proxyRes.pipe(res)
+      })
+      proxyReq.on('error', (e) => send(res, 502, { error: e.message }))
+      proxyReq.write(body)
+      proxyReq.end()
+      return
+    }
+
     // ── Legacy docs (JSON) ──────────────────────────────────────────────────
     if (req.method === 'GET' && pathname === '/api/docs') {
       const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'))
