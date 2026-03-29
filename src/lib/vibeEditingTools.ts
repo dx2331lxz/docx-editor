@@ -638,6 +638,20 @@ function applyFontSizeToHTML(
   selector: string,
   size: string,
 ): { newHtml: string; count: number } {
+  return applySpanStyleToHTML(html, selector, 'font-size', size)
+}
+
+/**
+ * Apply a CSS property to span-level elements inside matching block elements.
+ * TipTap stores text styles (font-size, font-family, color, etc.) on <span> via textStyle mark.
+ * Writing to block-level tags is invisible to TipTap's mark system.
+ */
+function applySpanStyleToHTML(
+  html: string,
+  selector: string,
+  prop: string,
+  value: string,
+): { newHtml: string; count: number } {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
   const realSelector = selector === '.all' ? 'h1,h2,h3,h4,h5,h6,p,li,blockquote,td,th' : selector
@@ -645,28 +659,21 @@ function applyFontSizeToHTML(
   let count = 0
   els.forEach(el => {
     count++
-    // Set font-size on all existing spans inside
+    // Update all existing spans inside
     el.querySelectorAll('span').forEach(span => {
       const s = span.getAttribute('style') || ''
-      // Remove existing font-size
-      const cleaned = s.replace(/(?:^|;)\s*font-size\s*:[^;]*/g, '').replace(/^;/, '')
-      span.setAttribute('style', cleaned ? `${cleaned};font-size:${size}` : `font-size:${size}`)
+      const cleaned = s.replace(new RegExp(`(?:^|;)\\s*${prop.replace('-', '\\-')}\\s*:[^;]*`, 'g'), '').replace(/^;/, '').trim()
+      span.setAttribute('style', cleaned ? `${cleaned};${prop}:${value}` : `${prop}:${value}`)
     })
-    // Also wrap bare text nodes in a span
+    // Wrap bare text nodes in a span
     Array.from(el.childNodes).forEach(node => {
       if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
         const span = doc.createElement('span')
-        span.style.fontSize = size
+        span.setAttribute('style', `${prop}:${value}`)
         el.insertBefore(span, node)
         span.appendChild(node)
       }
     })
-    // If no spans or text nodes were processed, set on the element itself as fallback
-    if (!el.querySelector('span') && !el.textContent?.trim()) {
-      const s = el.getAttribute('style') || ''
-      const cleaned = s.replace(/(?:^|;)\s*font-size\s*:[^;]*/g, '').replace(/^;/, '')
-      el.setAttribute('style', cleaned ? `${cleaned};font-size:${size}` : `font-size:${size}`)
-    }
   })
   return { newHtml: doc.body.innerHTML, count }
 }
@@ -766,21 +773,21 @@ export async function executeTool(
 
       case 'set_font_family': {
         const { selector, family } = args as { selector: string; family: string }
-        const { newHtml, count } = applyStylesToHTML(editor.getHTML(), selector, { 'font-family': family })
+        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), selector, 'font-family', family)
         editor.chain().focus().setContent(newHtml, true).run()
         return `已设置 ${count} 个元素字体为 ${family}`
       }
 
       case 'set_text_color': {
         const { selector, color } = args as { selector: string; color: string }
-        const { newHtml, count } = applyStylesToHTML(editor.getHTML(), selector, { color })
+        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), selector, 'color', color)
         editor.chain().focus().setContent(newHtml, true).run()
         return `已设置 ${count} 个元素文字颜色为 ${color}`
       }
 
       case 'set_font_bold': {
         const { selector, bold } = args as { selector: string; bold: boolean }
-        const { newHtml, count } = applyStylesToHTML(editor.getHTML(), selector, { 'font-weight': bold ? '700' : '400' })
+        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), selector, 'font-weight', bold ? '700' : '400')
         editor.chain().focus().setContent(newHtml, true).run()
         return `已设置 ${count} 个元素${bold ? '加粗' : '取消加粗'}`
       }
@@ -794,7 +801,7 @@ export async function executeTool(
 
       case 'set_letter_spacing': {
         const { selector, spacing } = args as { selector: string; spacing: string }
-        const { newHtml, count } = applyStylesToHTML(editor.getHTML(), selector, { 'letter-spacing': spacing })
+        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), selector, 'letter-spacing', spacing)
         editor.chain().focus().setContent(newHtml, true).run()
         return `已设置 ${count} 个元素字间距为 ${spacing}`
       }
@@ -879,14 +886,25 @@ export async function executeTool(
         const { theme } = args as { theme: string }
         const t = THEMES_MAP[theme] || THEMES_MAP.default
         let html = editor.getHTML()
-        const apply = (tag: string, s: string) => {
-          const r = applyStylesToHTML(html, tag, Object.fromEntries(s.split(';').map(x => x.split(':').map(s => s.trim()) as [string, string])))
-          html = r.newHtml
+        // Span-level props must go to spans; block-level props go to block tags
+        const SPAN_PROPS = new Set(['font-size', 'font-family', 'color', 'font-weight', 'letter-spacing'])
+        const applyThemeStyles = (tag: string, s: string) => {
+          const pairs = s.split(';').map(x => x.split(':').map(s => s.trim()) as [string, string]).filter(([k]) => k)
+          const blockStyles: Record<string, string> = {}
+          pairs.forEach(([k, v]) => {
+            if (SPAN_PROPS.has(k)) {
+              html = applySpanStyleToHTML(html, tag, k, v).newHtml
+            } else {
+              blockStyles[k] = v
+            }
+          })
+          if (Object.keys(blockStyles).length > 0) {
+            html = applyStylesToHTML(html, tag, blockStyles).newHtml
+          }
         }
-        apply('h1', t.h1); apply('h2', t.h2); apply('h3', t.h3); apply('p', t.p)
+        applyThemeStyles('h1', t.h1); applyThemeStyles('h2', t.h2); applyThemeStyles('h3', t.h3); applyThemeStyles('p', t.p)
         if (t.font) {
-          const r = applyStylesToHTML(html, 'h1,h2,h3,h4,p,li', { 'font-family': t.font })
-          html = r.newHtml
+          html = applySpanStyleToHTML(html, 'h1,h2,h3,h4,p,li', 'font-family', t.font).newHtml
         }
         editor.chain().focus().setContent(html, true).run()
         return `已应用"${theme}"主题`
@@ -894,7 +912,7 @@ export async function executeTool(
 
       case 'set_document_font': {
         const { font } = args as { font: string }
-        const { newHtml, count } = applyStylesToHTML(editor.getHTML(), 'h1,h2,h3,h4,h5,h6,p,li,td,th', { 'font-family': font })
+        const { newHtml, count } = applySpanStyleToHTML(editor.getHTML(), 'h1,h2,h3,h4,h5,h6,p,li,td,th', 'font-family', font)
         editor.chain().focus().setContent(newHtml, true).run()
         return `已将 ${count} 个元素字体统一为"${font}"`
       }
@@ -1159,10 +1177,10 @@ export async function executeTool(
 
       case 'set_body_font_size': {
         const { size } = args as { size: string }
-        const { newHtml, count } = applyStylesToHTML(
+        const { newHtml, count } = applySpanStyleToHTML(
           editor.getHTML(),
           'p,li,td,th',
-          { 'font-size': size }
+          'font-size', size
         )
         editor.chain().focus().setContent(newHtml, true).run()
         return `已将 ${count} 个正文元素字号设为 ${size}`
@@ -1170,10 +1188,10 @@ export async function executeTool(
 
       case 'set_body_font_family': {
         const { font } = args as { font: string }
-        const { newHtml, count } = applyStylesToHTML(
+        const { newHtml, count } = applySpanStyleToHTML(
           editor.getHTML(),
           'p,li,td,th',
-          { 'font-family': font }
+          'font-family', font
         )
         editor.chain().focus().setContent(newHtml, true).run()
         return `已将 ${count} 个正文元素字体设为 ${font}`
@@ -1212,18 +1230,18 @@ export async function executeTool(
         } = args as { font?: string; bodySize?: string; lineHeight?: string; indent?: boolean }
 
         let html = editor.getHTML()
-        // Step 1: unified body font
-        html = applyStylesToHTML(html, 'p,li,td,th', { 'font-family': font }).newHtml
-        // Step 2: unified body font size
-        html = applyStylesToHTML(html, 'p,li,td,th', { 'font-size': bodySize }).newHtml
-        // Step 3: line height for all blocks
+        // Step 1: unified body font (span-level)
+        html = applySpanStyleToHTML(html, 'p,li,td,th', 'font-family', font).newHtml
+        // Step 2: unified body font size (span-level)
+        html = applySpanStyleToHTML(html, 'p,li,td,th', 'font-size', bodySize).newHtml
+        // Step 3: line height for all blocks (block-level — correct)
         html = applyStylesToHTML(html, 'p,h1,h2,h3,h4,h5,h6,li', { 'line-height': lineHeight }).newHtml
         // Step 4: first-line indent for paragraphs
         if (indent) {
           html = applyStylesToHTML(html, 'p', { 'text-indent': '2em' }).newHtml
         }
-        // Step 5: ensure headings are bold
-        html = applyStylesToHTML(html, 'h1,h2,h3,h4', { 'font-weight': '700' }).newHtml
+        // Step 5: ensure headings are bold (span-level)
+        html = applySpanStyleToHTML(html, 'h1,h2,h3,h4', 'font-weight', '700').newHtml
 
         editor.chain().focus().setContent(html, true).run()
         return `智能排版完成：字体 ${font}、正文 ${bodySize}、行距 ${lineHeight}、${indent ? '首行缩进2em、' : ''}标题加粗`
