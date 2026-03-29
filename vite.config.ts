@@ -5,11 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3011',
-        changeOrigin: true,
-      },
-    },
+    // No proxy needed — all requests go through sync-server (port 3011 dev / 3000 prod)
+    // sync-server handles /api/* directly and proxies /* to Vite HMR
   },
 })

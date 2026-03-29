@@ -431,29 +431,63 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // ── Static file serving (production) ──────────────────────────────────
+    // ── Static file serving (production) / Dev proxy (development) ────────
     const DIST_DIR = path.join(__dirname, '../dist')
-    if (req.method === 'GET' && fs.existsSync(DIST_DIR)) {
-      let filePath = path.join(DIST_DIR, pathname === '/' ? 'index.html' : pathname)
-      if (!filePath.startsWith(DIST_DIR)) return send(res, 403, { error: 'Forbidden' })
-      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-        const ext = path.extname(filePath).toLowerCase()
-        const mime = { '.html':'text/html', '.js':'application/javascript', '.css':'text/css',
-          '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.ico':'image/x-icon',
-          '.woff':'font/woff', '.woff2':'font/woff2', '.json':'application/json', '.txt':'text/plain' }
-        res.writeHead(200, { 'Content-Type': mime[ext] || 'application/octet-stream' })
-        return fs.createReadStream(filePath).pipe(res)
-      } else {
-        // SPA fallback → index.html
-        res.writeHead(200, { 'Content-Type': 'text/html' })
-        return fs.createReadStream(path.join(DIST_DIR, 'index.html')).pipe(res)
+    const VITE_PORT = process.env.VITE_PORT ? parseInt(process.env.VITE_PORT) : 5173
+
+    if (fs.existsSync(DIST_DIR) && fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
+      // Production: serve static files from dist/
+      if (req.method === 'GET') {
+        let filePath = path.join(DIST_DIR, pathname === '/' ? 'index.html' : pathname)
+        if (!filePath.startsWith(DIST_DIR)) return send(res, 403, { error: 'Forbidden' })
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          const ext = path.extname(filePath).toLowerCase()
+          const mime = { '.html':'text/html', '.js':'application/javascript', '.css':'text/css',
+            '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.ico':'image/x-icon',
+            '.woff':'font/woff', '.woff2':'font/woff2', '.json':'application/json', '.txt':'text/plain' }
+          res.writeHead(200, { 'Content-Type': mime[ext] || 'application/octet-stream' })
+          return fs.createReadStream(filePath).pipe(res)
+        } else {
+          // SPA fallback → index.html
+          res.writeHead(200, { 'Content-Type': 'text/html' })
+          return fs.createReadStream(path.join(DIST_DIR, 'index.html')).pipe(res)
+        }
       }
+    } else {
+      // Development: reverse proxy to Vite dev server (supports HMR)
+      const isWs = req.headers.upgrade === 'websocket'
+      const proxyLib = require('http')
+      const proxyReq = proxyLib.request(
+        { hostname: 'localhost', port: VITE_PORT, path: req.url, method: req.method, headers: req.headers },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode, proxyRes.headers)
+          proxyRes.pipe(res)
+        }
+      )
+      proxyReq.on('error', () => send(res, 502, { error: `Vite dev server not running on port ${VITE_PORT}` }))
+      if (!isWs) req.pipe(proxyReq)
+      return
     }
 
     send(res, 404, { error: 'Not found' })
   } catch (e) {
     send(res, 500, { error: e.message })
   }
+})
+
+// ── WebSocket proxy for Vite HMR (dev only) ────────────────────────────────
+const net = require('net')
+server.on('upgrade', (req, socket, head) => {
+  const DIST_DIR = path.join(__dirname, '../dist')
+  if (fs.existsSync(path.join(DIST_DIR, 'index.html'))) return // production, no proxy
+  const VITE_PORT = process.env.VITE_PORT ? parseInt(process.env.VITE_PORT) : 5173
+  const target = net.createConnection({ host: 'localhost', port: VITE_PORT }, () => {
+    target.write(`${req.method} ${req.url} HTTP/1.1\r\nHost: localhost:${VITE_PORT}\r\n` +
+      Object.entries(req.headers).map(([k, v]) => `${k}: ${v}`).join('\r\n') + '\r\n\r\n')
+    target.write(head)
+    socket.pipe(target).pipe(socket)
+  })
+  target.on('error', () => socket.destroy())
 })
 
 server.listen(PORT, () => {
