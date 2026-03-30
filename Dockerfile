@@ -1,5 +1,5 @@
 # Stage 1: Build frontend
-FROM node:20-alpine AS builder
+FROM registry.cn-hangzhou.aliyuncs.com/library/node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Production — single Node.js process serves frontend + API
-FROM node:20-alpine
+FROM registry.cn-hangzhou.aliyuncs.com/library/node:20-alpine
 WORKDIR /app
 COPY sync-server/ ./sync-server/
 COPY --from=builder /app/dist ./dist
