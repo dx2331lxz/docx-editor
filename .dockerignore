@@ -1,7 +1,12 @@
 node_modules
 dist
-sync-server
 screenshots
 scripts
 *.log
 .git
+# sync-server/data 里的运行时数据不需要打包进镜像，但 sync-server 代码需要
+sync-server/data
+sync-server/docs
+sync-server/sessions
+sync-server/config
+
