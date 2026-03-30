@@ -22,8 +22,7 @@ import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 // ── Import helpers ───────────────────────────────────────────────────────────
 
 interface ParaStyleEntry {
-  lineHeight?: number      // multiplier (lineRule=auto): line/240
-  lineHeightPt?: number    // absolute pt (exact/atLeast): line/20
+  lineHeight?: number      // multiplier (lineRule=auto only): line/240
   spaceBefore?: number     // twip
   spaceAfter?: number      // twip
   textAlign?: string       // 'left'|'center'|'right'|'justify'
@@ -128,12 +127,12 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
         const lineNum = parseInt(lineVal)
         if (!isNaN(lineNum)) {
           if (!lineRule || lineRule === 'auto') {
+            // lineRule=auto: line/240 = multiplier (e.g. 276/240 = 1.15)
             const lh = lineNum / 240
             if (lh >= 0.8 && lh <= 5.0) result.lineHeight = lh
-          } else {
-            const pt = lineNum / 20
-            if (pt > 0) result.lineHeightPt = pt
           }
+          // lineRule=exact/atLeast: absolute twip value — skip to avoid line overlap
+          // (converting to pt CSS line-height causes text to stack when value ≈ font-size)
         }
       }
       const beforeVal = wAttr(spacing, 'before')
@@ -296,8 +295,6 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
 
     if (ps.lineHeight !== undefined) {
       parts.push(`line-height:${ps.lineHeight.toFixed(2)}`)
-    } else if (ps.lineHeightPt !== undefined) {
-      parts.push(`line-height:${ps.lineHeightPt.toFixed(1)}pt`)
     }
 
     if (ps.spaceBefore !== undefined) {
