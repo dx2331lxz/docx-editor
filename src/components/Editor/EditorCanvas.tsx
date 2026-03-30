@@ -40,6 +40,7 @@ interface EditorCanvasProps {
   pageBg?: { type: string; color?: string }
   themeClass?: string
   onTranslate?: () => void
+  onPageCountChange?: (totalPages: number) => void
 }
 
 /** Inline editable / display zone for header or footer */
@@ -147,6 +148,7 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
   pageBg,
   themeClass = '',
   onTranslate,
+  onPageCountChange,
 }) => {
   const columnClass =
     columns === 2 ? 'columns-2' :
@@ -321,6 +323,19 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
         )
         getStyleEl().textContent = rules.join('\n')
       }
+
+      // ── Calculate total page count from final layout ──────────────
+      if (onPageCountChange) {
+        const pm2 = page.querySelector('.ProseMirror') as HTMLElement | null
+        if (pm2) {
+          const lastChild = pm2.lastElementChild as HTMLElement | null
+          if (lastChild) {
+            const bottomOffset = getOffsetFromPage(lastChild) + lastChild.offsetHeight
+            const totalPages = Math.max(1, Math.ceil(bottomOffset / UNIT_PX))
+            onPageCountChange(totalPages)
+          }
+        }
+      }
     }
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -356,7 +371,7 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
       editor?.off('update', schedule)
       document.getElementById(styleId)?.remove()
     }
-  }, [editor, pageConfig])
+  }, [editor, pageConfig, onPageCountChange])
 
   return (
     <div className="glass-canvas-bg flex-1 overflow-auto bg-gray-300 flex flex-col">

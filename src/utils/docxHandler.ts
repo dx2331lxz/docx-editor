@@ -340,18 +340,18 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
       // Apply same grid-snapping logic to spaceBefore
       let beforeTwip = ps.spaceBefore
       if (docGridLinePitchTwip && beforeTwip > 0) {
-        beforeTwip = Math.max(0, beforeTwip - docGridLinePitchTwip)
+        beforeTwip = Math.round(beforeTwip / docGridLinePitchTwip) * docGridLinePitchTwip
       }
       if (beforeTwip > 0) parts.push(`margin-top:${(beforeTwip / 20).toFixed(1)}pt`)
     }
 
     if (ps.spaceAfter !== undefined) {
-      // Word docGrid snapping: the linePitch already accounts for one line of spacing.
-      // The actual visible gap is: spaceAfter - linePitch (clamped to 0).
-      // e.g. after=320 twip, linePitch=312 twip → extra = 8 twip ≈ 0 → no visible gap.
+      // Word docGrid snapping: round spaceAfter to nearest linePitch multiple.
+      // e.g. after=320 twip, linePitch=312 → round(320/312)×312 = 312 twip = 15.6pt (1 grid slot)
+      // e.g. after=0 twip → 0 (no gap)
       let afterTwip = ps.spaceAfter
       if (docGridLinePitchTwip && afterTwip > 0) {
-        afterTwip = Math.max(0, afterTwip - docGridLinePitchTwip)
+        afterTwip = Math.round(afterTwip / docGridLinePitchTwip) * docGridLinePitchTwip
       }
       if (afterTwip > 0) parts.push(`margin-bottom:${(afterTwip / 20).toFixed(1)}pt`)
     }

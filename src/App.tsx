@@ -119,6 +119,7 @@ const App: React.FC = () => {
   const [showParagraphDialog, setShowParagraphDialog] = useState(false)
   const [showPageSetup, setShowPageSetup] = useState(false)
   const [pageConfig, setPageConfig] = useState<PageConfig>(DEFAULT_PAGE_CONFIG)
+  const [totalPages, setTotalPages] = useState(1)
   const [showSpecialSymbols, setShowSpecialSymbols] = useState(false)
   const [showCommentPanel, setShowCommentPanel] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
@@ -375,6 +376,7 @@ const App: React.FC = () => {
       pageBg={pageBg}
       themeClass={currentTheme.bgClass}
       onTranslate={handleOpenTranslate}
+      onPageCountChange={setTotalPages}
     />
   )
 
@@ -627,6 +629,7 @@ const App: React.FC = () => {
         <StatusBar
           stats={stats}
           lastSaved={lastSaved}
+          totalPages={totalPages}
           onOpenWordCount={() => setShowWordCount(true)}
         />
       )}
