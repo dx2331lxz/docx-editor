@@ -565,8 +565,8 @@ export const VIBE_TOOLS = [
         properties: {
           area: {
             type: 'string',
-            enum: ['full', 'top', 'first_screen'],
-            description: '截图范围：full=完整文档，top=文档顶部（前1000px），first_screen=首屏',
+            enum: ['full', 'top', 'first_screen', 'page_1', 'page_2', 'page_3'],
+            description: '截图范围：full=完整文档，top=文档顶部（前1000px），first_screen=首屏，page_1/2/3=截指定页（推荐，多页文档时使用）',
           },
         },
         required: [],
@@ -1427,18 +1427,37 @@ export async function executeTool(
         const pageEl = document.querySelector('.a4-page') as HTMLElement
         if (!pageEl) return '错误：未找到文档页面元素（.a4-page）'
 
+        // A4 page constants (must match EditorCanvas)
+        const PAGE_MM = 297
+        const MM_PX = 3.7795275591
+        const PAGE_PX = Math.round(PAGE_MM * MM_PX)  // ≈ 1123px per page
+        const GAP_PX = 24
+        const UNIT_PX = PAGE_PX + GAP_PX  // ≈ 1147px per page slot
+
+        // Resolve page-specific crop
+        let cropY: number | undefined
+        let cropHeight: number | undefined
+        const pageMatch = area.match(/^page_(\d+)$/)
+        if (pageMatch) {
+          const pageNum = parseInt(pageMatch[1]) - 1  // 0-indexed
+          cropY = pageNum * UNIT_PX
+          cropHeight = PAGE_PX
+        }
+
         const canvas = await html2canvas(pageEl, {
           scale: 1.5,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
-          height: area === 'first_screen' ? 900 : area === 'top' ? 1000 : undefined,
+          height: cropHeight ?? (area === 'first_screen' ? 900 : area === 'top' ? 1000 : undefined),
+          y: cropY ?? 0,
           windowHeight: area === 'first_screen' ? 900 : area === 'top' ? 1000 : undefined,
         })
 
         const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1]
         lastScreenshotBase64 = base64
-        return `截图成功，尺寸：${canvas.width}×${canvas.height}px，base64已缓存供多模态分析使用`
+        const pageInfo = pageMatch ? `第${pageMatch[1]}页` : area
+        return `截图成功（${pageInfo}），尺寸：${canvas.width}×${canvas.height}px，base64已缓存供多模态分析使用`
       }
 
       case 'analyze_document_aesthetics': {
