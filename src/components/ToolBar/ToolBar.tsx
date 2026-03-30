@@ -54,6 +54,7 @@ interface ToolBarProps {
   onOpenStyleManager?: () => void
   onOpenVibeEditing?: () => void
   onPreview?: () => void
+  onPageConfigChange?: (config: Partial<import('../PageSetup/PageSetupDialog').PageConfig>) => void
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -199,6 +200,7 @@ const ToolBar: React.FC<ToolBarProps> = ({
   onOpenStyleManager,
   onOpenVibeEditing: _onOpenVibeEditing,
   onPreview,
+  onPageConfigChange,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
@@ -267,8 +269,11 @@ const ToolBar: React.FC<ToolBarProps> = ({
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const html = await importDocx(file)
-    editor.commands.setContent(html)
+    const result = await importDocx(file)
+    editor.commands.setContent(result.html)
+    if (result.pageConfig && onPageConfigChange) {
+      onPageConfigChange(result.pageConfig)
+    }
     e.target.value = ''
   }
 

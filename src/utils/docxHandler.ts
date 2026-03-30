@@ -48,18 +48,24 @@ interface StyleEntry {
   runStyle?: RunStyleEntry
 }
 
+/** Result of importing a docx file */
+export interface DocxImportResult {
+  html: string
+  pageConfig?: Partial<PageConfig>
+}
+
 /** Parse the raw docx XML and build enhanced HTML preserving color/font/size/align */
-async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
+async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportResult> {
   let zip: JSZip
   try {
     zip = await JSZip.loadAsync(arrayBuffer)
   } catch {
-    return ''
+    return { html: '' }
   }
 
   const docXmlFile = zip.file('word/document.xml')
   const stylesXmlFile = zip.file('word/styles.xml')
-  if (!docXmlFile) return ''
+  if (!docXmlFile) return { html: '' }
 
   const [docXmlStr, stylesXmlStr] = await Promise.all([
     docXmlFile.async('string'),
@@ -451,7 +457,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
 
   // Walk body children
   const body = docDom.getElementsByTagNameNS(W, 'body')[0]
-  if (!body) return ''
+  if (!body) return { html: '' }
 
   const htmlParts: string[] = []
   let listBuffer: { type: 'bullet' | 'number'; items: string[] } | null = null
@@ -490,17 +496,70 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
   }
   flushList()
 
-  return htmlParts.join('\n')
+  // ── Parse page setup from w:sectPr ────────────────────────────────────────
+  let importedPageConfig: Partial<PageConfig> | undefined
+  const sectPrEls = docDom.getElementsByTagNameNS(W, 'sectPr')
+  if (sectPrEls.length > 0) {
+    const sectPr = sectPrEls[sectPrEls.length - 1] as Element  // last sectPr = document-level
+    const pgSz = wChild(sectPr, 'pgSz')
+    const pgMar = wChild(sectPr, 'pgMar')
+
+    if (pgSz || pgMar) {
+      importedPageConfig = {}
+
+      if (pgSz) {
+        const w = parseInt(wAttr(pgSz, 'w'))
+        const h = parseInt(wAttr(pgSz, 'h'))
+        const orient = wAttr(pgSz, 'orient')
+
+        // Detect paper size from dimensions (twip)
+        // A4: 11906 x 16838, A3: 16838 x 23811, Letter: 12240 x 15840
+        if (!isNaN(w) && !isNaN(h)) {
+          const wMm = Math.round(w / 1440 * 25.4)
+          const hMm = Math.round(h / 1440 * 25.4)
+          if ((wMm === 210 && hMm === 297) || (wMm === 297 && hMm === 210)) {
+            importedPageConfig.paperSize = 'A4'
+          } else if ((wMm === 297 && hMm === 420) || (wMm === 420 && hMm === 297)) {
+            importedPageConfig.paperSize = 'A3'
+          } else if ((wMm >= 215 && wMm <= 217 && hMm >= 278 && hMm <= 280) ||
+                     (hMm >= 215 && hMm <= 217 && wMm >= 278 && wMm <= 280)) {
+            importedPageConfig.paperSize = 'Letter'
+          }
+        }
+
+        if (orient === 'landscape') {
+          importedPageConfig.orientation = 'landscape'
+        } else {
+          importedPageConfig.orientation = 'portrait'
+        }
+      }
+
+      if (pgMar) {
+        const TWIP_TO_CM = 1 / 567  // 1 cm = 567 twip (approx)
+        const top = parseInt(wAttr(pgMar, 'top'))
+        const bottom = parseInt(wAttr(pgMar, 'bottom'))
+        const left = parseInt(wAttr(pgMar, 'left'))
+        const right = parseInt(wAttr(pgMar, 'right'))
+
+        if (!isNaN(top)) importedPageConfig.marginTop = parseFloat((top * TWIP_TO_CM).toFixed(2))
+        if (!isNaN(bottom)) importedPageConfig.marginBottom = parseFloat((bottom * TWIP_TO_CM).toFixed(2))
+        if (!isNaN(left)) importedPageConfig.marginLeft = parseFloat((left * TWIP_TO_CM).toFixed(2))
+        if (!isNaN(right)) importedPageConfig.marginRight = parseFloat((right * TWIP_TO_CM).toFixed(2))
+      }
+    }
+  }
+
+  return { html: htmlParts.join('\n'), pageConfig: importedPageConfig }
 }
 
-/** Import a .docx file and return its HTML content */
-export async function importDocx(file: File): Promise<string> {
+/** Import a .docx file and return its HTML content + optional page config */
+export async function importDocx(file: File): Promise<DocxImportResult> {
   const arrayBuffer = await file.arrayBuffer()
 
   // Try enhanced XML-based import first for full fidelity
   try {
     const enhanced = await importDocxEnhanced(arrayBuffer)
-    if (enhanced && enhanced.trim().length > 0) return enhanced
+    if (enhanced.html && enhanced.html.trim().length > 0) return enhanced
   } catch {
     // Fall through to mammoth
   }
@@ -510,7 +569,7 @@ export async function importDocx(file: File): Promise<string> {
     { arrayBuffer },
     { styleMap: ['u => u'] }
   )
-  return result.value
+  return { html: result.value }
 }
 
 /** Map TipTap text-align value → docx AlignmentType */

@@ -499,6 +499,7 @@ const App: React.FC = () => {
             onOpenFormFields={() => setShowFormFields(true)}
             onOpenVibeEditing={() => setShowVibeEditing(true)}
             onExportPDF={handleExportPDF}
+            onPageConfigChange={(partial) => setPageConfig(prev => ({ ...prev, ...partial }))}
           />
           <ToolBar
             editor={editor}
@@ -516,6 +517,7 @@ const App: React.FC = () => {
             onOpenStyleManager={() => setShowStyleManager(true)}
             onOpenVibeEditing={() => setShowVibeEditing(true)}
             onPreview={handlePreview}
+            onPageConfigChange={(partial) => setPageConfig(prev => ({ ...prev, ...partial }))}
           />
         </>
       )}
@@ -553,6 +555,7 @@ const App: React.FC = () => {
             currentDoc={currentDoc}
             pageConfig={pageConfig}
             openFileId={openFileId}
+            onPageConfigChange={(partial) => setPageConfig(prev => ({ ...prev, ...partial }))}
             onDocOpened={(file: DocFile) => {
               setOpenFileId(file.id || null)
               if (file.name && file.id) {

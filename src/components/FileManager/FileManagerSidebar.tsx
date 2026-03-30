@@ -26,6 +26,7 @@ interface Props {
   onDocOpened?: (file: DocFile) => void
   /** Current open file id (to highlight) */
   openFileId?: string | null
+  onPageConfigChange?: (config: Partial<PageConfig>) => void
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -88,6 +89,7 @@ export default function FileManagerSidebar({
   pageConfig,
   onDocOpened,
   openFileId,
+  onPageConfigChange,
 }: Props) {
   const [collapsed, setCollapsed] = useState(true)
   const [files, setFiles] = useState<DocFile[]>([])
@@ -145,8 +147,11 @@ export default function FileManagerSidebar({
       if (!res.ok) throw new Error('下载失败')
       const blob = await res.blob()
       const f = new File([blob], `${file.name}.docx`, { type: blob.type })
-      const html = await importDocx(f)
-      editor.chain().focus().setContent(html).run()
+      const result = await importDocx(f)
+      editor.chain().focus().setContent(result.html).run()
+      if (result.pageConfig && onPageConfigChange) {
+        onPageConfigChange(result.pageConfig)
+      }
       setCurrentFileId(file.id)
       onDocOpened?.(file)
     } catch (e) {
