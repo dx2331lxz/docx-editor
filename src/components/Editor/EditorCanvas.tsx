@@ -166,13 +166,15 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const PAGE_PX  = PAGE_MM * MM_PX   // ≈ 1122.52 px
   const GAP_PX   = 24
   const UNIT_PX  = PAGE_PX + GAP_PX
+  // Top padding of each page (in px) — pushed blocks start this far below the grey band
+  const PAGE_PADDING_TOP_PX = (pageConfig?.marginTop ?? 2.54) * 10 * MM_PX  // cm→mm→px
 
   // Page gap gradient: grey band every 297mm, white page content in between.
   // This is the FIRST background layer; the page color is the SECOND layer.
   // Because the gradient uses opaque colors, it fully overrides the second
   // layer in grey zones and lets white show through in page zones.
   const pageGapGradient = (pageColor: string) =>
-    `repeating-linear-gradient(to bottom, ${pageColor} 0px, ${pageColor} ${PAGE_PX}px, #d4d4d4 ${PAGE_PX}px, #d4d4d4 ${UNIT_PX}px)`
+    `repeating-linear-gradient(to bottom, ${pageColor} 0px, ${pageColor} ${PAGE_PX}px, transparent ${PAGE_PX}px, transparent ${UNIT_PX}px)`
 
   // Compute page background style
   const pageBgStyle: React.CSSProperties = (() => {
@@ -304,7 +306,7 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
           let boundary    = PAGE_PX
           while (boundary < topRel) boundary += UNIT_PX
           if (topRel < boundary && bottomRel > boundary) {
-            const push = boundary + GAP_PX - topRel
+            const push = boundary + GAP_PX + PAGE_PADDING_TOP_PX - topRel
             if (push > 0) {
               pushMap.set(sel, push)
               foundNew = true
