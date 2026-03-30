@@ -63,19 +63,23 @@ export const INITIAL_CONTENT = `
 
 function computeStats(editor: ReturnType<typeof useEditor>): EditorStats {
   if (!editor) return { characters: 0, words: 0, paragraphs: 0 }
-  const storage = editor.storage.characterCount as {
-    characters: () => number
-    words: () => number
-  }
+  const fullText = editor.state.doc.textContent
+
+  // Chinese characters (CJK)
+  const chineseChars = (fullText.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length
+  // English words
+  const englishWords = (fullText.match(/[a-zA-Z]+/g) || []).length
+  // Total "words" = Chinese chars + English words (matches WordCountDialog)
+  const words = chineseChars + englishWords
+  // Characters: exclude whitespace (matches WordCountDialog charsNoSpace)
+  const characters = fullText.replace(/\s/g, '').length
+
   const paragraphs = editor
     .getText()
     .split('\n')
     .filter((l) => l.trim().length > 0).length
-  return {
-    characters: storage.characters(),
-    words: storage.words(),
-    paragraphs,
-  }
+
+  return { characters, words, paragraphs }
 }
 
 export function useDocxEditor(options: UseDocxEditorOptions = {}) {
