@@ -308,7 +308,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
   }
 
   /** Convert ParaStyleEntry to a CSS string */
-  function paraStyleToCss(ps: ParaStyleEntry): string {
+  function paraStyleToCss(ps: ParaStyleEntry, fallbackLineHeightPt?: number): string {
     const parts: string[] = []
 
     if (ps.textAlign) parts.push(`text-align:${ps.textAlign}`)
@@ -329,6 +329,9 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
       parts.push(`line-height:${ps.lineHeight.toFixed(2)}`)
     } else if (ps.lineHeightPt !== undefined) {
       parts.push(`line-height:${ps.lineHeightPt.toFixed(1)}pt`)
+    } else if (fallbackLineHeightPt !== undefined) {
+      // Use docGrid linePitch as the line height when no explicit line-height is set
+      parts.push(`line-height:${fallbackLineHeightPt.toFixed(1)}pt`)
     }
 
     if (ps.spaceBefore !== undefined) {
@@ -405,7 +408,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
     const directPara = pPr ? extractParaStyle(pPr) : {}
     const mergedPara = mergeObj<ParaStyleEntry>(resolved.paraStyle, directPara)
 
-    const css = paraStyleToCss(mergedPara)
+    const css = paraStyleToCss(mergedPara, docGridLineHeightMultiplier)
     const styleAttr = css ? ` style="${css}"` : ''
 
     const inner = paraInnerHtml(p, resolved.runStyle)
@@ -453,6 +456,32 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
       rows.push(`<tr>${cells.join('')}</tr>`)
     }
     return `<table style="border-collapse:collapse;width:100%">${rows.join('')}</table>`
+  }
+
+  // ── Parse docGrid for default line height (Chinese document grid) ──────────
+  // w:docGrid type="lines" linePitch="N" defines the line grid in twip.
+  // N twip / 20 = pt. This is the authoritative line height for the document.
+  let docGridLineHeightMultiplier: number | undefined
+  {
+    const sectPrEls2 = docDom.getElementsByTagNameNS(W, 'sectPr')
+    if (sectPrEls2.length > 0) {
+      const sectPr2 = sectPrEls2[sectPrEls2.length - 1] as Element
+      const docGridEl = wChild(sectPr2, 'docGrid')
+      if (docGridEl) {
+        const gridType = wAttr(docGridEl, 'type')
+        const linePitchStr = wAttr(docGridEl, 'linePitch')
+        if ((gridType === 'lines' || gridType === 'linesAndChars') && linePitchStr) {
+          const linePitchTwip = parseInt(linePitchStr)
+          if (!isNaN(linePitchTwip) && linePitchTwip > 0) {
+            // linePitch in twip / 20 = pt per line
+            // We'll apply this as line-height to paragraphs that don't have explicit line-height
+            // Store as a multiplier relative to font size (will be applied as absolute pt)
+            const linePitchPt = linePitchTwip / 20
+            docGridLineHeightMultiplier = linePitchPt  // absolute pt, applied in paraStyleToCss
+          }
+        }
+      }
+    }
   }
 
   // Walk body children
