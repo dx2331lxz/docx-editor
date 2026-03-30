@@ -307,8 +307,10 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
     return inner(styleId)
   }
 
-  /** Convert ParaStyleEntry to a CSS string */
-  function paraStyleToCss(ps: ParaStyleEntry, fallbackLineHeightPt?: number): string {
+  /** Convert ParaStyleEntry to a CSS string.
+   * docGridLinePitchTwip: when set, snap spacing to grid (Word docGrid behaviour).
+   * Segment-after space is reduced by one linePitch slot so only the overage shows. */
+  function paraStyleToCss(ps: ParaStyleEntry, fallbackLineHeightPt?: number, docGridLinePitchTwip?: number): string {
     const parts: string[] = []
 
     if (ps.textAlign) parts.push(`text-align:${ps.textAlign}`)
@@ -335,11 +337,23 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
     }
 
     if (ps.spaceBefore !== undefined) {
-      parts.push(`margin-top:${(ps.spaceBefore / 20).toFixed(1)}pt`)
+      // Apply same grid-snapping logic to spaceBefore
+      let beforeTwip = ps.spaceBefore
+      if (docGridLinePitchTwip && beforeTwip > 0) {
+        beforeTwip = Math.max(0, beforeTwip - docGridLinePitchTwip)
+      }
+      if (beforeTwip > 0) parts.push(`margin-top:${(beforeTwip / 20).toFixed(1)}pt`)
     }
 
     if (ps.spaceAfter !== undefined) {
-      parts.push(`margin-bottom:${(ps.spaceAfter / 20).toFixed(1)}pt`)
+      // Word docGrid snapping: the linePitch already accounts for one line of spacing.
+      // The actual visible gap is: spaceAfter - linePitch (clamped to 0).
+      // e.g. after=320 twip, linePitch=312 twip → extra = 8 twip ≈ 0 → no visible gap.
+      let afterTwip = ps.spaceAfter
+      if (docGridLinePitchTwip && afterTwip > 0) {
+        afterTwip = Math.max(0, afterTwip - docGridLinePitchTwip)
+      }
+      if (afterTwip > 0) parts.push(`margin-bottom:${(afterTwip / 20).toFixed(1)}pt`)
     }
 
     return parts.join(';')
@@ -408,7 +422,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
     const directPara = pPr ? extractParaStyle(pPr) : {}
     const mergedPara = mergeObj<ParaStyleEntry>(resolved.paraStyle, directPara)
 
-    const css = paraStyleToCss(mergedPara, docGridLineHeightMultiplier)
+    const css = paraStyleToCss(mergedPara, docGridLineHeightMultiplier, docGridLinePitchTwip)
     const styleAttr = css ? ` style="${css}"` : ''
 
     const inner = paraInnerHtml(p, resolved.runStyle)
@@ -462,6 +476,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
   // w:docGrid type="lines" linePitch="N" defines the line grid in twip.
   // N twip / 20 = pt. This is the authoritative line height for the document.
   let docGridLineHeightMultiplier: number | undefined
+  let docGridLinePitchTwip: number | undefined
   {
     const sectPrEls2 = docDom.getElementsByTagNameNS(W, 'sectPr')
     if (sectPrEls2.length > 0) {
@@ -478,6 +493,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
             // Store as a multiplier relative to font size (will be applied as absolute pt)
             const linePitchPt = linePitchTwip / 20
             docGridLineHeightMultiplier = linePitchPt  // absolute pt, applied in paraStyleToCss
+            docGridLinePitchTwip = linePitchTwip       // raw twip, used for spacing snap
           }
         }
       }
