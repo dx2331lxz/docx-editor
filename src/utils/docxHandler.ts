@@ -446,13 +446,15 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
 
   // ── Shared spacing builder (used by heading + paragraph) ────────────────
   const buildSpacing = (attrs: Record<string, unknown>): {
-    line: number; lineRule: 'auto'; before?: number; after?: number
+    line?: number; lineRule?: 'auto'; before?: number; after?: number
   } => {
     const lineHeight = attrs.lineHeight as string | undefined
     const lhNum = lineHeight ? parseFloat(lineHeight) : NaN
-    const line = !isNaN(lhNum) && lhNum > 0 ? Math.round(lhNum * 240) : Math.round(1.6 * 240)
-    const result: { line: number; lineRule: 'auto'; before?: number; after?: number } = {
-      line, lineRule: 'auto',
+    // Only set line spacing if explicitly provided; do NOT default to 1.6 (would inflate imported docs)
+    const result: { line?: number; lineRule?: 'auto'; before?: number; after?: number } = {}
+    if (!isNaN(lhNum) && lhNum > 0) {
+      result.line = Math.round(lhNum * 240)
+      result.lineRule = 'auto'
     }
     const mt = attrs.marginTop as number | undefined
     const mb = attrs.marginBottom as number | undefined
@@ -876,14 +878,16 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
           if (sc['line-height']) { const v = parseFloat(sc['line-height']); if (!isNaN(v) && v > 0) { resolvedLh = v; break } }
         }
       }
-      // Default heading line-height: match editor CSS (1.6)
-      if (!resolvedLh) resolvedLh = 1.6
+      // Default heading line-height: if not set, do NOT force 1.6 — let Word use its default
+      // (avoids inflating line spacing on imported docs that had no explicit line height)
 
       const hmtRaw = paraStyle['margin-top']
       const hmbRaw = paraStyle['margin-bottom']
       headingSpacing = {}
-      headingSpacing.line = Math.round(resolvedLh * 240)
-      headingSpacing.lineRule = 'auto'
+      if (resolvedLh) {
+        headingSpacing.line = Math.round(resolvedLh * 240)
+        headingSpacing.lineRule = 'auto'
+      }
       if (hmtRaw) { const pt = parseFloat(hmtRaw); if (!isNaN(pt)) headingSpacing.before = Math.round(pt * 20) }
       if (hmbRaw) { const pt = parseFloat(hmbRaw); if (!isNaN(pt)) headingSpacing.after = Math.round(pt * 20) }
 
@@ -939,8 +943,8 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
           }
         }
       }
-      // Priority 3: match editor CSS default (1.6) so docx matches the preview
-      if (!resolvedLineHeight) resolvedLineHeight = 1.6
+      // Priority 3: no explicit line-height → do NOT force a value; let Word use its default
+      // (forcing 1.6 here caused imported docs to export with larger line spacing than original)
 
       const spacing: {
         line?: number; lineRule?: 'auto' | 'atLeast' | 'exact'
