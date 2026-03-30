@@ -26,7 +26,8 @@ interface ParaStyleEntry {
   spaceBefore?: number     // twip
   spaceAfter?: number      // twip
   textAlign?: string       // 'left'|'center'|'right'|'justify'
-  firstLineIndent?: number // twip
+  firstLineIndent?: number // twip (from w:firstLine)
+  firstLineIndentEm?: number // em (from w:firstLineChars, e.g. 200 → 2em)
   leftIndent?: number      // twip
 }
 
@@ -113,8 +114,15 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
 
     const ind = wChild(pPr, 'ind')
     if (ind) {
-      const fl = parseInt(wAttr(ind, 'firstLine'))
-      if (!isNaN(fl) && fl > 0) result.firstLineIndent = fl
+      // firstLineChars: in 1/100 of a character width (200 = 2 chars = 2em)
+      const flChars = parseInt(wAttr(ind, 'firstLineChars'))
+      if (!isNaN(flChars) && flChars > 0) {
+        result.firstLineIndentEm = flChars / 100
+      } else {
+        // firstLine: in twip
+        const fl = parseInt(wAttr(ind, 'firstLine'))
+        if (!isNaN(fl) && fl > 0) result.firstLineIndent = fl
+      }
       const left = parseInt(wAttr(ind, 'left'))
       if (!isNaN(left) && left > 0) result.leftIndent = left
     }
@@ -283,7 +291,9 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
 
     if (ps.textAlign) parts.push(`text-align:${ps.textAlign}`)
 
-    if (ps.firstLineIndent !== undefined) {
+    if (ps.firstLineIndentEm !== undefined && ps.firstLineIndentEm > 0) {
+      parts.push(`text-indent:${ps.firstLineIndentEm.toFixed(2)}em`)
+    } else if (ps.firstLineIndent !== undefined) {
       const em = ps.firstLineIndent / 567
       if (em > 0) parts.push(`text-indent:${em.toFixed(2)}em`)
     }
@@ -326,13 +336,22 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
     const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const rPr = wChild(r, 'rPr')
     const directRun = rPr ? extractRunStyle(rPr) : {}
-    const mergedRun = mergeObj<RunStyleEntry>(inheritedRun ?? {} as RunStyleEntry, directRun)
+
+    // For font/size/color: merge inherited (style) with direct (run's own rPr)
+    // For bold/italic: only use the run's own rPr — style-inherited bold/italic
+    // should not apply to individual runs (it's meant for style-level defaults like headings)
+    const mergedVisual: RunStyleEntry = {
+      fontFamily: directRun.fontFamily ?? inheritedRun?.fontFamily,
+      fontSize: directRun.fontSize ?? inheritedRun?.fontSize,
+      color: directRun.color ?? inheritedRun?.color,
+    }
 
     let out = escaped
-    const css = runStyleToCss(mergedRun)
+    const css = runStyleToCss(mergedVisual)
     if (css) out = `<span style="${css}">${out}</span>`
-    if (mergedRun.bold) out = `<strong>${out}</strong>`
-    if (mergedRun.italic) out = `<em>${out}</em>`
+    // Bold/italic: only from the run's own rPr, not inherited style
+    if (rPr && wChild(rPr, 'b')) out = `<strong>${out}</strong>`
+    if (rPr && wChild(rPr, 'i')) out = `<em>${out}</em>`
     if (rPr && wChild(rPr, 'u')) out = `<u>${out}</u>`
     if (rPr && wChild(rPr, 'strike')) out = `<s>${out}</s>`
     return out
