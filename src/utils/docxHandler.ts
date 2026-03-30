@@ -139,10 +139,18 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
             // lineRule=auto: line/240 = multiplier (e.g. 276/240 = 1.15)
             const lh = lineNum / 240
             if (lh >= 0.8 && lh <= 5.0) result.lineHeight = lh
-          } else {
-            // lineRule=exact/atLeast: line/20 = absolute pt value
+          } else if (lineRule === 'exact') {
+            // lineRule=exact: line/20 = absolute pt value (forced)
             const pt = lineNum / 20
             if (pt > 0) result.lineHeightPt = pt
+          } else if (lineRule === 'atLeast') {
+            // lineRule=atLeast: minimum line height — Word uses font default when
+            // the font's natural line height exceeds this value. Very small values
+            // (e.g. 23 twip = 1.15pt) effectively mean "use default spacing".
+            // Only set line-height when the value is large enough to actually
+            // constrain the layout (> ~10pt for typical body text).
+            const pt = lineNum / 20
+            if (pt >= 10) result.lineHeightPt = pt
           }
         }
       }
