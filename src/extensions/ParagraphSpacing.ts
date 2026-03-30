@@ -19,8 +19,16 @@ export const ParagraphSpacing = Extension.create({
           marginTop: {
             default: null,
             parseHTML: (el) => {
-              const val = el.getAttribute('data-margin-top')
-              return val ? parseFloat(val) : null
+              // Priority 1: data attribute (internal round-trip)
+              const dataVal = el.getAttribute('data-margin-top')
+              if (dataVal) return parseFloat(dataVal)
+              // Priority 2: inline CSS margin-top (from docx import)
+              const style = el.style?.marginTop
+              if (style) {
+                const pt = parseFloat(style) // "12pt" → 12, "12.0pt" → 12
+                if (!isNaN(pt) && pt > 0) return pt
+              }
+              return null
             },
             renderHTML: (attrs) => {
               if (attrs.marginTop == null) return {}
@@ -33,8 +41,16 @@ export const ParagraphSpacing = Extension.create({
           marginBottom: {
             default: null,
             parseHTML: (el) => {
-              const val = el.getAttribute('data-margin-bottom')
-              return val ? parseFloat(val) : null
+              // Priority 1: data attribute (internal round-trip)
+              const dataVal = el.getAttribute('data-margin-bottom')
+              if (dataVal) return parseFloat(dataVal)
+              // Priority 2: inline CSS margin-bottom (from docx import)
+              const style = el.style?.marginBottom
+              if (style) {
+                const pt = parseFloat(style)
+                if (!isNaN(pt) && pt > 0) return pt
+              }
+              return null
             },
             renderHTML: (attrs) => {
               if (attrs.marginBottom == null) return {}
