@@ -21,6 +21,32 @@ import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 
 // ── Import helpers ───────────────────────────────────────────────────────────
 
+interface ParaStyleEntry {
+  lineHeight?: number      // multiplier (lineRule=auto): line/240
+  lineHeightPt?: number    // absolute pt (exact/atLeast): line/20
+  spaceBefore?: number     // twip
+  spaceAfter?: number      // twip
+  textAlign?: string       // 'left'|'center'|'right'|'justify'
+  firstLineIndent?: number // twip
+  leftIndent?: number      // twip
+}
+
+interface RunStyleEntry {
+  fontFamily?: string
+  fontSize?: number   // pt
+  bold?: boolean
+  italic?: boolean
+  color?: string
+}
+
+interface StyleEntry {
+  headingLevel?: number
+  listType?: 'bullet' | 'number'
+  basedOn?: string
+  paraStyle?: ParaStyleEntry
+  runStyle?: RunStyleEntry
+}
+
 /** Parse the raw docx XML and build enhanced HTML preserving color/font/size/align */
 async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
   let zip: JSZip
@@ -63,16 +89,133 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
     return el.getAttributeNS(W, localName) ?? el.getAttribute('w:' + localName) ?? ''
   }
 
-  // Build a map: styleId → { headingLevel, listType }
-  const styleMap = new Map<string, { headingLevel?: number; listType?: 'bullet' | 'number' }>()
+  /** Merge two partial style objects, only overriding with defined values */
+  function mergeObj<T extends object>(base: T, override?: Partial<T>): T {
+    if (!override) return { ...base }
+    const merged = { ...base }
+    ;(Object.keys(override) as Array<keyof T>).forEach(key => {
+      if (override[key] !== undefined) merged[key] = override[key] as T[keyof T]
+    })
+    return merged
+  }
+
+  /** Extract ParaStyleEntry from a <w:pPr> element */
+  function extractParaStyle(pPr: Element): ParaStyleEntry {
+    const result: ParaStyleEntry = {}
+
+    const jc = wChild(pPr, 'jc')
+    if (jc) {
+      const val = wAttr(jc, 'val')
+      if (val === 'center') result.textAlign = 'center'
+      else if (val === 'right') result.textAlign = 'right'
+      else if (val === 'both') result.textAlign = 'justify'
+      else if (val === 'left') result.textAlign = 'left'
+    }
+
+    const ind = wChild(pPr, 'ind')
+    if (ind) {
+      const fl = parseInt(wAttr(ind, 'firstLine'))
+      if (!isNaN(fl) && fl > 0) result.firstLineIndent = fl
+      const left = parseInt(wAttr(ind, 'left'))
+      if (!isNaN(left) && left > 0) result.leftIndent = left
+    }
+
+    const spacing = wChild(pPr, 'spacing')
+    if (spacing) {
+      const lineVal = wAttr(spacing, 'line')
+      const lineRule = wAttr(spacing, 'lineRule')
+      if (lineVal) {
+        const lineNum = parseInt(lineVal)
+        if (!isNaN(lineNum)) {
+          if (!lineRule || lineRule === 'auto') {
+            const lh = lineNum / 240
+            if (lh >= 0.8 && lh <= 5.0) result.lineHeight = lh
+          } else {
+            const pt = lineNum / 20
+            if (pt > 0) result.lineHeightPt = pt
+          }
+        }
+      }
+      const beforeVal = wAttr(spacing, 'before')
+      if (beforeVal) {
+        const before = parseInt(beforeVal)
+        if (!isNaN(before)) result.spaceBefore = before
+      }
+      const afterVal = wAttr(spacing, 'after')
+      if (afterVal) {
+        const after = parseInt(afterVal)
+        if (!isNaN(after)) result.spaceAfter = after
+      }
+    }
+
+    return result
+  }
+
+  /** Extract RunStyleEntry from a <w:rPr> element */
+  function extractRunStyle(rPr: Element): RunStyleEntry {
+    const result: RunStyleEntry = {}
+
+    const rFonts = wChild(rPr, 'rFonts')
+    if (rFonts) {
+      const eastAsia = wAttr(rFonts, 'eastAsia')
+      const ascii = wAttr(rFonts, 'ascii') || wAttr(rFonts, 'hAnsi')
+      const font = eastAsia || ascii
+      if (font) result.fontFamily = font
+    }
+
+    const sz = wChild(rPr, 'sz')
+    if (sz) {
+      const hp = parseInt(wAttr(sz, 'val'))
+      if (!isNaN(hp) && hp > 0) result.fontSize = hp / 2
+    }
+
+    const color = wChild(rPr, 'color')
+    if (color) {
+      const val = wAttr(color, 'val')
+      if (val && val !== 'auto') result.color = `#${val}`
+    }
+
+    if (wChild(rPr, 'b')) result.bold = true
+    if (wChild(rPr, 'i')) result.italic = true
+
+    return result
+  }
+
+  // docDefaults: lowest-priority base styles from w:docDefaults
+  const docDefaults: { paraStyle: ParaStyleEntry; runStyle: RunStyleEntry } = {
+    paraStyle: {},
+    runStyle: {},
+  }
+
+  // Build styleMap: styleId → StyleEntry (full pPr/rPr + inheritance info)
+  const styleMap = new Map<string, StyleEntry>()
+
   if (stylesDom) {
+    // Read w:docDefaults
+    const docDefaultsEl = stylesDom.getElementsByTagNameNS(W, 'docDefaults')[0] as Element | undefined
+    if (docDefaultsEl) {
+      const pPrDefaultEl = wChild(docDefaultsEl, 'pPrDefault')
+      if (pPrDefaultEl) {
+        const pPrEl = wChild(pPrDefaultEl, 'pPr')
+        if (pPrEl) docDefaults.paraStyle = extractParaStyle(pPrEl)
+      }
+      const rPrDefaultEl = wChild(docDefaultsEl, 'rPrDefault')
+      if (rPrDefaultEl) {
+        const rPrEl = wChild(rPrDefaultEl, 'rPr')
+        if (rPrEl) docDefaults.runStyle = extractRunStyle(rPrEl)
+      }
+    }
+
+    // Read all w:style elements
     const styleEls = Array.from(stylesDom.getElementsByTagNameNS(W, 'style'))
     for (const s of styleEls) {
       const sid = wAttr(s, 'styleId')
-      const nameEl = Array.from(s.getElementsByTagNameNS(W, 'name'))[0]
-      const name = nameEl ? (wAttr(nameEl, 'val') ?? '').toLowerCase() : ''
-      const basedOnEl = Array.from(s.getElementsByTagNameNS(W, 'basedOn'))[0]
-      const basedOn = basedOnEl ? (wAttr(basedOnEl, 'val') ?? '') : ''
+      if (!sid) continue
+
+      const nameEl = s.getElementsByTagNameNS(W, 'name')[0] as Element | undefined
+      const name = nameEl ? wAttr(nameEl, 'val').toLowerCase() : ''
+      const basedOnEl = s.getElementsByTagNameNS(W, 'basedOn')[0] as Element | undefined
+      const basedOn = basedOnEl ? wAttr(basedOnEl, 'val') : ''
 
       let headingLevel: number | undefined
       const hm = name.match(/^heading\s*([1-6])$/) ?? name.match(/^标题\s*([1-6])$/)
@@ -86,110 +229,128 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
       if (name.includes('list bullet') || sid === 'ListBullet') listType = 'bullet'
       if (name.includes('list number') || sid === 'ListNumber') listType = 'number'
 
-      if (headingLevel !== undefined || listType !== undefined) {
-        styleMap.set(sid, { headingLevel, listType })
+      const entry: StyleEntry = {}
+      if (headingLevel !== undefined) entry.headingLevel = headingLevel
+      if (listType !== undefined) entry.listType = listType
+      if (basedOn) entry.basedOn = basedOn
+
+      const pPrEl = wChild(s, 'pPr')
+      if (pPrEl) {
+        const ps = extractParaStyle(pPrEl)
+        if (Object.keys(ps).length > 0) entry.paraStyle = ps
       }
+
+      const rPrEl = wChild(s, 'rPr')
+      if (rPrEl) {
+        const rs = extractRunStyle(rPrEl)
+        if (Object.keys(rs).length > 0) entry.runStyle = rs
+      }
+
+      styleMap.set(sid, entry)
     }
   }
 
-  /** Build CSS string from run properties element */
-  function runCss(rPr: Element): string {
+  /** Resolve full inherited style for a styleId (docDefaults → basedOn chain → own style) */
+  function resolveStyle(styleId: string): { paraStyle: ParaStyleEntry; runStyle: RunStyleEntry } {
+    const visited = new Set<string>()
+
+    function inner(id: string): { paraStyle: ParaStyleEntry; runStyle: RunStyleEntry } {
+      if (!id || visited.has(id)) {
+        return { paraStyle: { ...docDefaults.paraStyle }, runStyle: { ...docDefaults.runStyle } }
+      }
+      visited.add(id)
+
+      const entry = styleMap.get(id)
+      if (!entry) {
+        return { paraStyle: { ...docDefaults.paraStyle }, runStyle: { ...docDefaults.runStyle } }
+      }
+
+      const base = entry.basedOn
+        ? inner(entry.basedOn)
+        : { paraStyle: { ...docDefaults.paraStyle }, runStyle: { ...docDefaults.runStyle } }
+
+      return {
+        paraStyle: mergeObj(base.paraStyle, entry.paraStyle),
+        runStyle: mergeObj(base.runStyle, entry.runStyle),
+      }
+    }
+
+    return inner(styleId)
+  }
+
+  /** Convert ParaStyleEntry to a CSS string */
+  function paraStyleToCss(ps: ParaStyleEntry): string {
     const parts: string[] = []
 
-    const rFonts = wChild(rPr, 'rFonts')
-    if (rFonts) {
-      // 优先东亚字体（中文），fallback 到西文字体，两者都接受（包括 sans-serif）
-      const eastAsia = wAttr(rFonts, 'eastAsia')
-      const ascii = wAttr(rFonts, 'ascii') || wAttr(rFonts, 'hAnsi')
-      const font = eastAsia || ascii
-      if (font) parts.push(`font-family:${font}`)
+    if (ps.textAlign) parts.push(`text-align:${ps.textAlign}`)
+
+    if (ps.firstLineIndent !== undefined) {
+      const em = ps.firstLineIndent / 567
+      if (em > 0) parts.push(`text-indent:${em.toFixed(2)}em`)
     }
 
-    const sz = wChild(rPr, 'sz')
-    if (sz) {
-      const hp = parseInt(wAttr(sz, 'val'))
-      if (!isNaN(hp) && hp > 0) parts.push(`font-size:${hp / 2}pt`)
+    if (ps.leftIndent !== undefined) {
+      const em = ps.leftIndent / 567
+      if (em > 0) parts.push(`margin-left:${em.toFixed(2)}em`)
     }
 
-    const color = wChild(rPr, 'color')
-    if (color) {
-      const val = wAttr(color, 'val')
-      if (val && val !== 'auto') parts.push(`color:#${val}`)
+    if (ps.lineHeight !== undefined) {
+      parts.push(`line-height:${ps.lineHeight.toFixed(2)}`)
+    } else if (ps.lineHeightPt !== undefined) {
+      parts.push(`line-height:${ps.lineHeightPt.toFixed(1)}pt`)
+    }
+
+    if (ps.spaceBefore !== undefined) {
+      parts.push(`margin-top:${(ps.spaceBefore / 20).toFixed(1)}pt`)
+    }
+
+    if (ps.spaceAfter !== undefined) {
+      parts.push(`margin-bottom:${(ps.spaceAfter / 20).toFixed(1)}pt`)
     }
 
     return parts.join(';')
   }
 
-  /** Convert a single <w:r> to HTML */
-  function runToHtml(r: Element): string {
+  /** Convert RunStyleEntry to a CSS string */
+  function runStyleToCss(rs: RunStyleEntry): string {
+    const parts: string[] = []
+    if (rs.fontFamily) parts.push(`font-family:${rs.fontFamily}`)
+    if (rs.fontSize) parts.push(`font-size:${rs.fontSize}pt`)
+    if (rs.color) parts.push(`color:${rs.color}`)
+    return parts.join(';')
+  }
+
+  /** Convert a single <w:r> to HTML, using inheritedRun as fallback for font/size/color */
+  function runToHtml(r: Element, inheritedRun?: RunStyleEntry): string {
     const textEls = r.getElementsByTagNameNS(W, 't')
     const text = Array.from(textEls).map(t => t.textContent ?? '').join('')
     if (!text) return ''
 
     const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const rPr = wChild(r, 'rPr')
-    if (!rPr) return escaped
+    const directRun = rPr ? extractRunStyle(rPr) : {}
+    const mergedRun = mergeObj<RunStyleEntry>(inheritedRun ?? {} as RunStyleEntry, directRun)
 
     let out = escaped
-    const css = runCss(rPr)
+    const css = runStyleToCss(mergedRun)
     if (css) out = `<span style="${css}">${out}</span>`
-    if (wChild(rPr, 'b')) out = `<strong>${out}</strong>`
-    if (wChild(rPr, 'i')) out = `<em>${out}</em>`
-    if (wChild(rPr, 'u')) out = `<u>${out}</u>`
-    if (wChild(rPr, 'strike')) out = `<s>${out}</s>`
+    if (mergedRun.bold) out = `<strong>${out}</strong>`
+    if (mergedRun.italic) out = `<em>${out}</em>`
+    if (rPr && wChild(rPr, 'u')) out = `<u>${out}</u>`
+    if (rPr && wChild(rPr, 'strike')) out = `<s>${out}</s>`
     return out
   }
 
   /** Convert paragraph content (direct <w:r> children) to HTML */
-  function paraInnerHtml(p: Element): string {
+  function paraInnerHtml(p: Element, inheritedRun?: RunStyleEntry): string {
     const runs: string[] = []
     for (let i = 0; i < p.childNodes.length; i++) {
       const child = p.childNodes[i]
       if (child.nodeType === 1 && (child as Element).localName === 'r') {
-        runs.push(runToHtml(child as Element))
+        runs.push(runToHtml(child as Element, inheritedRun))
       }
     }
     return runs.join('')
-  }
-
-  /** Build paragraph CSS from pPr */
-  function paraCss(pPr: Element): string {
-    const parts: string[] = []
-
-    const jc = wChild(pPr, 'jc')
-    if (jc) {
-      const val = wAttr(jc, 'val')
-      if (val === 'center') parts.push('text-align:center')
-      else if (val === 'right') parts.push('text-align:right')
-      else if (val === 'both') parts.push('text-align:justify')
-    }
-
-    const ind = wChild(pPr, 'ind')
-    if (ind) {
-      const firstLine = wAttr(ind, 'firstLine')
-      if (firstLine) {
-        const em = parseInt(firstLine) / 567
-        if (em > 0) parts.push(`text-indent:${em.toFixed(2)}em`)
-      }
-    }
-
-    const spacing = wChild(pPr, 'spacing')
-    if (spacing) {
-      const line = wAttr(spacing, 'line')
-      const lineRule = wAttr(spacing, 'lineRule') // 'auto'|'exact'|'atLeast'|''
-      if (line) {
-        // lineRule='auto'（默认）：line/240 = 行距倍率（如 276/240 = 1.15）
-        // lineRule='exact'/'atLeast'：line 是 twip 绝对值，不适合转为无单位倍率
-        // 对 exact/atLeast 跳过（交由 CSS 默认行高），避免极小值堆叠
-        if (!lineRule || lineRule === 'auto') {
-          const lh = parseInt(line) / 240
-          // 合理范围 0.8 ~ 5.0，超出则忽略（防御异常值）
-          if (!isNaN(lh) && lh >= 0.8 && lh <= 5.0) parts.push(`line-height:${lh.toFixed(2)}`)
-        }
-      }
-    }
-
-    return parts.join(';')
   }
 
   /** Convert <w:p> to HTML tag */
@@ -199,10 +360,15 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
     const styleId = pStyleEl ? wAttr(pStyleEl, 'val') : ''
     const styleInfo = styleMap.get(styleId)
 
-    const css = pPr ? paraCss(pPr) : ''
+    // Resolve inherited styles, then override with direct pPr values
+    const resolved = resolveStyle(styleId)
+    const directPara = pPr ? extractParaStyle(pPr) : {}
+    const mergedPara = mergeObj<ParaStyleEntry>(resolved.paraStyle, directPara)
+
+    const css = paraStyleToCss(mergedPara)
     const styleAttr = css ? ` style="${css}"` : ''
 
-    const inner = paraInnerHtml(p)
+    const inner = paraInnerHtml(p, resolved.runStyle)
 
     // Heading detection: styleMap lookup + well-known IDs
     const knownHeadings: Record<string, number> = {
