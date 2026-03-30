@@ -93,22 +93,18 @@ docker-compose up -d --build
 # 安装依赖
 npm install
 
-# 同时启动前端（Vite dev server）和后端
-npm run dev:full
+# 一键启动（sync-server + vite 同时启动）
+npm start
 
-# 前端访问：http://localhost:5173
-# 后端 API：http://localhost:3011
+# 访问：http://localhost:3011
+# sync-server 占 3011 作为主入口，自动反代 vite（5173）
 ```
 
-仅启动后端：
-```bash
-npm run server
-```
+> ⚠️ **不要单独运行 `npm run dev`**：vite 会抢占 3011 端口，导致 sync-server 无法启动，API Key 读取失败。始终用 `npm start`。
 
-仅启动前端（需后端已运行）：
-```bash
-npm run dev
-```
+**数据存储位置：**
+- 文档文件：`sync-server/data/docs/`
+- AI 配置（含 Key）：`sync-server/config/ai.json`
 
 ---
 
