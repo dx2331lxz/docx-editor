@@ -26,6 +26,7 @@ interface ParaStyleEntry {
   lineHeightPt?: number    // absolute pt (lineRule=exact/atLeast): line/20
   spaceBefore?: number     // twip
   spaceAfter?: number      // twip
+  spaceAfterAuto?: boolean // afterAutospacing=1: WPS adds ~1 line extra
   textAlign?: string       // 'left'|'center'|'right'|'justify'
   firstLineIndent?: number // twip (from w:firstLine)
   firstLineIndentEm?: number // em (from w:firstLineChars, e.g. 200 → 2em)
@@ -170,6 +171,8 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
         const after = parseInt(afterVal)
         if (!isNaN(after)) result.spaceAfter = after
       }
+      const afterAuto = wAttr(spacing, 'afterAutospacing')
+      if (afterAuto === '1') result.spaceAfterAuto = true
     }
 
     return result
@@ -353,16 +356,45 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
       if (docGridLinePitchTwip && afterTwip > 0) {
         afterTwip = Math.round(afterTwip / docGridLinePitchTwip) * docGridLinePitchTwip
       }
-      if (afterTwip > 0) parts.push(`margin-bottom:${(afterTwip / 20).toFixed(1)}pt`)
+      // afterAutospacing=1: WPS may add extra spacing; use declared after value as-is
+      if (ps.spaceAfterAuto && (ps.spaceAfter === undefined || ps.spaceAfter === 0)) {
+        // Only add fallback spacing when no explicit after value exists
+        parts.push(`margin-bottom:0.5em`)
+      } else if (afterTwip > 0) {
+        parts.push(`margin-bottom:${(afterTwip / 20).toFixed(1)}pt`)
+      }
     }
 
     return parts.join(';')
   }
 
+  /** Expand a font name to a CSS font-family stack with proper fallbacks */
+  function expandFontFamily(name: string): string {
+    const lower = name.toLowerCase().replace(/\s/g, '')
+    // CJK serif / 宋体 family
+    if (['simsun', '宋体', 'songti', 'nsimsun'].includes(lower)) {
+      return `'SimSun','宋体','Noto Serif CJK SC','Source Han Serif SC',serif`
+    }
+    // CJK sans / 黑体 family
+    if (['simhei', '黑体', 'microsoftyahei', '微软雅黑', 'heiti', 'pingfang'].includes(lower) ||
+        lower.includes('yahei') || lower.includes('heiti') || lower.includes('pingfang')) {
+      return `'SimHei','黑体','Microsoft YaHei','微软雅黑','Noto Sans CJK SC',sans-serif`
+    }
+    // CJK regular / 仿宋
+    if (['fangsong', '仿宋', 'kaiti', '楷体'].includes(lower)) {
+      return `'FangSong','仿宋','KaiTi','楷体','Noto Serif CJK SC',serif`
+    }
+    // Latin serif
+    if (['timesnewroman', 'times'].includes(lower)) {
+      return `'Times New Roman','Noto Serif',serif`
+    }
+    return `'${name}'`
+  }
+
   /** Convert RunStyleEntry to a CSS string */
   function runStyleToCss(rs: RunStyleEntry): string {
     const parts: string[] = []
-    if (rs.fontFamily) parts.push(`font-family:${rs.fontFamily}`)
+    if (rs.fontFamily) parts.push(`font-family:${expandFontFamily(rs.fontFamily)}`)
     if (rs.fontSize) parts.push(`font-size:${rs.fontSize}pt`)
     if (rs.color) parts.push(`color:${rs.color}`)
     return parts.join(';')

@@ -22,9 +22,9 @@ body {
 .ProseMirror {
   outline: none;
   min-height: 100%;
-  font-family: 'SimSun', '宋体', serif;
-  font-size: 14pt;
-  line-height: 1.6;
+  font-family: 'SimSun', '宋体', 'Noto Serif CJK SC', 'Source Han Serif SC', serif;
+  font-size: 12pt;
+  line-height: 1.5;
   color: #333;
 }
 
@@ -83,6 +83,12 @@ mark {
   background-color: #ffd700;
   border-radius: 2px;
   padding: 0 1px;
+}
+
+/* Paragraph: WPS-style default — no extra spacing */
+.ProseMirror p {
+  margin: 0;
+  padding: 0;
 }
 
 /* Headings */
