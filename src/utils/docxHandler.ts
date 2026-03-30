@@ -23,6 +23,7 @@ import type { PageConfig } from '../components/PageSetup/PageSetupDialog'
 
 interface ParaStyleEntry {
   lineHeight?: number      // multiplier (lineRule=auto only): line/240
+  lineHeightPt?: number    // absolute pt (lineRule=exact/atLeast): line/20
   spaceBefore?: number     // twip
   spaceAfter?: number      // twip
   textAlign?: string       // 'left'|'center'|'right'|'justify'
@@ -138,9 +139,11 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
             // lineRule=auto: line/240 = multiplier (e.g. 276/240 = 1.15)
             const lh = lineNum / 240
             if (lh >= 0.8 && lh <= 5.0) result.lineHeight = lh
+          } else {
+            // lineRule=exact/atLeast: line/20 = absolute pt value
+            const pt = lineNum / 20
+            if (pt > 0) result.lineHeightPt = pt
           }
-          // lineRule=exact/atLeast: absolute twip value — skip to avoid line overlap
-          // (converting to pt CSS line-height causes text to stack when value ≈ font-size)
         }
       }
       const beforeVal = wAttr(spacing, 'before')
@@ -171,8 +174,13 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
     }
 
     const sz = wChild(rPr, 'sz')
+    const szCs = wChild(rPr, 'szCs')
     if (sz) {
       const hp = parseInt(wAttr(sz, 'val'))
+      if (!isNaN(hp) && hp > 0) result.fontSize = hp / 2
+    } else if (szCs) {
+      // fallback: Complex Script size (some CJK docs use szCs instead of sz)
+      const hp = parseInt(wAttr(szCs, 'val'))
       if (!isNaN(hp) && hp > 0) result.fontSize = hp / 2
     }
 
@@ -305,6 +313,8 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<string> {
 
     if (ps.lineHeight !== undefined) {
       parts.push(`line-height:${ps.lineHeight.toFixed(2)}`)
+    } else if (ps.lineHeightPt !== undefined) {
+      parts.push(`line-height:${ps.lineHeightPt.toFixed(1)}pt`)
     }
 
     if (ps.spaceBefore !== undefined) {
