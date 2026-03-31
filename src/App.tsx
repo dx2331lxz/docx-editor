@@ -1064,36 +1064,36 @@ const App: React.FC = () => {
       )}
       {showDocDiff && <DocDiffDialog editor={editor} onClose={() => setShowDocDiff(false)} />}
       {showFormFields && <FormFieldDialog editor={editor} onClose={() => setShowFormFields(false)} />}
-      {/* Vibe Editing toggle button — fixed top-right */}
+      {/* Vibe Editing sticky edge handle (方案C) */}
       <button
         onClick={() => setShowVibeEditing(v => !v)}
         title="Vibe Editing (AI 智能编辑)"
+        className="glass-toolbar"
         style={{
           position: 'fixed',
-          top: 8,
-          right: showVibeEditing ? vibePanelWidth + 12 : 12,
-          transition: 'right 0.2s ease, background 0.2s',
+          top: '40%',
+          right: showVibeEditing ? vibePanelWidth : 0,
+          transform: 'translateY(-50%)',
           zIndex: 1200,
-          background: showVibeEditing
-            ? 'linear-gradient(135deg, rgba(0,212,255,0.25), rgba(178,75,255,0.25))'
-            : 'linear-gradient(135deg, #00d4ff, #b24bff)',
-          border: showVibeEditing ? '1px solid rgba(0,212,255,0.5)' : 'none',
-          borderRadius: 20,
-          color: '#fff',
-          fontSize: 13,
-          fontWeight: 600,
-          padding: '5px 12px 5px 9px',
+          borderWidth: '1px 0 1px 1px',
+          borderStyle: 'solid',
+          borderColor: 'rgba(128,128,128,0.3)',
+          borderRadius: '10px 0 0 10px',
+          padding: '16px 4px',
           cursor: 'pointer',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: 5,
-          boxShadow: showVibeEditing ? 'none' : '0 2px 12px rgba(0,212,255,0.4)',
-          transition: 'background 0.2s',
-          letterSpacing: '0.02em',
-          whiteSpace: 'nowrap',
+          gap: 8,
+          boxShadow: showVibeEditing ? 'none' : '-2px 0 10px rgba(0,0,0,0.1)',
+          transition: 'right 0.2s ease-out, transform 0.2s',
+          opacity: showVibeEditing ? 0.6 : 1,
         }}
+        onMouseEnter={e => { if (!showVibeEditing) e.currentTarget.style.transform = 'translateY(-50%) translateX(-4px)'; e.currentTarget.style.opacity = '1' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(-50%) translateX(0)'; if (showVibeEditing) e.currentTarget.style.opacity = '0.6' }}
       >
-        <span style={{ fontSize: 15 }}>✨</span> Vibe
+        <span style={{ fontSize: 15 }}>✨</span>
+        <span style={{ fontSize: 11, fontWeight: 700, writingMode: 'vertical-rl', letterSpacing: 2, opacity: 0.8 }}>Vibe</span>
       </button>
     </div>
   )

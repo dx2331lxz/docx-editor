@@ -242,7 +242,7 @@ export default function FileManagerSidebar({
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, currentDoc, pageConfig, currentFileId])
 
   // 2-second debounce auto-save when a file is open
@@ -269,7 +269,7 @@ export default function FileManagerSidebar({
       editor.off('update', triggerAutoSave)
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, currentDoc, pageConfig, currentFileId])
 
   // ── Render ───────────────────────────────────────────────────────────────────

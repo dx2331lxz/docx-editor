@@ -44,7 +44,7 @@ export default function SettingsPanel({ defaultTab = 'ai', currentFileId }: Prop
         title="设置"
         style={{
           position: 'fixed',
-          bottom: 16,
+          bottom: 40,
           left: 16,
           zIndex: 500,
           width: 36,
