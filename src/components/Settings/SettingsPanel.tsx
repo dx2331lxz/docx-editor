@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Settings, X, Bot, HardDrive, Palette, Keyboard, ChevronRight, ChevronDown, Loader2 } from 'lucide-react'
 import AISettingsContent from './AISettingsContent'
+import { applyTheme, loadTheme } from '../AppTheme/AppThemeDialog'
+import type { ThemeConfig } from '../AppTheme/AppThemeDialog'
 
 type TabId = 'ai' | 'storage' | 'appearance' | 'shortcuts'
 
@@ -156,7 +158,7 @@ export default function SettingsPanel({ defaultTab = 'ai', currentFileId }: Prop
           <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
             {activeTab === 'ai' && <AISettingsContent />}
             {activeTab === 'storage' && <StorageTab currentFileId={currentFileId} />}
-            {activeTab === 'appearance' && <ComingSoonTab label="外观" />}
+            {activeTab === 'appearance' && <AppearanceTab />}
             {activeTab === 'shortcuts' && <ComingSoonTab label="快捷键" />}
           </div>
         </div>
@@ -533,6 +535,139 @@ function StorageTab({ currentFileId }: { currentFileId?: string | null }) {
 }
 
 // ── Coming soon placeholder ───────────────────────────────────────────────────
+
+function AppearanceTab() {
+  const [config, setConfig] = useState<ThemeConfig>(loadTheme)
+
+  function update(partial: Partial<ThemeConfig>) {
+    const next = { ...config, ...partial }
+    setConfig(next)
+    applyTheme(next)
+  }
+
+  type ColorMode = ThemeConfig['mode']
+  type AccentColor = ThemeConfig['accent']
+  type AppSkin = ThemeConfig['skin']
+
+  const ACCENT_COLORS: Record<AccentColor, { primary: string; light: string; label: string }> = {
+    blue:   { primary: '#2563eb', light: '#eff6ff', label: '蓝色' },
+    green:  { primary: '#16a34a', light: '#f0fdf4', label: '绿色' },
+    purple: { primary: '#7c3aed', light: '#f5f3ff', label: '紫色' },
+    orange: { primary: '#ea580c', light: '#fff7ed', label: '橙色' },
+  }
+
+  const APP_SKINS: Array<{ id: AppSkin; name: string; desc: string; toolbar: string; canvas: string; page: string; textOnToolbar: string }> = [
+    { id: 'clean', name: '清爽白', desc: '简洁明亮', toolbar: '#ffffff', canvas: '#e2e8f0', page: '#ffffff', textOnToolbar: '#374151' },
+    { id: 'glass', name: '玻璃暗色', desc: '科技质感', toolbar: '#0d1117', canvas: '#0a0e1a', page: '#ffffff', textOnToolbar: '#c8d8ff' },
+    { id: 'slate', name: '商务灰', desc: '专业沉稳', toolbar: '#1e293b', canvas: '#cdd5df', page: '#ffffff', textOnToolbar: '#cbd5e1' },
+    { id: 'warm', name: '暖阳', desc: '温暖舒适', toolbar: '#fffaf4', canvas: '#ede0ce', page: '#fffdf8', textOnToolbar: '#5c3d1e' },
+    { id: 'night', name: '深夜护眼', desc: '护眼夜间', toolbar: '#1f2430', canvas: '#151820', page: '#f5f4f0', textOnToolbar: '#b0bcd0' },
+  ]
+
+  const MODE_OPTIONS: { value: ColorMode; label: string; icon: string }[] = [
+    { value: 'light', label: '浅色', icon: '☀️' },
+    { value: 'dark', label: '深色', icon: '🌙' },
+    { value: 'system', label: '跟随系统', icon: '💻' },
+  ]
+
+  const accent = ACCENT_COLORS[config.accent]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Skin */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>外观皮肤</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+          {APP_SKINS.map(skin => {
+            const isActive = config.skin === skin.id
+            return (
+              <button
+                key={skin.id}
+                onClick={() => update({ skin: skin.id })}
+                style={{
+                  border: `2px solid ${isActive ? accent.primary : '#e5e7eb'}`,
+                  borderRadius: 8, padding: 0, cursor: 'pointer', background: 'transparent',
+                  overflow: 'hidden', transition: 'border-color 0.15s',
+                  boxShadow: isActive ? `0 0 0 1px ${accent.primary}` : 'none',
+                }}
+              >
+                <div style={{ background: skin.canvas, padding: '6px 6px 4px' }}>
+                  <div style={{ background: skin.toolbar, borderRadius: '4px 4px 0 0', padding: '3px 4px', display: 'flex', gap: 2 }}>
+                    {[1,2,3].map(i => <div key={i} style={{ width: 8, height: 4, background: skin.textOnToolbar, borderRadius: 1, opacity: 0.6 }} />)}
+                  </div>
+                  <div style={{ background: skin.page, height: 30, borderRadius: '0 0 2px 2px', padding: '3px 4px' }}>
+                    {[1,2,3].map(i => <div key={i} style={{ height: 3, background: '#d1d5db', borderRadius: 1, marginBottom: 2, width: i === 3 ? '60%' : '100%' }} />)}
+                  </div>
+                </div>
+                <div style={{ padding: '4px 4px 5px', background: '#fff' }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#1f2937', marginBottom: 1 }}>{skin.name}</div>
+                  <div style={{ fontSize: 9, color: '#9ca3af' }}>{skin.desc}</div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Mode */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>显示模式</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {MODE_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => update({ mode: opt.value })}
+              style={{
+                flex: 1, padding: '12px 8px', border: `2px solid ${config.mode === opt.value ? accent.primary : '#e5e7eb'}`,
+                borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                background: config.mode === opt.value ? accent.light : '#fff',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ fontSize: 20, marginBottom: 4 }}>{opt.icon}</div>
+              <div style={{ fontSize: 11, color: '#374151', fontWeight: 500 }}>{opt.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Accent */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>主题色</div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {(Object.entries(ACCENT_COLORS) as [AccentColor, typeof ACCENT_COLORS[AccentColor]][]).map(([key, val]) => (
+            <button
+              key={key}
+              onClick={() => update({ accent: key })}
+              title={val.label}
+              style={{
+                width: 32, height: 32, background: val.primary,
+                border: `3px solid ${config.accent === key ? '#1f2937' : 'transparent'}`,
+                borderRadius: '50%', cursor: 'pointer', position: 'relative',
+                outline: 'none', transition: 'border 0.15s', flexShrink: 0,
+              }}
+            >
+              {config.accent === key && (
+                <span style={{ color: '#fff', fontSize: 14, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>✓</span>
+              )}
+            </button>
+          ))}
+          <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 4 }}>{accent.label}</span>
+        </div>
+      </div>
+
+      {/* Reset */}
+      <div>
+        <button
+          onClick={() => update({ mode: 'light', accent: 'blue', skin: 'clean' })}
+          style={{ padding: '6px 14px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: '#6b7280' }}
+        >
+          重置默认
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function ComingSoonTab({ label }: { label: string }) {
   return (

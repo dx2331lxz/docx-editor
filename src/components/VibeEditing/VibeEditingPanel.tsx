@@ -1,9 +1,86 @@
 import { API, apiUrl } from '../../lib/apiRoutes'
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import type { Editor } from '@tiptap/react'
 import { runVibeEditing } from '../../lib/vibeEditingEngine'
 import type { ProgressCallback, Message } from '../../lib/vibeEditingEngine'
 import type { PageConfig } from '../PageSetup/PageSetupDialog'
+
+// ── Skin-aware color tokens ───────────────────────────────────────────────────
+function getSkinTokens() {
+  const skin = document.body.dataset.skin ?? 'clean'
+  // For dark skins (glass/slate/night), use the dark palette.
+  // For light skins (clean/warm), use a light palette.
+  const isDark = ['glass', 'slate', 'night'].includes(skin)
+  return isDark ? {
+    panelBg:      'rgba(10, 14, 30, 0.97)',
+    panelBorder:  'rgba(178, 75, 255, 0.3)',
+    panelShadow:  '-4px 0 20px rgba(0,0,0,0.4)',
+    titleBg:      'linear-gradient(135deg, rgba(0,212,255,0.07), rgba(178,75,255,0.07))',
+    titleBorder:  'rgba(255,255,255,0.07)',
+    tabBorder:    'rgba(255,255,255,0.07)',
+    tabBg:        'rgba(0,0,0,0.15)',
+    tabActive:    '#fff',
+    tabInactive:  '#6677aa',
+    tabIndicator: '#00d4ff',
+    chatBg:       'transparent',
+    userBubbleBg: 'rgba(0,212,255,0.1)',
+    userBubbleBorder: 'rgba(0,212,255,0.5)',
+    userBubbleText: '#c8e8ff',
+    aiBubbleBg:   'rgba(255,255,255,0.03)',
+    aiBubbleBorder: 'rgba(255,255,255,0.07)',
+    inputBg:      'rgba(10,14,30,0.95)',
+    inputBorder:  'rgba(255,255,255,0.07)',
+    textareaBg:   'rgba(255,255,255,0.06)',
+    textareaBorder: 'rgba(0,212,255,0.2)',
+    textareaColor: '#e0e8ff',
+    presetsBg:    'rgba(0,0,0,0.2)',
+    presetBorder: 'rgba(0,212,255,0.15)',
+    presetBg:     'rgba(0,212,255,0.06)',
+    presetColor:  '#9bbfe0',
+    historyBg:    'transparent',
+    scrollbarColor: 'rgba(255,255,255,0.08)',
+    mutedText:    '#6677aa',
+    normalText:   '#e0e8ff',
+    headingText:  '#b0c4de',
+    accentColor:  '#00d4ff',
+    accentGlow:   'rgba(0,212,255,0.35)',
+    sendBtnActive: 'linear-gradient(135deg, #00d4ff, #b24bff)',
+  } : {
+    panelBg:      'rgba(255,255,255,0.97)',
+    panelBorder:  'rgba(99,102,241,0.25)',
+    panelShadow:  '-4px 0 20px rgba(0,0,0,0.12)',
+    titleBg:      'linear-gradient(135deg, rgba(99,102,241,0.05), rgba(168,85,247,0.05))',
+    titleBorder:  '#e5e7eb',
+    tabBorder:    '#e5e7eb',
+    tabBg:        '#f8fafc',
+    tabActive:    '#1e293b',
+    tabInactive:  '#94a3b8',
+    tabIndicator: '#6366f1',
+    chatBg:       'transparent',
+    userBubbleBg: 'rgba(99,102,241,0.08)',
+    userBubbleBorder: 'rgba(99,102,241,0.4)',
+    userBubbleText: '#3730a3',
+    aiBubbleBg:   '#f8fafc',
+    aiBubbleBorder: '#e5e7eb',
+    inputBg:      '#ffffff',
+    inputBorder:  '#e5e7eb',
+    textareaBg:   '#f8fafc',
+    textareaBorder: 'rgba(99,102,241,0.3)',
+    textareaColor: '#1e293b',
+    presetsBg:    '#f1f5f9',
+    presetBorder: 'rgba(99,102,241,0.2)',
+    presetBg:     'rgba(99,102,241,0.05)',
+    presetColor:  '#4b5563',
+    historyBg:    '#fff',
+    scrollbarColor: 'rgba(0,0,0,0.08)',
+    mutedText:    '#94a3b8',
+    normalText:   '#1e293b',
+    headingText:  '#374151',
+    accentColor:  '#6366f1',
+    accentGlow:   'rgba(99,102,241,0.3)',
+    sendBtnActive: 'linear-gradient(135deg, #6366f1, #a855f7)',
+  }
+}
 
 interface Props {
   editor: Editor | null
@@ -168,7 +245,48 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
   const [askContinueResolver, setAskContinueResolver] = useState<((v: boolean) => void) | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const lastSavedAtRef = useRef(0) // 记录上次保存时间，防止重复保存
+  const lastSavedAtRef = useRef(0)
+
+  // Re-compute skin tokens whenever skin changes (listen to body data-skin mutations)
+  const [skinKey, setSkinKey] = useState(0)
+  useEffect(() => {
+    const obs = new MutationObserver(() => setSkinKey(k => k + 1))
+    obs.observe(document.body, { attributes: true, attributeFilter: ['data-skin'] })
+    return () => obs.disconnect()
+  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tk = useMemo(() => getSkinTokens(), [skinKey])
+
+  // Export conversation as Markdown
+  const exportConversation = useCallback(() => {
+    const msgs = viewingSession ? viewingSession.messages : messages
+    if (msgs.length === 0) return
+    const lines: string[] = [`# Vibe Editing 对话记录\n`, `> 模式：${MODE_LABELS[mode]}  导出时间：${new Date().toLocaleString('zh-CN')}\n`]
+    for (const msg of msgs) {
+      if (msg.role === 'user') {
+        lines.push(`## 🧑 用户\n\n${msg.text}\n`)
+      } else {
+        if (msg.steps.length > 0) {
+          lines.push(`## ✨ AI 执行过程\n`)
+          for (const step of msg.steps) {
+            const icon = STEP_ICON[step.type] || '•'
+            lines.push(`- ${icon} **${step.type}**: ${step.text.replace(/\n/g, ' ').slice(0, 200)}`)
+          }
+          lines.push('')
+        }
+        if (msg.summary) {
+          lines.push(`## 💬 AI 回复\n\n${msg.summary}\n`)
+        }
+      }
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vibe-chat-${new Date().toISOString().slice(0, 10)}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [messages, viewingSession, mode])
 
   // Drag-resize handle
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
@@ -427,11 +545,11 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       zIndex: 1100,
       display: 'flex',
       flexDirection: 'column',
-      background: 'rgba(10, 14, 30, 0.97)',
+      background: tk.panelBg,
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
-      borderLeft: '1px solid rgba(178, 75, 255, 0.3)',
-      boxShadow: '-4px 0 20px rgba(0,0,0,0.4)',
+      borderLeft: `1px solid ${tk.panelBorder}`,
+      boxShadow: tk.panelShadow,
     }}>
       {/* Drag-resize handle */}
       <div
@@ -446,7 +564,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
           zIndex: 10,
           transition: 'background 0.15s',
         }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.4)')}
+        onMouseEnter={e => (e.currentTarget.style.background = `${tk.accentColor}66`)}
         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
       />
 
@@ -457,21 +575,38 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '14px 16px 12px',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        background: 'linear-gradient(135deg, rgba(0,212,255,0.07), rgba(178,75,255,0.07))',
+        borderBottom: `1px solid ${tk.titleBorder}`,
+        background: tk.titleBg,
       }}>
         <div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#e0e8ff' }}>✨ Vibe Editing</span>
-          <span style={{ fontSize: 11, color: '#6677aa', marginLeft: 8 }}>AI 驱动 · 30+ 工具</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: tk.headingText }}>✨ Vibe Editing</span>
+          <span style={{ fontSize: 11, color: tk.mutedText, marginLeft: 8 }}>AI 驱动 · 30+ 工具</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button
+            onClick={exportConversation}
+            title="导出对话"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: tk.mutedText,
+              cursor: 'pointer',
+              fontSize: 14,
+              padding: '2px 6px',
+              borderRadius: 6,
+              lineHeight: 1,
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = tk.normalText)}
+            onMouseLeave={e => (e.currentTarget.style.color = tk.mutedText)}
+          >⬇</button>
           <button
             onClick={() => { setShowHistory(v => !v); setViewingSession(null) }}
             title="历史记录"
             style={{
-              background: showHistory ? 'rgba(0,212,255,0.12)' : 'none',
+              background: showHistory ? `${tk.accentColor}20` : 'none',
               border: 'none',
-              color: showHistory ? '#00d4ff' : '#6677aa',
+              color: showHistory ? tk.accentColor : tk.mutedText,
               cursor: 'pointer',
               fontSize: 16,
               padding: '2px 6px',
@@ -479,16 +614,16 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
               lineHeight: 1,
               transition: 'color 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#e0e8ff')}
-            onMouseLeave={e => (e.currentTarget.style.color = showHistory ? '#00d4ff' : '#6677aa')}
+            onMouseEnter={e => (e.currentTarget.style.color = tk.normalText)}
+            onMouseLeave={e => (e.currentTarget.style.color = showHistory ? tk.accentColor : tk.mutedText)}
           >🕐</button>
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: '#6677aa', cursor: 'pointer',
+            background: 'none', border: 'none', color: tk.mutedText, cursor: 'pointer',
             fontSize: 18, padding: '2px 6px', borderRadius: 6, lineHeight: 1,
             transition: 'color 0.15s',
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#e0e8ff')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#6677aa')}
+            onMouseEnter={e => (e.currentTarget.style.color = tk.normalText)}
+            onMouseLeave={e => (e.currentTarget.style.color = tk.mutedText)}
           >✕</button>
         </div>
       </div>
@@ -497,8 +632,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       {!showHistory && (
         <div style={{
           flexShrink: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          background: 'rgba(0,0,0,0.15)',
+          borderBottom: `1px solid ${tk.tabBorder}`,
+          background: tk.tabBg,
           padding: '0 12px',
         }}>
           <div style={{ display: 'flex', gap: 0 }}>
@@ -509,8 +644,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                 style={{
                   background: 'none',
                   border: 'none',
-                  borderBottom: mode === m ? '2px solid #00d4ff' : '2px solid transparent',
-                  color: mode === m ? '#fff' : '#6677aa',
+                  borderBottom: mode === m ? `2px solid ${tk.tabIndicator}` : '2px solid transparent',
+                  color: mode === m ? tk.tabActive : tk.tabInactive,
                   cursor: 'pointer',
                   fontSize: 12,
                   fontWeight: mode === m ? 600 : 400,
@@ -523,7 +658,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 10, color: '#445577', padding: '3px 2px 5px', letterSpacing: '0.02em' }}>
+          <div style={{ fontSize: 10, color: tk.mutedText, padding: '3px 2px 5px', letterSpacing: '0.02em' }}>
             {MODE_DESC[mode]}
           </div>
         </div>
@@ -532,15 +667,15 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       {/* ── History panel OR Chat area ─────────────── */}
       {showHistory ? (
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: '#8899bb', fontWeight: 600 }}>最近对话</span>
+          <div style={{ padding: '10px 12px 8px', borderBottom: `1px solid ${tk.titleBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, color: tk.normalText, fontWeight: 600 }}>最近对话</span>
             <button
               onClick={startNewSession}
               style={{
-                background: 'rgba(0,212,255,0.1)',
-                border: '1px solid rgba(0,212,255,0.25)',
+                background: `${tk.accentColor}1a`,
+                border: `1px solid ${tk.accentColor}44`,
                 borderRadius: 8,
-                color: '#00d4ff',
+                color: tk.accentColor,
                 cursor: 'pointer',
                 fontSize: 11,
                 padding: '4px 10px',
@@ -553,7 +688,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
           {/* Session list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
               {sessions.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#445577', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: tk.mutedText, fontSize: 13 }}>
                   暂无历史记录
                 </div>
               )}
@@ -614,10 +749,10 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                     }}>
                       {MODE_LABELS[sess.mode]}
                     </span>
-                    <span style={{ flex: 1, fontSize: 12, color: '#b0c4de', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ flex: 1, fontSize: 12, color: tk.normalText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {sess.title}
                     </span>
-                    <span style={{ flexShrink: 0, fontSize: 10, color: '#445577' }}>{relativeTime(sess.createdAt)}</span>
+                    <span style={{ flexShrink: 0, fontSize: 10, color: tk.mutedText }}>{relativeTime(sess.createdAt)}</span>
                   </button>
                   <button
                     title="删除会话"
@@ -627,20 +762,20 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                       setSessions(prev => prev.filter(s => s.id !== sess.id))
                       if (currentSessionId === sess.id) setCurrentSessionId(null)
                     }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#445577', padding: '0 10px', fontSize: 14 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: tk.mutedText, padding: '0 10px', fontSize: 14 }}
                     onMouseEnter={e => (e.currentTarget.style.color = '#ff6b6b')}
-                    onMouseLeave={e => (e.currentTarget.style.color = '#445577')}
+                    onMouseLeave={e => (e.currentTarget.style.color = tk.mutedText)}
                   >✕</button>
                 </div>
               ))}
             </div>
         </div>
       ) : (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14, background: tk.chatBg }}>
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 20px' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>✨</div>
-              <div style={{ fontSize: 14, color: '#6677aa', lineHeight: 1.6 }}>
+              <div style={{ fontSize: 14, color: tk.mutedText, lineHeight: 1.6 }}>
                 {mode === 'ask' ? '向 AI 提问关于文档的任何问题' : mode === 'edit' ? '描述你想精确修改的内容' : '描述你想要的文档效果'}
                 <br />
                 {mode === 'agent' ? 'AI 将自动选择并组合工具执行' : ''}
@@ -656,8 +791,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       {!showHistory && (
         <div style={{
           flexShrink: 0,
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          background: 'rgba(0,0,0,0.2)',
+          borderTop: `1px solid ${tk.presetBorder}`,
+          background: tk.presetsBg,
         }}>
           <button
             onClick={() => setPresetsOpen(v => !v)}
@@ -665,7 +800,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
               width: '100%', background: 'none', border: 'none',
               padding: '8px 14px', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 6,
-              color: '#6677aa', fontSize: 11,
+              color: tk.mutedText, fontSize: 11,
             }}
           >
             <span style={{
@@ -686,10 +821,10 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                   style={{
                     padding: '5px 8px',
                     fontSize: 10.5,
-                    background: 'rgba(0,212,255,0.06)',
-                    border: '1px solid rgba(0,212,255,0.15)',
+                    background: tk.presetBg,
+                    border: `1px solid ${tk.presetBorder}`,
                     borderRadius: 8,
-                    color: '#9bbfe0',
+                    color: tk.presetColor,
                     cursor: 'pointer',
                     textAlign: 'left',
                     lineHeight: 1.3,
@@ -698,8 +833,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.14)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.35)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.15)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${tk.accentColor}24`; e.currentTarget.style.borderColor = `${tk.accentColor}55` }}
+                  onMouseLeave={e => { e.currentTarget.style.background = tk.presetBg; e.currentTarget.style.borderColor = tk.presetBorder }}
                   title={p.value}
                 >
                   {p.label}
@@ -714,9 +849,9 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       {!showHistory && (
         <div style={{
           flexShrink: 0,
-          borderTop: '1px solid rgba(0,212,255,0.18)',
+          borderTop: `1px solid ${tk.inputBorder}`,
           padding: '10px 12px 12px',
-          background: 'rgba(10,14,30,0.95)',
+          background: tk.inputBg,
           display: 'flex',
           gap: 8,
           alignItems: 'flex-end',
@@ -737,10 +872,10 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
             rows={1}
             style={{
               flex: 1,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(0,212,255,0.2)',
+              background: tk.textareaBg,
+              border: `1px solid ${tk.textareaBorder}`,
               borderRadius: 10,
-              color: '#e0e8ff',
+              color: tk.textareaColor,
               fontSize: 13,
               padding: '9px 12px',
               outline: 'none',
@@ -752,8 +887,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
               overflow: 'hidden',
               transition: 'border-color 0.2s',
             }}
-            onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.5)' }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.2)' }}
+            onFocus={e => { e.currentTarget.style.borderColor = `${tk.accentColor}80` }}
+            onBlur={e => { e.currentTarget.style.borderColor = tk.textareaBorder }}
           />
           <button
             onClick={() => handleSend()}
@@ -765,16 +900,16 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
               borderRadius: 10,
               border: 'none',
               background: running || !input.trim()
-                ? 'rgba(0,212,255,0.12)'
-                : 'linear-gradient(135deg, #00d4ff, #b24bff)',
-              color: running || !input.trim() ? 'rgba(0,212,255,0.35)' : '#fff',
+                ? `${tk.accentColor}20`
+                : tk.sendBtnActive,
+              color: running || !input.trim() ? `${tk.accentColor}55` : '#fff',
               cursor: running || !input.trim() ? 'not-allowed' : 'pointer',
               fontSize: 16,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'all 0.2s',
-              boxShadow: running || !input.trim() ? 'none' : '0 0 12px rgba(0,212,255,0.35)',
+              boxShadow: running || !input.trim() ? 'none' : tk.accentGlow,
             }}
             title="发送 (Enter)"
           >
@@ -800,9 +935,9 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
             maxWidth: '85%',
             padding: '10px 14px',
             borderRadius: '12px 12px 2px 12px',
-            background: 'rgba(0,212,255,0.1)',
-            borderLeft: '2px solid rgba(0,212,255,0.5)',
-            color: '#c8e8ff',
+            background: tk.userBubbleBg,
+            borderLeft: `2px solid ${tk.userBubbleBorder}`,
+            color: tk.userBubbleText,
             fontSize: 13,
             lineHeight: 1.6,
             wordBreak: 'break-word',
@@ -816,8 +951,8 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
             maxWidth: '95%',
             padding: '10px 12px',
             borderRadius: '2px 12px 12px 12px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: tk.aiBubbleBg,
+            border: `1px solid ${tk.aiBubbleBorder}`,
             fontSize: 12,
             lineHeight: 1.7,
             minWidth: 120,
@@ -864,7 +999,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
             ))}
 
             {!msg.done && (
-              <div style={{ color: '#6677aa', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <div style={{ color: tk.mutedText, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                 <span style={{ display: 'inline-block', animation: 'vspin 1s linear infinite' }}>⟳</span>
                 <span>执行中…</span>
               </div>
@@ -874,9 +1009,9 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
               <div style={{
                 marginTop: msg.steps.length > 0 ? 8 : 0,
                 paddingTop: msg.steps.length > 0 ? 8 : 0,
-                borderTop: msg.steps.length > 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                borderTop: msg.steps.length > 0 ? `1px solid ${tk.aiBubbleBorder}` : 'none',
                 fontSize: 13,
-                color: '#e0e8ff',
+                color: tk.normalText,
                 fontWeight: 500,
                 lineHeight: 1.6,
               }}>
