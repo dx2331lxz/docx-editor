@@ -12,72 +12,72 @@ function getSkinTokens() {
   // For light skins (clean/warm), use a light palette.
   const isDark = ['glass', 'slate', 'night'].includes(skin)
   return isDark ? {
-    panelBg:      'rgba(10, 14, 30, 0.97)',
-    panelBorder:  'rgba(178, 75, 255, 0.3)',
-    panelShadow:  '-4px 0 20px rgba(0,0,0,0.4)',
-    titleBg:      'linear-gradient(135deg, rgba(0,212,255,0.07), rgba(178,75,255,0.07))',
-    titleBorder:  'rgba(255,255,255,0.07)',
-    tabBorder:    'rgba(255,255,255,0.07)',
-    tabBg:        'rgba(0,0,0,0.15)',
-    tabActive:    '#fff',
-    tabInactive:  '#6677aa',
+    panelBg: 'rgba(10, 14, 30, 0.97)',
+    panelBorder: 'rgba(178, 75, 255, 0.3)',
+    panelShadow: '-4px 0 20px rgba(0,0,0,0.4)',
+    titleBg: 'linear-gradient(135deg, rgba(0,212,255,0.07), rgba(178,75,255,0.07))',
+    titleBorder: 'rgba(255,255,255,0.07)',
+    tabBorder: 'rgba(255,255,255,0.07)',
+    tabBg: 'rgba(0,0,0,0.15)',
+    tabActive: '#fff',
+    tabInactive: '#6677aa',
     tabIndicator: '#00d4ff',
-    chatBg:       'transparent',
+    chatBg: 'transparent',
     userBubbleBg: 'rgba(0,212,255,0.1)',
     userBubbleBorder: 'rgba(0,212,255,0.5)',
     userBubbleText: '#c8e8ff',
-    aiBubbleBg:   'rgba(255,255,255,0.03)',
+    aiBubbleBg: 'rgba(255,255,255,0.03)',
     aiBubbleBorder: 'rgba(255,255,255,0.07)',
-    inputBg:      'rgba(10,14,30,0.95)',
-    inputBorder:  'rgba(255,255,255,0.07)',
-    textareaBg:   'rgba(255,255,255,0.06)',
+    inputBg: 'rgba(10,14,30,0.95)',
+    inputBorder: 'rgba(255,255,255,0.07)',
+    textareaBg: 'rgba(255,255,255,0.06)',
     textareaBorder: 'rgba(0,212,255,0.2)',
     textareaColor: '#e0e8ff',
-    presetsBg:    'rgba(0,0,0,0.2)',
+    presetsBg: 'rgba(0,0,0,0.2)',
     presetBorder: 'rgba(0,212,255,0.15)',
-    presetBg:     'rgba(0,212,255,0.06)',
-    presetColor:  '#9bbfe0',
-    historyBg:    'transparent',
+    presetBg: 'rgba(0,212,255,0.06)',
+    presetColor: '#9bbfe0',
+    historyBg: 'transparent',
     scrollbarColor: 'rgba(255,255,255,0.08)',
-    mutedText:    '#6677aa',
-    normalText:   '#e0e8ff',
-    headingText:  '#b0c4de',
-    accentColor:  '#00d4ff',
-    accentGlow:   'rgba(0,212,255,0.35)',
+    mutedText: '#6677aa',
+    normalText: '#e0e8ff',
+    headingText: '#b0c4de',
+    accentColor: '#00d4ff',
+    accentGlow: 'rgba(0,212,255,0.35)',
     sendBtnActive: 'linear-gradient(135deg, #00d4ff, #b24bff)',
   } : {
-    panelBg:      'rgba(255,255,255,0.97)',
-    panelBorder:  'rgba(99,102,241,0.25)',
-    panelShadow:  '-4px 0 20px rgba(0,0,0,0.12)',
-    titleBg:      'linear-gradient(135deg, rgba(99,102,241,0.05), rgba(168,85,247,0.05))',
-    titleBorder:  '#e5e7eb',
-    tabBorder:    '#e5e7eb',
-    tabBg:        '#f8fafc',
-    tabActive:    '#1e293b',
-    tabInactive:  '#94a3b8',
+    panelBg: 'rgba(255,255,255,0.97)',
+    panelBorder: 'rgba(99,102,241,0.25)',
+    panelShadow: '-4px 0 20px rgba(0,0,0,0.12)',
+    titleBg: 'linear-gradient(135deg, rgba(99,102,241,0.05), rgba(168,85,247,0.05))',
+    titleBorder: '#e5e7eb',
+    tabBorder: '#e5e7eb',
+    tabBg: '#f8fafc',
+    tabActive: '#1e293b',
+    tabInactive: '#94a3b8',
     tabIndicator: '#6366f1',
-    chatBg:       'transparent',
+    chatBg: 'transparent',
     userBubbleBg: 'rgba(99,102,241,0.08)',
     userBubbleBorder: 'rgba(99,102,241,0.4)',
     userBubbleText: '#3730a3',
-    aiBubbleBg:   '#f8fafc',
+    aiBubbleBg: '#f8fafc',
     aiBubbleBorder: '#e5e7eb',
-    inputBg:      '#ffffff',
-    inputBorder:  '#e5e7eb',
-    textareaBg:   '#f8fafc',
+    inputBg: '#ffffff',
+    inputBorder: '#e5e7eb',
+    textareaBg: '#f8fafc',
     textareaBorder: 'rgba(99,102,241,0.3)',
     textareaColor: '#1e293b',
-    presetsBg:    '#f1f5f9',
+    presetsBg: '#f1f5f9',
     presetBorder: 'rgba(99,102,241,0.2)',
-    presetBg:     'rgba(99,102,241,0.05)',
-    presetColor:  '#4b5563',
-    historyBg:    '#fff',
+    presetBg: 'rgba(99,102,241,0.05)',
+    presetColor: '#4b5563',
+    historyBg: '#fff',
     scrollbarColor: 'rgba(0,0,0,0.08)',
-    mutedText:    '#94a3b8',
-    normalText:   '#1e293b',
-    headingText:  '#374151',
-    accentColor:  '#6366f1',
-    accentGlow:   'rgba(99,102,241,0.3)',
+    mutedText: '#94a3b8',
+    normalText: '#1e293b',
+    headingText: '#374151',
+    accentColor: '#6366f1',
+    accentGlow: 'rgba(99,102,241,0.3)',
     sendBtnActive: 'linear-gradient(135deg, #6366f1, #a855f7)',
   }
 }
@@ -229,7 +229,7 @@ const MODE_BADGE_COLOR: Record<Mode, string> = {
 let gStepId = 0
 
 function loadSessions(): ChatSession[] { return [] } // replaced by server API
-function saveSessions(_sessions: ChatSession[]) {} // replaced by server API
+function saveSessions(_sessions: ChatSession[]) { } // replaced by server API
 
 export default function VibeEditingPanel({ editor, onClose, width = 360, onWidthChange, onPageConfigChange, pageConfig }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -468,7 +468,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
 
       if (mode === 'ask') {
         const docText = editor.getText()
-        summary = await runAskMode(inst, docText, () => {}, conversationHistory)
+        summary = await runAskMode(inst, docText, () => { }, conversationHistory)
         setMessages(prev => {
           const next = [...prev]
           const aiMsg = next[next.length - 1]
@@ -513,7 +513,7 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
       setAskContinueResolver(null)
       textareaRef.current?.focus()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, input, running, resizeTextarea, mode, saveSession, conversationHistory])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -686,89 +686,89 @@ export default function VibeEditingPanel({ editor, onClose, width = 360, onWidth
           </div>
 
           {/* Session list */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-              {sessions.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: tk.mutedText, fontSize: 13 }}>
-                  暂无历史记录
-                </div>
-              )}
-              {sessions.slice(0, 20).map(sess => (
-                <div
-                  key={sess.id}
-                  style={{
-                    display: 'flex', alignItems: 'center',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  }}
-                >
-                  <button
-                    onClick={async () => {
-                      // Load full session from server
-                      const full = await loadServerSession(sess.id)
-                      if (!full) return
-                      setMessages(full.messages)
-                      setMode(full.mode)
-                      setCurrentSessionId(full.id)
-                      // Reconstruct conversation history from saved messages
-                      const rebuilt: Message[] = []
-                      for (const m of full.messages) {
-                        if (m.role === 'user') {
-                          rebuilt.push({ role: 'user', content: m.text })
-                        } else if (m.role === 'ai' && m.done && m.summary) {
-                          rebuilt.push({ role: 'assistant', content: m.summary })
-                        }
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+            {sessions.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: tk.mutedText, fontSize: 13 }}>
+                暂无历史记录
+              </div>
+            )}
+            {sessions.slice(0, 20).map(sess => (
+              <div
+                key={sess.id}
+                style={{
+                  display: 'flex', alignItems: 'center',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                }}
+              >
+                <button
+                  onClick={async () => {
+                    // Load full session from server
+                    const full = await loadServerSession(sess.id)
+                    if (!full) return
+                    setMessages(full.messages)
+                    setMode(full.mode)
+                    setCurrentSessionId(full.id)
+                    // Reconstruct conversation history from saved messages
+                    const rebuilt: Message[] = []
+                    for (const m of full.messages) {
+                      if (m.role === 'user') {
+                        rebuilt.push({ role: 'user', content: m.text })
+                      } else if (m.role === 'ai' && m.done && m.summary) {
+                        rebuilt.push({ role: 'assistant', content: m.summary })
                       }
-                      setConversationHistory(rebuilt.slice(-20))
-                      setShowHistory(false)
-                      setViewingSession(null)
-                    }}
-                    style={{
-                      flex: 1,
-                      background: 'none',
-                      border: 'none',
-                      padding: '10px 14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      textAlign: 'left',
-                      transition: 'background 0.12s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                  >
-                    <span style={{
-                      flexShrink: 0,
-                      fontSize: 9,
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      background: `${MODE_BADGE_COLOR[sess.mode]}22`,
-                      color: MODE_BADGE_COLOR[sess.mode],
-                      border: `1px solid ${MODE_BADGE_COLOR[sess.mode]}44`,
-                      letterSpacing: '0.04em',
-                    }}>
-                      {MODE_LABELS[sess.mode]}
-                    </span>
-                    <span style={{ flex: 1, fontSize: 12, color: tk.normalText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {sess.title}
-                    </span>
-                    <span style={{ flexShrink: 0, fontSize: 10, color: tk.mutedText }}>{relativeTime(sess.createdAt)}</span>
-                  </button>
-                  <button
-                    title="删除会话"
-                    onClick={async () => {
-                      if (!confirm('删除此会话？')) return
-                      await deleteServerSession(sess.id)
-                      setSessions(prev => prev.filter(s => s.id !== sess.id))
-                      if (currentSessionId === sess.id) setCurrentSessionId(null)
-                    }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: tk.mutedText, padding: '0 10px', fontSize: 14 }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#ff6b6b')}
-                    onMouseLeave={e => (e.currentTarget.style.color = tk.mutedText)}
-                  >✕</button>
-                </div>
-              ))}
-            </div>
+                    }
+                    setConversationHistory(rebuilt.slice(-20))
+                    setShowHistory(false)
+                    setViewingSession(null)
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'none',
+                    border: 'none',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    textAlign: 'left',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span style={{
+                    flexShrink: 0,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    background: `${MODE_BADGE_COLOR[sess.mode]}22`,
+                    color: MODE_BADGE_COLOR[sess.mode],
+                    border: `1px solid ${MODE_BADGE_COLOR[sess.mode]}44`,
+                    letterSpacing: '0.04em',
+                  }}>
+                    {MODE_LABELS[sess.mode]}
+                  </span>
+                  <span style={{ flex: 1, fontSize: 12, color: tk.normalText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {sess.title}
+                  </span>
+                  <span style={{ flexShrink: 0, fontSize: 10, color: tk.mutedText }}>{relativeTime(sess.createdAt)}</span>
+                </button>
+                <button
+                  title="删除会话"
+                  onClick={async () => {
+                    if (!confirm('删除此会话？')) return
+                    await deleteServerSession(sess.id)
+                    setSessions(prev => prev.filter(s => s.id !== sess.id))
+                    if (currentSessionId === sess.id) setCurrentSessionId(null)
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: tk.mutedText, padding: '0 10px', fontSize: 14 }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#ff6b6b')}
+                  onMouseLeave={e => (e.currentTarget.style.color = tk.mutedText)}
+                >✕</button>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14, background: tk.chatBg }}>

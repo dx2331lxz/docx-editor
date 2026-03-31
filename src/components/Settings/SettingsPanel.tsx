@@ -13,10 +13,10 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { id: 'ai',         icon: <Bot size={16} />,      label: 'AI 配置' },
-  { id: 'storage',    icon: <HardDrive size={16} />, label: '存储' },
-  { id: 'appearance', icon: <Palette size={16} />,   label: '外观' },
-  { id: 'shortcuts',  icon: <Keyboard size={16} />,  label: '快捷键' },
+  { id: 'ai', icon: <Bot size={16} />, label: 'AI 配置' },
+  { id: 'storage', icon: <HardDrive size={16} />, label: '存储' },
+  { id: 'appearance', icon: <Palette size={16} />, label: '外观' },
+  { id: 'shortcuts', icon: <Keyboard size={16} />, label: '快捷键' },
 ]
 
 interface Props {
@@ -486,7 +486,7 @@ function StorageTab({ currentFileId }: { currentFileId?: string | null }) {
                   fetch(`${API_BASE}/api/cloud/quark/config`)
                     .then(r => r.json())
                     .then(d => { setQuarkConfig(d); setQuarkExpanded(false) })
-                    .catch(() => {})
+                    .catch(() => { })
                 }} />
               )}
             </div>
@@ -550,8 +550,8 @@ function AppearanceTab() {
   type AppSkin = ThemeConfig['skin']
 
   const ACCENT_COLORS: Record<AccentColor, { primary: string; light: string; label: string }> = {
-    blue:   { primary: '#2563eb', light: '#eff6ff', label: '蓝色' },
-    green:  { primary: '#16a34a', light: '#f0fdf4', label: '绿色' },
+    blue: { primary: '#2563eb', light: '#eff6ff', label: '蓝色' },
+    green: { primary: '#16a34a', light: '#f0fdf4', label: '绿色' },
     purple: { primary: '#7c3aed', light: '#f5f3ff', label: '紫色' },
     orange: { primary: '#ea580c', light: '#fff7ed', label: '橙色' },
   }
@@ -593,10 +593,10 @@ function AppearanceTab() {
               >
                 <div style={{ background: skin.canvas, padding: '6px 6px 4px' }}>
                   <div style={{ background: skin.toolbar, borderRadius: '4px 4px 0 0', padding: '3px 4px', display: 'flex', gap: 2 }}>
-                    {[1,2,3].map(i => <div key={i} style={{ width: 8, height: 4, background: skin.textOnToolbar, borderRadius: 1, opacity: 0.6 }} />)}
+                    {[1, 2, 3].map(i => <div key={i} style={{ width: 8, height: 4, background: skin.textOnToolbar, borderRadius: 1, opacity: 0.6 }} />)}
                   </div>
                   <div style={{ background: skin.page, height: 30, borderRadius: '0 0 2px 2px', padding: '3px 4px' }}>
-                    {[1,2,3].map(i => <div key={i} style={{ height: 3, background: '#d1d5db', borderRadius: 1, marginBottom: 2, width: i === 3 ? '60%' : '100%' }} />)}
+                    {[1, 2, 3].map(i => <div key={i} style={{ height: 3, background: '#d1d5db', borderRadius: 1, marginBottom: 2, width: i === 3 ? '60%' : '100%' }} />)}
                   </div>
                 </div>
                 <div style={{ padding: '4px 4px 5px', background: '#fff' }}>

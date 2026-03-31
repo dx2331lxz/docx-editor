@@ -21,22 +21,29 @@ body[data-skin="glass"]::before {
     radial-gradient(ellipse at 50% 50%, rgba(0, 255, 204, 0.03) 0%, transparent 70%);
 }
 
-/* ── Scrollbar ─────────────────────────────────────────── */
+/* ── Scrollbar (base size — color overridden per skin) ─── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
-  background: #0a0e1a;
-}
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 212, 255, 0.3);
   border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+/* glass skin (default dark/cyan) */
+body[data-skin="glass"] ::-webkit-scrollbar-track,
+body:not([data-skin]) ::-webkit-scrollbar-track {
+  background: #0a0e1a;
+}
+
+body[data-skin="glass"] ::-webkit-scrollbar-thumb,
+body:not([data-skin]) ::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.3);
+}
+
+body[data-skin="glass"] ::-webkit-scrollbar-thumb:hover,
+body:not([data-skin]) ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 212, 255, 0.5);
 }
 
