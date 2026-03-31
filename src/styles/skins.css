@@ -365,9 +365,11 @@ body[data-skin="night"] .glass-tabbar * {
 body[data-skin="clean"] ::-webkit-scrollbar-track {
     background: #e2e8f0;
 }
+
 body[data-skin="clean"] ::-webkit-scrollbar-thumb {
     background: rgba(99, 102, 241, 0.35);
 }
+
 body[data-skin="clean"] ::-webkit-scrollbar-thumb:hover {
     background: rgba(99, 102, 241, 0.6);
 }
@@ -376,9 +378,11 @@ body[data-skin="clean"] ::-webkit-scrollbar-thumb:hover {
 body[data-skin="slate"] ::-webkit-scrollbar-track {
     background: #1e293b;
 }
+
 body[data-skin="slate"] ::-webkit-scrollbar-thumb {
     background: rgba(56, 189, 248, 0.3);
 }
+
 body[data-skin="slate"] ::-webkit-scrollbar-thumb:hover {
     background: rgba(56, 189, 248, 0.55);
 }
@@ -387,9 +391,11 @@ body[data-skin="slate"] ::-webkit-scrollbar-thumb:hover {
 body[data-skin="warm"] ::-webkit-scrollbar-track {
     background: #ede0ce;
 }
+
 body[data-skin="warm"] ::-webkit-scrollbar-thumb {
     background: rgba(180, 120, 50, 0.35);
 }
+
 body[data-skin="warm"] ::-webkit-scrollbar-thumb:hover {
     background: rgba(180, 120, 50, 0.6);
 }
@@ -398,9 +404,11 @@ body[data-skin="warm"] ::-webkit-scrollbar-thumb:hover {
 body[data-skin="night"] ::-webkit-scrollbar-track {
     background: #151820;
 }
+
 body[data-skin="night"] ::-webkit-scrollbar-thumb {
     background: rgba(99, 179, 237, 0.25);
 }
+
 body[data-skin="night"] ::-webkit-scrollbar-thumb:hover {
     background: rgba(99, 179, 237, 0.5);
 }

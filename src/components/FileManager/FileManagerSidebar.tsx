@@ -100,6 +100,7 @@ export default function FileManagerSidebar({
   const [renameValue, setRenameValue] = useState('')
   const [menuId, setMenuId] = useState<string | null>(null)
   const [currentFileId, setCurrentFileId] = useState<string | null>(openFileId ?? null)
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveDialogDefaultName, setSaveDialogDefaultName] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
@@ -153,6 +154,7 @@ export default function FileManagerSidebar({
         onPageConfigChange(result.pageConfig)
       }
       setCurrentFileId(file.id)
+      setCurrentFileName(file.name)
       onDocOpened?.(file)
     } catch (e) {
       setError(e instanceof Error ? e.message : '打开失败')
@@ -163,6 +165,7 @@ export default function FileManagerSidebar({
     if (!editor) return
     editor.chain().focus().clearContent().run()
     setCurrentFileId(null)
+    setCurrentFileName(null)
     onDocOpened?.({ id: '', name: '新文档', size: 0, updatedAt: new Date().toISOString() })
   }
 
@@ -179,7 +182,7 @@ export default function FileManagerSidebar({
     try {
       const html = editor.getHTML()
       const blob = await exportDocx(currentDoc, pageConfig, html)
-      const name = nameOverride ?? currentDoc.title ?? '新文档'
+      const name = nameOverride ?? currentFileName ?? currentDoc.title ?? '新文档'
       let saved: DocFile
       if (currentFileId) {
         saved = await overwriteDocx(currentFileId, blob, name)
@@ -187,6 +190,7 @@ export default function FileManagerSidebar({
         saved = await uploadDocx(blob, name)
       }
       setCurrentFileId(saved.id)
+      setCurrentFileName(saved.name)
       onDocOpened?.(saved)
       await refresh()
       document.dispatchEvent(
@@ -252,7 +256,7 @@ export default function FileManagerSidebar({
         try {
           const html = editor.getHTML()
           const blob = await exportDocx(currentDoc, pageConfig, html)
-          const name = currentDoc.title || '新文档'
+          const name = currentFileName || currentDoc.title || '新文档'
           const saved = await overwriteDocx(currentFileId, blob, name)
           document.dispatchEvent(
             new CustomEvent('autosave:manualsave', { detail: { fileName: saved.name, isAuto: true } }),
