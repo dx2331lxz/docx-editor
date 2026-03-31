@@ -554,7 +554,7 @@ const App: React.FC = () => {
           {editorCanvas}
         </PrintPreviewOverlay>
       ) : (
-        <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+        <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0, position: 'relative' }}>
           {/* File Manager Sidebar */}
           <FileManagerSidebar
             editor={editor}
@@ -626,6 +626,37 @@ const App: React.FC = () => {
             />
           )}
 
+          {/* Vibe Editing sticky edge handle (方案C) */}
+          <button
+            onClick={() => setShowVibeEditing(v => !v)}
+            title="Vibe Editing (AI 智能编辑)"
+            className="glass-toolbar"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              right: 0,
+              transform: 'translateY(-50%)',
+              zIndex: 1200,
+              width: 18,
+              height: 48,
+              borderWidth: '1px 0 1px 1px',
+              borderStyle: 'solid',
+              borderColor: 'rgba(128,128,128,0.3)',
+              borderRadius: '6px 0 0 6px',
+              padding: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: showVibeEditing ? 'none' : '-2px 0 5px rgba(0,0,0,0.05)',
+              transition: 'opacity 0.2s',
+              opacity: showVibeEditing ? 0.6 : 1,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
+            onMouseLeave={e => { if (showVibeEditing) e.currentTarget.style.opacity = '0.6' }}
+          >
+            <span style={{ fontSize: 11, pointerEvents: 'none' }}>✨</span>
+          </button>
         </div>
       )}
 
@@ -1064,37 +1095,6 @@ const App: React.FC = () => {
       )}
       {showDocDiff && <DocDiffDialog editor={editor} onClose={() => setShowDocDiff(false)} />}
       {showFormFields && <FormFieldDialog editor={editor} onClose={() => setShowFormFields(false)} />}
-      {/* Vibe Editing sticky edge handle (方案C) */}
-      <button
-        onClick={() => setShowVibeEditing(v => !v)}
-        title="Vibe Editing (AI 智能编辑)"
-        className="glass-toolbar"
-        style={{
-          position: 'fixed',
-          top: '50%',
-          right: showVibeEditing ? vibePanelWidth : 0,
-          transform: 'translateY(-50%)',
-          zIndex: 1200,
-          width: 18,
-          height: 48,
-          borderWidth: '1px 0 1px 1px',
-          borderStyle: 'solid',
-          borderColor: 'rgba(128,128,128,0.3)',
-          borderRadius: '6px 0 0 6px',
-          padding: 0,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: showVibeEditing ? 'none' : '-2px 0 5px rgba(0,0,0,0.05)',
-          transition: 'right 0.2s ease-out, opacity 0.2s',
-          opacity: showVibeEditing ? 0.6 : 1,
-        }}
-        onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
-        onMouseLeave={e => { if (showVibeEditing) e.currentTarget.style.opacity = '0.6' }}
-      >
-        <span style={{ fontSize: 11, pointerEvents: 'none' }}>✨</span>
-      </button>
     </div>
   )
 }
