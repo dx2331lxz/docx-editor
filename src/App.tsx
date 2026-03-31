@@ -1071,29 +1071,29 @@ const App: React.FC = () => {
         className="glass-toolbar"
         style={{
           position: 'fixed',
-          top: '40%',
+          top: '50%',
           right: showVibeEditing ? vibePanelWidth : 0,
           transform: 'translateY(-50%)',
           zIndex: 1200,
+          width: 18,
+          height: 48,
           borderWidth: '1px 0 1px 1px',
           borderStyle: 'solid',
           borderColor: 'rgba(128,128,128,0.3)',
-          borderRadius: '10px 0 0 10px',
-          padding: '16px 4px',
+          borderRadius: '6px 0 0 6px',
+          padding: 0,
           cursor: 'pointer',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          gap: 8,
-          boxShadow: showVibeEditing ? 'none' : '-2px 0 10px rgba(0,0,0,0.1)',
-          transition: 'right 0.2s ease-out, transform 0.2s',
+          justifyContent: 'center',
+          boxShadow: showVibeEditing ? 'none' : '-2px 0 5px rgba(0,0,0,0.05)',
+          transition: 'right 0.2s ease-out, opacity 0.2s',
           opacity: showVibeEditing ? 0.6 : 1,
         }}
-        onMouseEnter={e => { if (!showVibeEditing) e.currentTarget.style.transform = 'translateY(-50%) translateX(-4px)'; e.currentTarget.style.opacity = '1' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(-50%) translateX(0)'; if (showVibeEditing) e.currentTarget.style.opacity = '0.6' }}
+        onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
+        onMouseLeave={e => { if (showVibeEditing) e.currentTarget.style.opacity = '0.6' }}
       >
-        <span style={{ fontSize: 15 }}>✨</span>
-        <span style={{ fontSize: 11, fontWeight: 700, writingMode: 'vertical-rl', letterSpacing: 2, opacity: 0.8 }}>Vibe</span>
+        <span style={{ fontSize: 11, pointerEvents: 'none' }}>✨</span>
       </button>
     </div>
   )
