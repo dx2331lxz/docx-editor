@@ -3,7 +3,7 @@
  * Supports: ruler, column layout, header/footer display, inline header/footer editing.
  */
 
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { EditorContent } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
 import ContextMenu from './ContextMenu'
@@ -152,42 +152,42 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
 }) => {
   const columnClass =
     columns === 2 ? 'columns-2' :
-    columns === 3 ? 'columns-3' :
-    columns === 'left' ? 'columns-left' :
-    columns === 'right' ? 'columns-right' : ''
+      columns === 3 ? 'columns-3' :
+        columns === 'left' ? 'columns-left' :
+          columns === 'right' ? 'columns-right' : ''
   const pageStyle = pageConfig ? getPageStyle(pageConfig) : undefined
   const borderStyle = pageBorder ? getBorderStyle(pageBorder) : {}
   const scrollRef = useRef<HTMLDivElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   // Stable unique ID per editor instance — used to scope injected CSS rules
   const editorIdRef = useRef(`pg-${Math.random().toString(36).slice(2, 9)}`)
+  const [numPages, setNumPages] = useState(1)
 
-  // Word-style page gap constants (shared between pageBgStyle and pushBlocks effect)
-  const PAGE_MM  = 297
-  const MM_PX    = 3.7795275591
-  const PAGE_PX  = PAGE_MM * MM_PX   // ≈ 1122.52 px
-  const GAP_PX   = 24
-  const UNIT_PX  = PAGE_PX + GAP_PX
-  // Top padding of each page (in px) — pushed blocks start this far below the grey band
-  const PAGE_PADDING_TOP_PX = (pageConfig?.marginTop ?? 2.54) * 10 * MM_PX  // cm→mm→px
+  // ── Fixed-page constants ─────────────────────────────────────────────
+  const PAPER_SIZES_MM: Record<string, { w: number; h: number }> = {
+    A4: { w: 210, h: 297 }, A3: { w: 297, h: 420 }, Letter: { w: 216, h: 279 },
+  }
+  const _paper = PAPER_SIZES_MM[pageConfig?.paperSize ?? 'A4'] ?? PAPER_SIZES_MM.A4
+  const _isLandscape = pageConfig?.orientation === 'landscape'
+  const PAGE_H_MM = _isLandscape ? _paper.w : _paper.h
+  const MM_PX = 3.7795275591
+  const PAGE_PX = PAGE_H_MM * MM_PX
+  const GAP_PX = 24
+  const UNIT_PX = PAGE_PX + GAP_PX
+  const PAGE_PADDING_TOP_PX = (pageConfig?.marginTop ?? 2.54) * 10 * MM_PX
+  const PAGE_PADDING_BOTTOM_PX = (pageConfig?.marginBottom ?? 2.54) * 10 * MM_PX
 
-  // Page gap gradient: grey band every 297mm, white page content in between.
-  // This is the FIRST background layer; the page color is the SECOND layer.
-  // Because the gradient uses opaque colors, it fully overrides the second
-  // layer in grey zones and lets white show through in page zones.
-  const pageGapGradient = (pageColor: string) =>
-    `repeating-linear-gradient(to bottom, ${pageColor} 0px, ${pageColor} ${PAGE_PX}px, transparent ${PAGE_PX}px, transparent ${UNIT_PX}px)`
-
-  // Compute page background style
-  const pageBgStyle: React.CSSProperties = (() => {
-    if (!pageBg || pageBg.type === 'none') return { background: pageGapGradient('#ffffff') }
-    if (pageBg.type === 'solid') return { background: pageGapGradient(pageBg.color || '#ffffff') }
-    // For gradient backgrounds, fall back to simple colour for the page-gap gradient
-    // (mixing two gradients in repeating-linear-gradient is not straightforward)
-    if (pageBg.type === 'gradient1') return { background: pageGapGradient(pageBg.color || '#e8f4f8') }
-    if (pageBg.type === 'gradient2') return { background: pageGapGradient(pageBg.color || '#fff9e6') }
-    return { background: pageGapGradient('#ffffff') }
+  // Page background colour (used per page card)
+  const pageColor = (() => {
+    if (!pageBg || pageBg.type === 'none') return '#ffffff'
+    if (pageBg.type === 'solid') return pageBg.color || '#ffffff'
+    if (pageBg.type === 'gradient1') return pageBg.color || '#e8f4f8'
+    if (pageBg.type === 'gradient2') return pageBg.color || '#fff9e6'
+    return '#ffffff'
   })()
+
+  // Total container height — always snaps to whole pages
+  const totalHeight = numPages * PAGE_PX + Math.max(0, numPages - 1) * GAP_PX
 
   // Watermark overlay (absolute positioned inside A4 page)
   const showWatermark = watermark && watermark.type !== 'none'
@@ -272,22 +272,22 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
       // instead we push their individual list items.
       type PushTarget = { el: HTMLElement; sel: string }
       const targets: PushTarget[] = []
-      ;(Array.from(pm.children) as HTMLElement[]).forEach((pmChild, pi) => {
-        const tag = pmChild.tagName
-        if ((tag === 'UL' || tag === 'OL') && pmChild.offsetHeight > PAGE_PX) {
-          ;(Array.from(pmChild.children) as HTMLElement[]).forEach((li, li_i) => {
-            targets.push({
-              el: li,
-              sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1}) > :nth-child(${li_i + 1})`,
+        ; (Array.from(pm.children) as HTMLElement[]).forEach((pmChild, pi) => {
+          const tag = pmChild.tagName
+          if ((tag === 'UL' || tag === 'OL') && pmChild.offsetHeight > PAGE_PX) {
+            ; (Array.from(pmChild.children) as HTMLElement[]).forEach((li, li_i) => {
+              targets.push({
+                el: li,
+                sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1}) > :nth-child(${li_i + 1})`,
+              })
             })
-          })
-        } else {
-          targets.push({
-            el: pmChild,
-            sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1})`,
-          })
-        }
-      })
+          } else {
+            targets.push({
+              el: pmChild,
+              sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1})`,
+            })
+          }
+        })
 
       // Clear previous rules so pass 1 reads natural (unpushed) positions.
       getStyleEl().textContent = ''
@@ -303,12 +303,25 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
         for (const { el, sel } of targets) {
           if (pushMap.has(sel)) continue  // already handled
 
-          const topRel    = getOffsetFromPage(el)
+          const topRel = getOffsetFromPage(el)
           const bottomRel = topRel + el.offsetHeight
-          let boundary    = PAGE_PX
-          while (boundary < topRel) boundary += UNIT_PX
-          if (topRel < boundary && bottomRel > boundary) {
-            const push = boundary + GAP_PX + PAGE_PADDING_TOP_PX - topRel
+
+          // Find which page this element starts on
+          let pageStart = 0
+          while (pageStart + UNIT_PX <= topRel) pageStart += UNIT_PX
+
+          // Effective page bottom = page end minus bottom margin
+          const effectiveBottom = pageStart + PAGE_PX - PAGE_PADDING_BOTTOM_PX
+          const gapStart = pageStart + PAGE_PX
+          const gapEnd = pageStart + UNIT_PX
+
+          // Push if block crosses effective bottom boundary or starts in the gap zone
+          const crossesBottom = topRel < gapStart && bottomRel > effectiveBottom
+          const startsInGap = topRel >= gapStart && topRel < gapEnd
+
+          if (crossesBottom || startsInGap) {
+            const nextPageTop = pageStart + UNIT_PX + PAGE_PADDING_TOP_PX
+            const push = nextPageTop - topRel
             if (push > 0) {
               pushMap.set(sel, push)
               foundNew = true
@@ -324,18 +337,21 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
         getStyleEl().textContent = rules.join('\n')
       }
 
-      // ── Calculate total page count from final layout ──────────────
-      if (onPageCountChange) {
-        const pm2 = page.querySelector('.ProseMirror') as HTMLElement | null
-        if (pm2) {
-          const lastChild = pm2.lastElementChild as HTMLElement | null
-          if (lastChild) {
-            const bottomOffset = getOffsetFromPage(lastChild) + lastChild.offsetHeight
-            const totalPages = Math.max(1, Math.ceil(bottomOffset / UNIT_PX))
-            onPageCountChange(totalPages)
-          }
-        }
+      // ── Calculate page count from final layout ────────────────────
+      let maxBottom = 0
+      for (const { el } of targets) {
+        const b = getOffsetFromPage(el) + el.offsetHeight
+        if (b > maxBottom) maxBottom = b
       }
+      let neededPages = 1
+      if (maxBottom > PAGE_PX) {
+        const idx = Math.floor(maxBottom / UNIT_PX)
+        const rem = maxBottom - idx * UNIT_PX
+        neededPages = rem > PAGE_PX ? idx + 2 : idx + 1
+      }
+      neededPages = Math.max(1, neededPages)
+      setNumPages(neededPages)
+      if (onPageCountChange) onPageCountChange(neededPages)
     }
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -389,94 +405,120 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
         <div
           ref={pageRef}
           data-pgid={editorIdRef.current}
-          className={`a4-page ${columnClass} ${themeClass}`}
-          style={pageStyle ? {
-            ...pageStyle,
-            ...borderStyle,
-            ...pageBgStyle,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+          className={columnClass}
+          style={{
+            width: pageStyle?.width ?? '210mm',
+            height: totalHeight,
             margin: '0 auto',
-            boxSizing: 'border-box',
             position: 'relative',
-          } : { ...borderStyle, ...pageBgStyle, position: 'relative' }}
+          }}
         >
-          {/* ── Watermark layer ─────────────────────────────── */}
-          {showWatermark && watermark?.type === 'text' && (
-            <div style={{
-              pointerEvents: 'none',
-              userSelect: 'none',
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 0,
-              overflow: 'hidden',
-            }}>
-              <span style={{
-                fontFamily: watermark.fontFamily || 'sans-serif',
-                fontSize: (watermark.fontSize || 72) + 'px',
-                color: watermark.color || '#cccccc',
-                opacity: watermark.opacity ?? 0.3,
-                transform: `rotate(${-(watermark.angle ?? 45)}deg)`,
-                whiteSpace: 'nowrap',
-                fontWeight: 'bold',
-              }}>
-                {watermark.text || '水印'}
-              </span>
-            </div>
-          )}
-          {showWatermark && watermark?.type === 'image' && watermark.imageDataUrl && (
-            <div style={{
-              pointerEvents: 'none',
-              userSelect: 'none',
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url(${watermark.imageDataUrl})`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-              backgroundSize: '60%',
-              opacity: watermark.imageOpacity ?? 0.3,
-              zIndex: 0,
-            }} />
-          )}
-
-          {/* ── Document grid overlay ───────────────────────── */}
-          {docGrid?.showGrid && docGrid.mode !== 'none' && (
+          {/* ── Visual page cards (background + shadow per page) ── */}
+          {Array.from({ length: numPages }).map((_, i) => (
             <div
-              className="doc-grid-overlay"
-              style={{ '--grid-line-height': `${Math.round(297 * 3.7795 / docGrid.linesPerPage)}px` } as React.CSSProperties}
-            />
-          )}
+              key={i}
+              className={`page-card ${themeClass}`}
+              style={{
+                position: 'absolute',
+                top: i * UNIT_PX,
+                left: 0,
+                right: 0,
+                height: PAGE_PX,
+                background: pageColor,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                boxSizing: 'border-box',
+                ...borderStyle,
+              }}
+            >
+              {/* Watermark per page */}
+              {showWatermark && watermark?.type === 'text' && (
+                <div style={{
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 0,
+                  overflow: 'hidden',
+                }}>
+                  <span style={{
+                    fontFamily: watermark.fontFamily || 'sans-serif',
+                    fontSize: (watermark.fontSize || 72) + 'px',
+                    color: watermark.color || '#cccccc',
+                    opacity: watermark.opacity ?? 0.3,
+                    transform: `rotate(${-(watermark.angle ?? 45)}deg)`,
+                    whiteSpace: 'nowrap',
+                    fontWeight: 'bold',
+                  }}>
+                    {watermark.text || '水印'}
+                  </span>
+                </div>
+              )}
+              {showWatermark && watermark?.type === 'image' && watermark.imageDataUrl && (
+                <div style={{
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundImage: `url(${watermark.imageDataUrl})`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                  backgroundSize: '60%',
+                  opacity: watermark.imageOpacity ?? 0.3,
+                  zIndex: 0,
+                }} />
+              )}
+              {/* Document grid overlay per page */}
+              {docGrid?.showGrid && docGrid.mode !== 'none' && (
+                <div
+                  className="doc-grid-overlay"
+                  style={{ '--grid-line-height': `${Math.round(PAGE_H_MM * 3.7795 / docGrid.linesPerPage)}px` } as React.CSSProperties}
+                />
+              )}
+            </div>
+          ))}
 
-          {/* ── Header zone (only when has content or editing) ── */}
-          {(headerContent || headerFooterMode === 'header') && (
-          <HeaderFooterZone
-            position="header"
-            content={headerContent}
-            editing={headerFooterMode === 'header'}
-            onChange={(v) => onHeaderChange?.(v)}
-            onActivate={() => onEditHeader?.()}
-            onDeactivate={() => onExitHeaderFooter?.()}
-          />
-          )}
+          {/* ── Content layer (on top of page cards) ───────── */}
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              paddingTop: `${pageConfig?.marginTop ?? 2.54}cm`,
+              paddingLeft: `${pageConfig?.marginLeft ?? 2.54}cm`,
+              paddingRight: `${pageConfig?.marginRight ?? 2.54}cm`,
+            }}
+          >
+            {/* Header zone */}
+            {(headerContent || headerFooterMode === 'header') && (
+              <HeaderFooterZone
+                position="header"
+                content={headerContent}
+                editing={headerFooterMode === 'header'}
+                onChange={(v) => onHeaderChange?.(v)}
+                onActivate={() => onEditHeader?.()}
+                onDeactivate={() => onExitHeaderFooter?.()}
+              />
+            )}
 
-          {/* ── Main content ────────────────────────────────── */}
-          <div onClick={handleBodyClick} style={{ position: 'relative', zIndex: 1, writingMode: isVertical ? 'vertical-rl' : undefined }}>
-            <EditorContent editor={editor} />
+            {/* Main content */}
+            <div onClick={handleBodyClick} style={{ writingMode: isVertical ? 'vertical-rl' : undefined }}>
+              <EditorContent editor={editor} />
+            </div>
+
+            {/* Footer zone */}
+            {(footerContent || headerFooterMode === 'footer') && (
+              <HeaderFooterZone
+                position="footer"
+                content={footerContent}
+                editing={headerFooterMode === 'footer'}
+                onChange={(v) => onFooterChange?.(v)}
+                onActivate={() => onEditFooter?.()}
+                onDeactivate={() => onExitHeaderFooter?.()}
+              />
+            )}
           </div>
-
-          {/* ── Footer zone (only when has content or editing) ── */}
-          {(footerContent || headerFooterMode === 'footer') && (
-          <HeaderFooterZone
-            position="footer"
-            content={footerContent}
-            editing={headerFooterMode === 'footer'}
-            onChange={(v) => onFooterChange?.(v)}
-            onActivate={() => onEditFooter?.()}
-            onDeactivate={() => onExitHeaderFooter?.()}
-          />
-          )}
         </div>
         <ContextMenu editor={editor} onInsertComment={onInsertComment} onTranslate={onTranslate} />
         <PasteOptionsPopup editor={editor} />

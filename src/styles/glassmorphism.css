@@ -3,7 +3,8 @@
    ═══════════════════════════════════════════════════════ */
 
 /* ── Global background ─────────────────────────────────── */
-body, #root {
+body,
+#root {
   background: #0a0e1a !important;
   color: #e0e8ff;
 }
@@ -21,16 +22,37 @@ body::before {
 }
 
 /* ── Scrollbar ─────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0a0e1a; }
-::-webkit-scrollbar-thumb { background: rgba(0, 212, 255, 0.3); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0, 212, 255, 0.5); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.5);
+}
 
 /* ── Flow light animation ──────────────────────────────── */
 @keyframes flowLight {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .flow-border {
@@ -87,7 +109,7 @@ body::before {
   color: #e0e8ff !important;
 }
 
-.glass-menubar > * {
+.glass-menubar>* {
   color: #c8d8ff !important;
 }
 
@@ -109,7 +131,7 @@ body::before {
   -webkit-backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(0, 212, 255, 0.2) !important;
   border-radius: 8px !important;
-  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1), 0 2px 8px rgba(0,0,0,0.5) !important;
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.5) !important;
   color: #c8d8ff !important;
 }
 
@@ -136,7 +158,8 @@ body::before {
   color: #e0e8ff !important;
 }
 
-.glass-dialog h2, .glass-dialog h3 {
+.glass-dialog h2,
+.glass-dialog h3 {
   color: #e0e8ff !important;
 }
 
@@ -230,8 +253,9 @@ body::before {
   background: #0f1420 !important;
 }
 
-.glass-canvas-bg .a4-page {
-  box-shadow: 0 4px 40px rgba(0, 212, 255, 0.15), 0 2px 8px rgba(0,0,0,0.4) !important;
+.glass-canvas-bg .a4-page,
+.glass-canvas-bg .page-card {
+  box-shadow: 0 4px 40px rgba(0, 212, 255, 0.15), 0 2px 8px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* ── Ruler ─────────────────────────────────────────────── */
@@ -263,23 +287,78 @@ body::before {
 }
 
 /* ── Tailwind overrides for dark theme ─────────────────── */
-.bg-white { background: transparent !important; }
-.bg-gray-50 { background: rgba(255,255,255,0.03) !important; }
-.bg-gray-100 { background: rgba(255,255,255,0.05) !important; }
-.bg-gray-200 { background: rgba(255,255,255,0.07) !important; }
-.bg-gray-300 { background: #0f1420 !important; }
-.bg-blue-600 { background: rgba(255, 255, 255, 0.03) !important; }
-.text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900 { color: #c8d8ff !important; }
-.text-gray-400, .text-gray-500 { color: #8899bb !important; }
-.border-gray-200, .border-gray-300 { border-color: rgba(255,255,255,0.08) !important; }
-.hover\:bg-gray-100:hover { background: rgba(0, 212, 255, 0.12) !important; }
-.hover\:bg-gray-200:hover { background: rgba(0, 212, 255, 0.15) !important; }
-.hover\:bg-blue-50:hover { background: rgba(0, 212, 255, 0.1) !important; }
-.bg-blue-50 { background: rgba(0, 212, 255, 0.08) !important; }
-.bg-blue-100 { background: rgba(0, 212, 255, 0.12) !important; }
-.text-blue-600, .text-blue-700 { color: #00d4ff !important; }
-.text-white { color: #e0e8ff !important; }
-.bg-white.rounded, .bg-white.shadow { 
+.bg-white {
+  background: transparent !important;
+}
+
+.bg-gray-50 {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.bg-gray-100 {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.bg-gray-200 {
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+.bg-gray-300 {
+  background: #0f1420 !important;
+}
+
+.bg-blue-600 {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.text-gray-600,
+.text-gray-700,
+.text-gray-800,
+.text-gray-900 {
+  color: #c8d8ff !important;
+}
+
+.text-gray-400,
+.text-gray-500 {
+  color: #8899bb !important;
+}
+
+.border-gray-200,
+.border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.hover\:bg-gray-100:hover {
+  background: rgba(0, 212, 255, 0.12) !important;
+}
+
+.hover\:bg-gray-200:hover {
+  background: rgba(0, 212, 255, 0.15) !important;
+}
+
+.hover\:bg-blue-50:hover {
+  background: rgba(0, 212, 255, 0.1) !important;
+}
+
+.bg-blue-50 {
+  background: rgba(0, 212, 255, 0.08) !important;
+}
+
+.bg-blue-100 {
+  background: rgba(0, 212, 255, 0.12) !important;
+}
+
+.text-blue-600,
+.text-blue-700 {
+  color: #00d4ff !important;
+}
+
+.text-white {
+  color: #e0e8ff !important;
+}
+
+.bg-white.rounded,
+.bg-white.shadow {
   background: rgba(13, 10, 30, 0.92) !important;
   border: 1px solid rgba(178, 75, 255, 0.25) !important;
 }
@@ -308,43 +387,50 @@ body::before {
 .menu-dropdown-light * {
   color: #1f2937 !important;
 }
+
 .menu-dropdown-light button:hover {
   background: #eff6ff !important;
   color: #1d4ed8 !important;
 }
+
 .menu-dropdown-light .text-gray-400,
 .menu-dropdown-light .shortcut {
   color: #9ca3af !important;
 }
+
 .menu-dropdown-light::-webkit-scrollbar {
   width: 4px;
 }
+
 .menu-dropdown-light::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .menu-dropdown-light::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 4px;
 }
+
 .menu-dropdown-light::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
 
 /* ── Portal dropdowns (white bg, dark text override) ───── */
 /* Any portal div injected to body with white background should use dark text */
-body > div[style*="background: rgb(255, 255, 255)"],
-body > div[style*="background: #fff"],
-body > div[style*="background: white"],
-body > div[style*="background:#fff"] {
+body>div[style*="background: rgb(255, 255, 255)"],
+body>div[style*="background: #fff"],
+body>div[style*="background: white"],
+body>div[style*="background:#fff"] {
   color: #111827 !important;
 }
-body > div[style*="background: rgb(255, 255, 255)"] button,
-body > div[style*="background: #fff"] button,
-body > div[style*="background: white"] button,
-body > div[style*="background:#fff"] button,
-body > div[style*="background: rgb(255, 255, 255)"] span,
-body > div[style*="background: #fff"] span,
-body > div[style*="background: white"] span,
-body > div[style*="background:#fff"] span {
+
+body>div[style*="background: rgb(255, 255, 255)"] button,
+body>div[style*="background: #fff"] button,
+body>div[style*="background: white"] button,
+body>div[style*="background:#fff"] button,
+body>div[style*="background: rgb(255, 255, 255)"] span,
+body>div[style*="background: #fff"] span,
+body>div[style*="background: white"] span,
+body>div[style*="background:#fff"] span {
   color: inherit !important;
 }
