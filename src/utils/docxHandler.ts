@@ -101,9 +101,9 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
   function mergeObj<T extends object>(base: T, override?: Partial<T>): T {
     if (!override) return { ...base }
     const merged = { ...base }
-    ;(Object.keys(override) as Array<keyof T>).forEach(key => {
-      if (override[key] !== undefined) merged[key] = override[key] as T[keyof T]
-    })
+      ; (Object.keys(override) as Array<keyof T>).forEach(key => {
+        if (override[key] !== undefined) merged[key] = override[key] as T[keyof T]
+      })
     return merged
   }
 
@@ -377,7 +377,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
     }
     // CJK sans / 黑体 family
     if (['simhei', '黑体', 'microsoftyahei', '微软雅黑', 'heiti', 'pingfang'].includes(lower) ||
-        lower.includes('yahei') || lower.includes('heiti') || lower.includes('pingfang')) {
+      lower.includes('yahei') || lower.includes('heiti') || lower.includes('pingfang')) {
       return `'SimHei','黑体','Microsoft YaHei','微软雅黑','Noto Sans CJK SC',sans-serif`
     }
     // CJK regular / 仿宋
@@ -599,7 +599,7 @@ async function importDocxEnhanced(arrayBuffer: ArrayBuffer): Promise<DocxImportR
           } else if ((wMm === 297 && hMm === 420) || (wMm === 420 && hMm === 297)) {
             importedPageConfig.paperSize = 'A3'
           } else if ((wMm >= 215 && wMm <= 217 && hMm >= 278 && hMm <= 280) ||
-                     (hMm >= 215 && hMm <= 217 && wMm >= 278 && wMm <= 280)) {
+            (hMm >= 215 && hMm <= 217 && wMm >= 278 && wMm <= 280)) {
             importedPageConfig.paperSize = 'Letter'
           }
         }
@@ -652,11 +652,11 @@ export async function importDocx(file: File): Promise<DocxImportResult> {
 /** Map TipTap text-align value → docx AlignmentType */
 function toAlignment(align?: string): AlignmentType | undefined {
   switch (align) {
-    case 'center':  return AlignmentType.CENTER
-    case 'right':   return AlignmentType.RIGHT
+    case 'center': return AlignmentType.CENTER
+    case 'right': return AlignmentType.RIGHT
     case 'justify': return AlignmentType.JUSTIFIED
     case 'left':
-    default:        return AlignmentType.LEFT
+    default: return AlignmentType.LEFT
   }
 }
 
@@ -732,21 +732,23 @@ function buildRuns(node: AIDocumentNode): TextRun[] {
       }
 
       return new TextRun({
-        text:             child.text ?? '',
-        bold:             hasMark('bold') || undefined,
-        italics:          hasMark('italic') || undefined,
-        underline:        hasMark('underline') ? {} : undefined,
-        strike:           hasMark('strike') || undefined,
-        superScript:      hasMark('superscript') || undefined,
-        subScript:        hasMark('subscript') || undefined,
+        text: child.text ?? '',
+        bold: hasMark('bold') || undefined,
+        italics: hasMark('italic') || undefined,
+        underline: hasMark('underline') ? {} : undefined,
+        strike: hasMark('strike') || undefined,
+        superScript: hasMark('superscript') || undefined,
+        subScript: hasMark('subscript') || undefined,
         color,
-        font:             fontFamily ? { name: fontFamily } : undefined,
-        size:             sizeHalfPt,
+        font: fontFamily ? { name: fontFamily } : undefined,
+        size: sizeHalfPt,
         characterSpacing,
         // Text highlight (Highlight mark with color attr)
-        ...(hasMark('highlight') ? { highlight: cssColorToHighlight(
-          (markAttrs('highlight') as Record<string, string>).color ?? '#ffff00'
-        ) as never } : {}),
+        ...(hasMark('highlight') ? {
+          highlight: cssColorToHighlight(
+            (markAttrs('highlight') as Record<string, string>).color ?? '#ffff00'
+          ) as never
+        } : {}),
         // Text background shading
         ...(bgHex ? { shading: { type: ShadingType.CLEAR, fill: bgHex } } : {}),
       })
@@ -761,10 +763,10 @@ function nodeToTable(node: AIDocumentNode): Table {
       return new TableCell({
         children: cellParas.length > 0 ? cellParas : [new Paragraph({ children: [] })],
         borders: {
-          top:    { style: BorderStyle.SINGLE, size: 1 },
+          top: { style: BorderStyle.SINGLE, size: 1 },
           bottom: { style: BorderStyle.SINGLE, size: 1 },
-          left:   { style: BorderStyle.SINGLE, size: 1 },
-          right:  { style: BorderStyle.SINGLE, size: 1 },
+          left: { style: BorderStyle.SINGLE, size: 1 },
+          right: { style: BorderStyle.SINGLE, size: 1 },
         },
       })
     })
@@ -782,20 +784,27 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
 
   // ── Shared spacing builder (used by heading + paragraph) ────────────────
   const buildSpacing = (attrs: Record<string, unknown>): {
-    line?: number; lineRule?: 'auto'; before?: number; after?: number
+    line?: number; lineRule?: 'auto' | 'exact' | 'atLeast'; before?: number; after?: number
   } => {
     const lineHeight = attrs.lineHeight as string | undefined
     const lhNum = lineHeight ? parseFloat(lineHeight) : NaN
     // Only set line spacing if explicitly provided; do NOT default to 1.6 (would inflate imported docs)
-    const result: { line?: number; lineRule?: 'auto'; before?: number; after?: number } = {}
+    const result: { line?: number; lineRule?: 'auto' | 'exact' | 'atLeast'; before?: number; after?: number } = {}
     if (!isNaN(lhNum) && lhNum > 0) {
-      result.line = Math.round(lhNum * 240)
-      result.lineRule = 'auto'
+      if (lineHeight!.endsWith('pt')) {
+        // Absolute pt line height (from exact/atLeast docx spacing) → twips, exact rule
+        result.line = Math.round(lhNum * 20)
+        result.lineRule = 'exact'
+      } else {
+        // Unitless multiplier (e.g. 1.5) → 240-unit scale, auto rule
+        result.line = Math.round(lhNum * 240)
+        result.lineRule = 'auto'
+      }
     }
     const mt = attrs.marginTop as number | undefined
     const mb = attrs.marginBottom as number | undefined
     if (mt != null && mt > 0) result.before = Math.round(mt * 20)
-    if (mb != null && mb > 0) result.after  = Math.round(mb * 20)
+    if (mb != null && mb > 0) result.after = Math.round(mb * 20)
     return result
   }
 
@@ -804,13 +813,13 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
     firstLine?: number; left?: number; right?: number
   } | undefined => {
     const fi = attrs.firstLineIndent as number | undefined
-    const pl = attrs.paddingLeft     as number | undefined  // cm
-    const pr = attrs.paddingRight    as number | undefined  // cm
+    const pl = attrs.paddingLeft as number | undefined  // cm
+    const pr = attrs.paddingRight as number | undefined  // cm
     if (!fi && !pl && !pr) return undefined
     const res: { firstLine?: number; left?: number; right?: number } = {}
     if (fi) res.firstLine = Math.round(fi * 2 * 240)  // level → 2em → twip (12pt base)
-    if (pl) res.left      = Math.round(pl * 567)       // cm → twip
-    if (pr) res.right     = Math.round(pr * 567)
+    if (pl) res.left = Math.round(pl * 567)       // cm → twip
+    if (pr) res.right = Math.round(pr * 567)
     return res
   }
 
@@ -906,8 +915,8 @@ function nodeToParagraphs(node: AIDocumentNode): (Paragraph | Table)[] {
 const CM_TO_TWIP = 567
 
 const PAPER_SIZES_TWIP: Record<string, { width: number; height: number }> = {
-  A4:     { width: 11906, height: 16838 },  // 210mm × 297mm
-  A3:     { width: 16838, height: 23811 },  // 297mm × 420mm
+  A4: { width: 11906, height: 16838 },  // 210mm × 297mm
+  A3: { width: 16838, height: 23811 },  // 297mm × 420mm
   Letter: { width: 12240, height: 15840 },  // 8.5in × 11in
 }
 
@@ -920,7 +929,7 @@ function parseInlineStyle(style: string): Record<string, string> {
     const idx = decl.indexOf(':')
     if (idx < 0) return
     const prop = decl.slice(0, idx).trim().toLowerCase()
-    const val  = decl.slice(idx + 1).trim()
+    const val = decl.slice(idx + 1).trim()
     if (prop && val) result[prop] = val
   })
   return result
@@ -931,9 +940,9 @@ function parseFontSizeToHalfPt(val?: string): number | undefined {
   if (!val) return undefined
   const n = parseFloat(val)
   if (isNaN(n)) return undefined
-  if (val.endsWith('pt'))  return Math.round(n * 2)
-  if (val.endsWith('px'))  return Math.round(n * 1.5)
-  if (val.endsWith('em'))  return Math.round(n * 24)  // assume 12pt base
+  if (val.endsWith('pt')) return Math.round(n * 2)
+  if (val.endsWith('px')) return Math.round(n * 1.5)
+  if (val.endsWith('em')) return Math.round(n * 24)  // assume 12pt base
   return Math.round(n * 2)  // bare number treated as pt
 }
 
@@ -1034,7 +1043,7 @@ function buildImageRun(img: HTMLImageElement): ImageRun | null {
     type: type as 'jpg' | 'png' | 'gif' | 'bmp',
     data: Uint8Array.from(atob(data), c => c.charCodeAt(0)),
     transformation: {
-      width:  widthPx  * PX_TO_EMU,
+      width: widthPx * PX_TO_EMU,
       height: heightPx * PX_TO_EMU,
     },
   })
@@ -1056,15 +1065,15 @@ function htmlNodeToRuns(el: Element, inherited: {
       if (!text) return
       runs.push(new TextRun({
         text,
-        bold:             inherited.bold,
-        italics:          inherited.italics,
-        underline:        inherited.underline ? {} : undefined,
-        strike:           inherited.strike,
-        color:            inherited.color,
-        font:             inherited.fontFamily ? { name: inherited.fontFamily } : undefined,
-        size:             inherited.sizeHalfPt,
-        superScript:      inherited.superScript,
-        subScript:        inherited.subScript,
+        bold: inherited.bold,
+        italics: inherited.italics,
+        underline: inherited.underline ? {} : undefined,
+        strike: inherited.strike,
+        color: inherited.color,
+        font: inherited.fontFamily ? { name: inherited.fontFamily } : undefined,
+        size: inherited.sizeHalfPt,
+        superScript: inherited.superScript,
+        subScript: inherited.subScript,
         // Text highlight (named color) — best-effort mapping
         ...(inherited.highlight ? { highlight: cssColorToHighlight(inherited.highlight) as never } : {}),
         // Text background via shading
@@ -1137,10 +1146,10 @@ function htmlNodeToRuns(el: Element, inherited: {
 
 /** Parse CSS length value to twips (1/1440 inch). Supports em/px/cm/pt. */
 function parseToTwipSimple(val: string): number | undefined {
-  if (val.endsWith('em'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 240) }
-  if (val.endsWith('px'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 15) }
-  if (val.endsWith('cm'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 567) }
-  if (val.endsWith('pt'))  { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 20) }
+  if (val.endsWith('em')) { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 240) }
+  if (val.endsWith('px')) { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 15) }
+  if (val.endsWith('cm')) { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 567) }
+  if (val.endsWith('pt')) { const v = parseFloat(val); return isNaN(v) ? undefined : Math.round(v * 20) }
   return undefined
 }
 
@@ -1148,10 +1157,10 @@ function parseToTwipSimple(val: string): number | undefined {
 function parseTextAlign(style: string): typeof AlignmentType[keyof typeof AlignmentType] {
   const css = parseInlineStyle(style)
   switch (css['text-align']) {
-    case 'center':  return AlignmentType.CENTER
-    case 'right':   return AlignmentType.RIGHT
+    case 'center': return AlignmentType.CENTER
+    case 'right': return AlignmentType.RIGHT
     case 'justify': return AlignmentType.JUSTIFIED
-    default:        return AlignmentType.LEFT
+    default: return AlignmentType.LEFT
   }
 }
 
@@ -1183,7 +1192,7 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       const paraInherited = {
         color: explicitColor || '000000', // 强制黑色
         ...(paraStyle['font-family']?.replace(/['"]/g, '').split(',')[0]?.trim() ? { fontFamily: paraStyle['font-family']!.replace(/['"]/g, '').split(',')[0].trim() } : {}),
-        ...(parseFontSizeToHalfPt(paraStyle['font-size'])                       ? { sizeHalfPt: parseFontSizeToHalfPt(paraStyle['font-size'])! } : {}),
+        ...(parseFontSizeToHalfPt(paraStyle['font-size']) ? { sizeHalfPt: parseFontSizeToHalfPt(paraStyle['font-size'])! } : {}),
       }
 
       // Scan spans for font/size/color fallback (same as paragraph)
@@ -1203,15 +1212,16 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       }
 
       // Line spacing and paragraph spacing for headings
-      let headingSpacing: { line?: number; lineRule?: 'auto'; before?: number; after?: number } | undefined
+      let headingSpacing: { line?: number; lineRule?: 'auto' | 'exact' | 'atLeast'; before?: number; after?: number } | undefined
       // Check <p/h> own style first, then scan spans
       let resolvedLh: number | undefined
+      let resolvedLhUnit: string | undefined
       const hLhRaw = paraStyle['line-height']
-      if (hLhRaw) { const v = parseFloat(hLhRaw); if (!isNaN(v) && v > 0) resolvedLh = v }
+      if (hLhRaw) { const v = parseFloat(hLhRaw); if (!isNaN(v) && v > 0) { resolvedLh = v; resolvedLhUnit = hLhRaw.endsWith('pt') ? 'pt' : undefined } }
       if (!resolvedLh) {
         for (const span of Array.from(node.querySelectorAll('span'))) {
           const sc = parseInlineStyle(span.getAttribute('style') ?? '')
-          if (sc['line-height']) { const v = parseFloat(sc['line-height']); if (!isNaN(v) && v > 0) { resolvedLh = v; break } }
+          if (sc['line-height']) { const v = parseFloat(sc['line-height']); if (!isNaN(v) && v > 0) { resolvedLh = v; resolvedLhUnit = sc['line-height'].endsWith('pt') ? 'pt' : undefined; break } }
         }
       }
       // Default heading line-height: if not set, do NOT force 1.6 — let Word use its default
@@ -1221,8 +1231,13 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       const hmbRaw = paraStyle['margin-bottom']
       headingSpacing = {}
       if (resolvedLh) {
-        headingSpacing.line = Math.round(resolvedLh * 240)
-        headingSpacing.lineRule = 'auto'
+        if (resolvedLhUnit === 'pt') {
+          headingSpacing.line = Math.round(resolvedLh * 20)
+          headingSpacing.lineRule = 'exact'
+        } else {
+          headingSpacing.line = Math.round(resolvedLh * 240)
+          headingSpacing.lineRule = 'auto'
+        }
       }
       if (hmtRaw) { const pt = parseFloat(hmtRaw); if (!isNaN(pt)) headingSpacing.before = Math.round(pt * 20) }
       if (hmbRaw) { const pt = parseFloat(hmbRaw); if (!isNaN(pt)) headingSpacing.after = Math.round(pt * 20) }
@@ -1237,7 +1252,7 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       const hPlRaw = paraStyle['padding-left']
       const hPrRaw = paraStyle['padding-right']
       const hIndent = (hPlRaw || hPrRaw) ? {
-        ...(hPlRaw ? { left:  parseToTwipSimple(hPlRaw) } : {}),
+        ...(hPlRaw ? { left: parseToTwipSimple(hPlRaw) } : {}),
         ...(hPrRaw ? { right: parseToTwipSimple(hPrRaw) } : {}),
       } : undefined
 
@@ -1259,10 +1274,14 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       // ── Line spacing ──────────────────────────────────────────────────────
       // Priority 1: line-height directly on <p> (LineHeight now configured for paragraph nodes)
       let resolvedLineHeight: number | undefined
+      let resolvedLineHeightUnit: string | undefined
       const lhRaw = lineStyle['line-height']
       if (lhRaw) {
         const lh = parseFloat(lhRaw)
-        if (!isNaN(lh) && lh > 0) resolvedLineHeight = lh
+        if (!isNaN(lh) && lh > 0) {
+          resolvedLineHeight = lh
+          resolvedLineHeightUnit = lhRaw.endsWith('pt') ? 'pt' : undefined
+        }
       }
       // Priority 2: scan ALL spans — fallback for old data where line-height was on textStyle spans
       if (!resolvedLineHeight) {
@@ -1274,6 +1293,7 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
             const lh = parseFloat(spanLh)
             if (!isNaN(lh) && lh > 0) {
               resolvedLineHeight = lh
+              resolvedLineHeightUnit = spanLh.endsWith('pt') ? 'pt' : undefined
               break
             }
           }
@@ -1287,8 +1307,15 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
         before?: number; after?: number
       } = {}
       if (resolvedLineHeight) {
-        spacing.line = Math.round(resolvedLineHeight * 240)
-        spacing.lineRule = 'auto'
+        if (resolvedLineHeightUnit === 'pt') {
+          // Absolute pt line height (from docx exact/atLeast spacing) → twips, exact rule
+          spacing.line = Math.round(resolvedLineHeight * 20)
+          spacing.lineRule = 'exact'
+        } else {
+          // Unitless multiplier → 240-unit scale, auto rule
+          spacing.line = Math.round(resolvedLineHeight * 240)
+          spacing.lineRule = 'auto'
+        }
       }
 
       // Paragraph before/after spacing (from ParagraphSpacing extension)
@@ -1313,8 +1340,8 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
       if (tiRaw || plRaw || prRaw) {
         indent = {}
         if (tiRaw) { const v = parseToTwipSimple(tiRaw); if (v !== undefined) indent.firstLine = v }
-        if (plRaw) { const v = parseToTwipSimple(plRaw);  if (v !== undefined) indent.left = v }
-        if (prRaw) { const v = parseToTwipSimple(prRaw);  if (v !== undefined) indent.right = v }
+        if (plRaw) { const v = parseToTwipSimple(plRaw); if (v !== undefined) indent.left = v }
+        if (prRaw) { const v = parseToTwipSimple(prRaw); if (v !== undefined) indent.right = v }
       }
 
       // ── Paragraph background color (ParagraphShading extension) ──────────
@@ -1397,7 +1424,7 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
           const cellParas = Array.from(td.children).flatMap(child => {
             const childEl = child as Element
             const childTag = childEl.tagName.toLowerCase()
-            if (['p', 'h1','h2','h3','h4','h5','h6'].includes(childTag)) {
+            if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(childTag)) {
               processNode(childEl)
               const last = children.pop()
               return last ? [last] : []
@@ -1407,10 +1434,10 @@ function htmlToDocxChildren(html: string): (Paragraph | Table)[] {
           return new TableCell({
             children: cellParas.length > 0 ? cellParas as Paragraph[] : [new Paragraph({ children: [] })],
             borders: {
-              top:    { style: BorderStyle.SINGLE, size: 1 },
+              top: { style: BorderStyle.SINGLE, size: 1 },
               bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left:   { style: BorderStyle.SINGLE, size: 1 },
-              right:  { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
             },
           })
         })
@@ -1464,16 +1491,16 @@ export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlC
   // Default run style: match the editor's CSS defaults (14pt, SimSun)
   // This ensures paragraphs without explicit font/size marks render consistently in Word.
   const DEFAULT_FONT_NAME = 'SimSun'   // editor shows 宋体 as default
-  const DEFAULT_SIZE_HP   = 28         // 14pt × 2 = 28 half-points
+  const DEFAULT_SIZE_HP = 28         // 14pt × 2 = 28 half-points
 
   // Heading run style applied to all heading levels:
   // - bold: true  (docx lib's default Heading styles omit <w:b/>, so Word renders them as non-bold)
   // - color: 000000  (override the default blue color from docx lib's Heading styles)
   // - font: SimSun  (consistent with document default font)
   const headingRunStyle = {
-    bold:  true,
+    bold: true,
     color: '000000',
-    font:  { name: DEFAULT_FONT_NAME, eastAsia: DEFAULT_FONT_NAME } as { name: string; eastAsia: string },
+    font: { name: DEFAULT_FONT_NAME, eastAsia: DEFAULT_FONT_NAME } as { name: string; eastAsia: string },
   }
 
   const document = new Document({
@@ -1512,15 +1539,15 @@ export async function exportDocx(doc: AIDocument, pageConfig?: PageConfig, htmlC
       properties: {
         page: {
           size: {
-            width:  isLandscape ? height : width,
-            height: isLandscape ? width  : height,
+            width: isLandscape ? height : width,
+            height: isLandscape ? width : height,
             orientation: isLandscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
           },
           margin: {
-            top:    Math.round(cfg.marginTop    * CM_TO_TWIP),
+            top: Math.round(cfg.marginTop * CM_TO_TWIP),
             bottom: Math.round(cfg.marginBottom * CM_TO_TWIP),
-            left:   Math.round(cfg.marginLeft   * CM_TO_TWIP),
-            right:  Math.round(cfg.marginRight  * CM_TO_TWIP),
+            left: Math.round(cfg.marginLeft * CM_TO_TWIP),
+            right: Math.round(cfg.marginRight * CM_TO_TWIP),
           },
         },
       },

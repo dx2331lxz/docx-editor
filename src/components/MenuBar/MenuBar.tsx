@@ -108,6 +108,7 @@ interface MenuBarProps {
   onOpenVibeEditing?: () => void
   onOpenAISettings?: () => void
   onPageConfigChange?: (config: Partial<import('../PageSetup/PageSetupDialog').PageConfig>) => void
+  onOpenMarginPresets?: (anchorRect: DOMRect) => void
 }
 
 interface MenuItem {
@@ -213,7 +214,7 @@ const MenuDropdown: React.FC<MenuDropdownProps> = ({ menu, isOpen, isAnyOpen, on
   )
 }
 
-const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter, onOpenPageSetup, onOpenSpecialSymbols, onInsertTOC, onInsertComment, onOpenPageBorder, onOpenWordCount, onPrintPreview, onExportPDF, onOpenWatermark, onOpenProtect, onToggleNavPane, showNavPane, trackingEnabled, onConvertToTraditional, onConvertToSimplified, onOpenBookmarks, onOpenDocGrid, onOpenStyleManager, onTableToText, onTextToTable, onSmartFormat, onRemoveBlankLines, onAddFirstLineIndent, onRemoveLeadingSpaces, onFullToHalf, onHalfToFull, onToggleVertical, isVertical, onOpenEnvelope, onToggleSplitView, isSplitView, onOpenTheme, onOpenChart, onOpenFormula, onOpenDocProps, onOpenPageBg, currentThemeName, onOpenCompare, onOpenWordFreq, onOpenTranslate, onToggleReadMode, readMode, onOpenPageNumber, onOpenCrossRef, onOpenContentControl, onOpenMailMerge, onOpenDropCap, onOpenSmartArt, onOpenAdvancedTOC, onOpenFootnoteSettings, onOpenExportOptions, onOpenDocInspector, onToggleOutlineView, showOutlineView, onOpenCitations, onOpenIndex, onOpenWordArt, onOpenShapes, onOpenGridPaper, onOpenTableAdvanced, onOpenTextBox, onOpenTemplate, onOpenBookFold, onOpenCalligraphy, onOpenShortcuts, onOpenHighlight, onOpenParaBorder, onOpenVersionHistory, onOpenMacro, onOpenAppTheme, onOpenPasteSettings, onToggleTwoPageView, isTwoPageView, onOpenTableChart, onOpenVideoEmbed, onOpenAdvancedFind, onOpenTTS, onOpenDocStats, onOpenGrammarLint, onOpenCustomShortcuts, onOpenCloudSync, onOpenAIAdvisor, onOpenTemplateGallery, onOpenDocDiff, onOpenFormFields, onOpenVibeEditing, onOpenAISettings, onPageConfigChange }) => {
+const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter, onOpenPageSetup, onOpenSpecialSymbols, onInsertTOC, onInsertComment, onOpenPageBorder, onOpenWordCount, onPrintPreview, onExportPDF, onOpenWatermark, onOpenProtect, onToggleNavPane, showNavPane, trackingEnabled, onConvertToTraditional, onConvertToSimplified, onOpenBookmarks, onOpenDocGrid, onOpenStyleManager, onTableToText, onTextToTable, onSmartFormat, onRemoveBlankLines, onAddFirstLineIndent, onRemoveLeadingSpaces, onFullToHalf, onHalfToFull, onToggleVertical, isVertical, onOpenEnvelope, onToggleSplitView, isSplitView, onOpenTheme, onOpenChart, onOpenFormula, onOpenDocProps, onOpenPageBg, currentThemeName, onOpenCompare, onOpenWordFreq, onOpenTranslate, onToggleReadMode, readMode, onOpenPageNumber, onOpenCrossRef, onOpenContentControl, onOpenMailMerge, onOpenDropCap, onOpenSmartArt, onOpenAdvancedTOC, onOpenFootnoteSettings, onOpenExportOptions, onOpenDocInspector, onToggleOutlineView, showOutlineView, onOpenCitations, onOpenIndex, onOpenWordArt, onOpenShapes, onOpenGridPaper, onOpenTableAdvanced, onOpenTextBox, onOpenTemplate, onOpenBookFold, onOpenCalligraphy, onOpenShortcuts, onOpenHighlight, onOpenParaBorder, onOpenVersionHistory, onOpenMacro, onOpenAppTheme, onOpenPasteSettings, onToggleTwoPageView, isTwoPageView, onOpenTableChart, onOpenVideoEmbed, onOpenAdvancedFind, onOpenTTS, onOpenDocStats, onOpenGrammarLint, onOpenCustomShortcuts, onOpenCloudSync, onOpenAIAdvisor, onOpenTemplateGallery, onOpenDocDiff, onOpenFormFields, onOpenVibeEditing, onOpenAISettings, onPageConfigChange, onOpenMarginPresets }) => {
   const [openMenu, setOpenMenu] = React.useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -267,10 +268,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
     {
       label: '视图',
       items: [
-        { label: '100%', action: () => {} },
-        { label: '页面视图（A4）', action: () => {} },
+        { label: '100%', action: () => { } },
+        { label: '页面视图（A4）', action: () => { } },
         { divider: true, label: '' },
-        { label: '标尺', action: () => {} },
+        { label: '标尺', action: () => { } },
         { label: showNavPane ? '✓ 导航窗格' : '导航窗格', action: () => onToggleNavPane?.() },
         { label: isSplitView ? '✓ 拆分视图' : '拆分视图', action: () => onToggleSplitView?.() },
         { label: isTwoPageView ? '✓ 双页视图' : '双页视图', action: () => onToggleTwoPageView?.() },
@@ -279,15 +280,15 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
         { divider: true, label: '' },
         { label: '界面主题...', action: () => onOpenAppTheme?.() },
         { divider: true, label: '' },
-        { label: '字符计数', action: () => {} },
+        { label: '字符计数', action: () => { } },
       ],
     },
     {
       label: '插入',
       items: [
         { label: '表格', action: () => editor?.commands.insertTable({ rows: 3, cols: 3, withHeaderRow: true }) },
-        { label: '图片', action: () => {} },
-        { label: '链接', shortcut: 'Ctrl+K', action: () => {} },
+        { label: '图片', action: () => { } },
+        { label: '链接', shortcut: 'Ctrl+K', action: () => { } },
         { divider: true, label: '' },
         { label: '图表...', action: () => onOpenChart?.() },
         { label: '公式...', action: () => onOpenFormula?.() },
@@ -332,8 +333,8 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
     {
       label: '格式',
       items: [
-        { label: '字体...', action: () => {} },
-        { label: '段落...', action: () => {} },
+        { label: '字体...', action: () => { } },
+        { label: '段落...', action: () => { } },
         { divider: true, label: '' },
         { label: '首字下沉...', action: () => onOpenDropCap?.() },
         { divider: true, label: '' },
@@ -345,6 +346,13 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
         { label: '文档主题...', action: () => onOpenTheme?.() },
         { label: '页面颜色...', action: () => onOpenPageBg?.() },
         { divider: true, label: '' },
+        {
+          label: '页边距...', action: () => {
+            // The action needs an anchor rect — we pass document.body rect as fallback;
+            // the actual MenuBar renders this via a dedicated button below.
+            onOpenMarginPresets?.(document.body.getBoundingClientRect())
+          }
+        },
         { label: '页面设置...', action: () => onOpenPageSetup?.() },
         { label: '页面边框...', action: () => onOpenPageBorder?.() },
         { label: '水印...', action: () => onOpenWatermark?.() },
@@ -384,7 +392,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
         { label: '简→繁转换', action: () => onConvertToTraditional?.() },
         { label: '繁→简转换', action: () => onConvertToSimplified?.() },
         { divider: true, label: '' },
-        { label: '拼写检查', action: () => {} },
+        { label: '拼写检查', action: () => { } },
         { divider: true, label: '' },
         { label: '字数统计', action: () => onOpenWordCount?.() },
         { divider: true, label: '' },
@@ -402,8 +410,8 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
         { divider: true, label: '' },
         { label: '保护文档...', action: () => onOpenProtect?.() },
         { divider: true, label: '' },
-        { label: '查找', shortcut: 'Ctrl+F', action: () => {} },
-        { label: '查找替换', shortcut: 'Ctrl+H', action: () => {} },
+        { label: '查找', shortcut: 'Ctrl+F', action: () => { } },
+        { label: '查找替换', shortcut: 'Ctrl+H', action: () => { } },
       ],
     },
     {
@@ -424,13 +432,13 @@ const MenuBar: React.FC<MenuBarProps> = ({ editor, onExport, onOpenHeaderFooter,
         { divider: true, label: '' },
         { label: '粘贴设置...', action: () => onOpenPasteSettings?.() },
         { divider: true, label: '' },
-        { label: '应用段落样式', action: () => {} },
+        { label: '应用段落样式', action: () => { } },
       ],
     },
     {
       label: '帮助',
       items: [
-        { label: '关于', action: () => {} },
+        { label: '关于', action: () => { } },
         { label: '快捷键...', action: () => onOpenShortcuts?.() },
       ],
     },

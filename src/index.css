@@ -26,6 +26,10 @@ body {
   font-size: 12pt;
   line-height: 1.5;
   color: #333;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  /* prevent any child element from overflowing the right page margin */
+  overflow-x: hidden;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
@@ -41,7 +45,7 @@ body {
   width: 210mm;
   min-height: 297mm;
   background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   margin: 0 auto;
   box-sizing: border-box;
 }
@@ -51,8 +55,15 @@ body {
   border-collapse: collapse;
   table-layout: fixed;
   width: 100%;
+  max-width: 100%;
   margin: 8px 0;
   overflow: hidden;
+}
+
+/* Clamp all imported images and block elements to content width */
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
 }
 
 .ProseMirror table td,
@@ -73,8 +84,11 @@ body {
   z-index: 2;
   position: absolute;
   content: "";
-  left: 0; right: 0; top: 0; bottom: 0;
-  background: rgba(200,200,255,0.4);
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(200, 200, 255, 0.4);
   pointer-events: none;
 }
 
@@ -92,37 +106,104 @@ mark {
 }
 
 /* Headings */
-.ProseMirror h1 { font-size: 2em; font-weight: 700; margin: 0.67em 0; }
-.ProseMirror h2 { font-size: 1.5em; font-weight: 700; margin: 0.83em 0; }
-.ProseMirror h3 { font-size: 1.17em; font-weight: 700; margin: 1em 0; }
-.ProseMirror h4 { font-size: 1em; font-weight: 700; margin: 1.33em 0; }
-.ProseMirror h5 { font-size: 0.83em; font-weight: 700; margin: 1.67em 0; }
-.ProseMirror h6 { font-size: 0.67em; font-weight: 700; margin: 2.33em 0; }
+.ProseMirror h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 0.67em 0;
+}
 
-.ProseMirror ul, .ProseMirror ol {
+.ProseMirror h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0.83em 0;
+}
+
+.ProseMirror h3 {
+  font-size: 1.17em;
+  font-weight: 700;
+  margin: 1em 0;
+}
+
+.ProseMirror h4 {
+  font-size: 1em;
+  font-weight: 700;
+  margin: 1.33em 0;
+}
+
+.ProseMirror h5 {
+  font-size: 0.83em;
+  font-weight: 700;
+  margin: 1.67em 0;
+}
+
+.ProseMirror h6 {
+  font-size: 0.67em;
+  font-weight: 700;
+  margin: 2.33em 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
   padding-left: 1.5em;
   margin: 0.5em 0;
 }
 
 /* ── Multi-level ordered list ──────────────────────────────── */
-.ProseMirror ol { list-style-type: decimal; }
-.ProseMirror ol ol { list-style-type: lower-alpha; }
-.ProseMirror ol ol ol { list-style-type: lower-roman; }
-.ProseMirror ol ol ol ol { list-style-type: upper-alpha; }
-.ProseMirror ol ol ol ol ol { list-style-type: upper-roman; }
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror ol ol {
+  list-style-type: lower-alpha;
+}
+
+.ProseMirror ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.ProseMirror ol ol ol ol {
+  list-style-type: upper-alpha;
+}
+
+.ProseMirror ol ol ol ol ol {
+  list-style-type: upper-roman;
+}
 
 /* ── Column layout ─────────────────────────────────────────── */
-.columns-2 .ProseMirror { column-count: 2; column-gap: 1cm; }
-.columns-3 .ProseMirror { column-count: 3; column-gap: 0.8cm; }
-.columns-left .ProseMirror { column-count: 2; column-gap: 1cm; }
-.columns-right .ProseMirror { column-count: 2; column-gap: 1cm; }
+.columns-2 .ProseMirror {
+  column-count: 2;
+  column-gap: 1cm;
+}
+
+.columns-3 .ProseMirror {
+  column-count: 3;
+  column-gap: 0.8cm;
+}
+
+.columns-left .ProseMirror {
+  column-count: 2;
+  column-gap: 1cm;
+}
+
+.columns-right .ProseMirror {
+  column-count: 2;
+  column-gap: 1cm;
+}
+
 .columns-2 .ProseMirror::after,
-.columns-3 .ProseMirror::after { content: ''; display: table; clear: both; }
+.columns-3 .ProseMirror::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
 /* Column divider rule */
 .columns-2.column-rule .ProseMirror,
 .columns-3.column-rule .ProseMirror,
 .columns-left.column-rule .ProseMirror,
-.columns-right.column-rule .ProseMirror { column-rule: 1px solid #d1d5db; }
+.columns-right.column-rule .ProseMirror {
+  column-rule: 1px solid #d1d5db;
+}
 
 /* ── Header / Footer editing areas ────────────────────────── */
 .header-footer-area {
@@ -132,16 +213,23 @@ mark {
   position: relative;
   background: #f0f7ff;
 }
-.header-footer-area:focus-within { border-color: #3b82f6; background: #eff6ff; }
+
+.header-footer-area:focus-within {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
 .header-footer-label {
   position: absolute;
-  top: 2px; right: 6px;
+  top: 2px;
+  right: 6px;
   font-size: 10px;
   color: #93c5fd;
   pointer-events: none;
   user-select: none;
   font-style: italic;
 }
+
 .header-footer-input {
   width: 100%;
   background: transparent;
@@ -153,8 +241,15 @@ mark {
 }
 
 /* ── Search highlight decoration ─────────────────────────── */
-.search-highlight { background-color: #fef08a; border-radius: 2px; }
-.search-highlight-current { background-color: #fb923c; border-radius: 2px; }
+.search-highlight {
+  background-color: #fef08a;
+  border-radius: 2px;
+}
+
+.search-highlight-current {
+  background-color: #fb923c;
+  border-radius: 2px;
+}
 
 /* ── Comment mark ────────────────────────────────────────── */
 .comment-mark {
@@ -163,7 +258,10 @@ mark {
   border-radius: 1px;
   cursor: pointer;
 }
-.comment-mark:hover { background-color: #fde68a; }
+
+.comment-mark:hover {
+  background-color: #fde68a;
+}
 
 /* ── Track Changes marks ─────────────────────────────────── */
 span.track-insert {
@@ -173,19 +271,29 @@ span.track-insert {
   text-decoration-color: #16a34a;
   background-color: #f0fdf4;
 }
+
 span.track-delete {
   color: #dc2626;
   text-decoration: line-through;
   text-decoration-color: #dc2626;
   background-color: #fef2f2;
 }
+
 /* Tracking indicator in toolbar */
 .tracking-active {
   animation: tracking-pulse 2s ease-in-out infinite;
 }
+
 @keyframes tracking-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* ── Footnote styles ─────────────────────────────────────── */
@@ -198,51 +306,93 @@ span.track-delete {
   user-select: none;
   transition: color 0.1s;
 }
-.ProseMirror sup.footnote-ref:hover { color: #1d4ed8; text-decoration: underline; }
-.footnote-section { font-size: 0.82em; color: #374151; }
-.footnote-list { margin-bottom: 0.5em; }
+
+.ProseMirror sup.footnote-ref:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.footnote-section {
+  font-size: 0.82em;
+  color: #374151;
+}
+
+.footnote-list {
+  margin-bottom: 0.5em;
+}
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Table style presets ─────────────────────────────────── */
 /* Applied via class on <table> element */
 .ProseMirror table.table-style-simple td,
-.ProseMirror table.table-style-simple th { border: 1px solid #374151 !important; }
+.ProseMirror table.table-style-simple th {
+  border: 1px solid #374151 !important;
+}
 
 .ProseMirror table.table-style-light-grid td,
-.ProseMirror table.table-style-light-grid th { border: 1px solid #e5e7eb !important; }
-.ProseMirror table.table-style-light-grid th { background: #f3f4f6 !important; }
+.ProseMirror table.table-style-light-grid th {
+  border: 1px solid #e5e7eb !important;
+}
+
+.ProseMirror table.table-style-light-grid th {
+  background: #f3f4f6 !important;
+}
 
 .ProseMirror table.table-style-dark-header th {
-  background: #374151 !important; color: white !important; font-weight: bold !important;
+  background: #374151 !important;
+  color: white !important;
+  font-weight: bold !important;
   border-color: #374151 !important;
 }
 
 .ProseMirror table.table-style-blue-header th {
-  background: #3b82f6 !important; color: white !important; font-weight: bold !important;
+  background: #3b82f6 !important;
+  color: white !important;
+  font-weight: bold !important;
   border-color: #3b82f6 !important;
 }
-.ProseMirror table.table-style-blue-header td { border-color: #bfdbfe !important; }
+
+.ProseMirror table.table-style-blue-header td {
+  border-color: #bfdbfe !important;
+}
 
 .ProseMirror table.table-style-striped tbody tr:nth-child(even) td {
   background: #f0f9ff !important;
 }
-.ProseMirror table.table-style-striped th { background: #eff6ff !important; font-weight: bold !important; }
+
+.ProseMirror table.table-style-striped th {
+  background: #eff6ff !important;
+  font-weight: bold !important;
+}
 
 .ProseMirror table.table-style-no-border td,
 .ProseMirror table.table-style-no-border th {
-  border-top: none !important; border-left: none !important; border-right: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
   border-bottom: 1px solid #f3f4f6 !important;
 }
+
 .ProseMirror table.table-style-no-border th {
-  border-bottom: 2px solid #6b7280 !important; font-weight: bold !important;
+  border-bottom: 2px solid #6b7280 !important;
+  font-weight: bold !important;
 }
 
 /* ── TOC block ───────────────────────────────────────────── */
-.toc-block { page-break-inside: avoid; }
+.toc-block {
+  page-break-inside: avoid;
+}
 
 /* ── Page break node ─────────────────────────────────────── */
 .ProseMirror div[data-type="page-break"] {
@@ -253,12 +403,14 @@ span.track-delete {
   overflow: visible;
   page-break-after: always;
 }
+
 .ProseMirror div[data-type="page-break"]::before {
   content: '';
   display: block;
   border-top: 2px dashed #93c5fd;
   width: 100%;
 }
+
 .ProseMirror div[data-type="page-break"]::after {
   content: '分页符';
   position: absolute;
@@ -272,6 +424,7 @@ span.track-delete {
   pointer-events: none;
   user-select: none;
 }
+
 /* When selected */
 .ProseMirror div[data-type="page-break"].ProseMirror-selectednode::before {
   border-color: #3b82f6;
@@ -317,9 +470,14 @@ span.track-delete {
 
 /* ── Print styles ─────────────────────────────────────────── */
 @media print {
+
   /* Hide all UI chrome */
-  nav, header, footer,
-  .menubar, .toolbar, .statusbar,
+  nav,
+  header,
+  footer,
+  .menubar,
+  .toolbar,
+  .statusbar,
   .ruler-container,
   [class*="MenuBar"],
   [class*="ToolBar"],
@@ -330,7 +488,9 @@ span.track-delete {
   }
 
   /* Reset page chrome */
-  body, html, #root {
+  body,
+  html,
+  #root {
     height: auto !important;
     overflow: visible !important;
     background: white !important;
@@ -349,7 +509,8 @@ span.track-delete {
     margin: 0 !important;
     width: 100% !important;
     min-height: auto !important;
-    padding: 0 !important;     /* Printer handles margins via @page */
+    padding: 0 !important;
+    /* Printer handles margins via @page */
   }
 
   /* Page margin via @page */
@@ -362,9 +523,20 @@ span.track-delete {
   div[data-type="page-break"] {
     page-break-after: always !important;
   }
+
   /* Avoid breaking inside headings / tables */
-  h1, h2, h3, h4, h5, h6 { page-break-after: avoid; }
-  table { page-break-inside: avoid; }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    page-break-after: avoid;
+  }
+
+  table {
+    page-break-inside: avoid;
+  }
 
   /* Remove search highlights when printing */
   .search-highlight,
@@ -380,6 +552,7 @@ span.track-delete {
   border-bottom: 2px solid #9ca3af;
   cursor: pointer;
 }
+
 .bookmark-mark::before {
   content: '🔖';
   font-size: 10px;
@@ -389,7 +562,7 @@ span.track-delete {
 
 /* Document grid overlay */
 .doc-grid-overlay {
-  background-image: 
+  background-image:
     linear-gradient(to bottom, transparent calc(100% - 1px), #e5e7eb 100%);
   background-size: 100% var(--grid-line-height, 28px);
   pointer-events: none;
@@ -416,6 +589,7 @@ span.track-delete {
   background: rgba(255, 220, 0, 0.5);
   border-radius: 2px;
 }
+
 .find-highlight-current {
   background: rgba(255, 140, 0, 0.6);
   border-radius: 2px;
@@ -434,34 +608,89 @@ span.track-delete {
 }
 
 /* Theme: Business Blue */
-.theme-blue .ProseMirror h1 { color: #1e3a5f; }
-.theme-blue .ProseMirror h2 { color: #2563a8; }
-.theme-blue .ProseMirror h3 { color: #3b82c4; }
-.theme-blue .ProseMirror a { color: #1d6fa8; }
+.theme-blue .ProseMirror h1 {
+  color: #1e3a5f;
+}
+
+.theme-blue .ProseMirror h2 {
+  color: #2563a8;
+}
+
+.theme-blue .ProseMirror h3 {
+  color: #3b82c4;
+}
+
+.theme-blue .ProseMirror a {
+  color: #1d6fa8;
+}
 
 /* Theme: Active Orange */
-.theme-orange .ProseMirror h1 { color: #c2410c; }
-.theme-orange .ProseMirror h2 { color: #ea580c; }
-.theme-orange .ProseMirror h3 { color: #f97316; }
-.theme-orange .ProseMirror a { color: #d97706; }
+.theme-orange .ProseMirror h1 {
+  color: #c2410c;
+}
+
+.theme-orange .ProseMirror h2 {
+  color: #ea580c;
+}
+
+.theme-orange .ProseMirror h3 {
+  color: #f97316;
+}
+
+.theme-orange .ProseMirror a {
+  color: #d97706;
+}
 
 /* Theme: Forest Green */
-.theme-green .ProseMirror h1 { color: #14532d; }
-.theme-green .ProseMirror h2 { color: #15803d; }
-.theme-green .ProseMirror h3 { color: #16a34a; }
-.theme-green .ProseMirror a { color: #059669; }
+.theme-green .ProseMirror h1 {
+  color: #14532d;
+}
+
+.theme-green .ProseMirror h2 {
+  color: #15803d;
+}
+
+.theme-green .ProseMirror h3 {
+  color: #16a34a;
+}
+
+.theme-green .ProseMirror a {
+  color: #059669;
+}
 
 /* Theme: Elegant Purple */
-.theme-purple .ProseMirror h1 { color: #4c1d95; }
-.theme-purple .ProseMirror h2 { color: #6d28d9; }
-.theme-purple .ProseMirror h3 { color: #7c3aed; }
-.theme-purple .ProseMirror a { color: #8b5cf6; }
+.theme-purple .ProseMirror h1 {
+  color: #4c1d95;
+}
+
+.theme-purple .ProseMirror h2 {
+  color: #6d28d9;
+}
+
+.theme-purple .ProseMirror h3 {
+  color: #7c3aed;
+}
+
+.theme-purple .ProseMirror a {
+  color: #8b5cf6;
+}
 
 /* Theme: Classic Red */
-.theme-red .ProseMirror h1 { color: #7f1d1d; }
-.theme-red .ProseMirror h2 { color: #b91c1c; }
-.theme-red .ProseMirror h3 { color: #dc2626; }
-.theme-red .ProseMirror a { color: #ef4444; }
+.theme-red .ProseMirror h1 {
+  color: #7f1d1d;
+}
+
+.theme-red .ProseMirror h2 {
+  color: #b91c1c;
+}
+
+.theme-red .ProseMirror h3 {
+  color: #dc2626;
+}
+
+.theme-red .ProseMirror a {
+  color: #ef4444;
+}
 
 /* ─── Paragraph Collapse (heading fold triangles) ─────────────────────── */
 .ProseMirror h1,
@@ -507,9 +736,9 @@ span.track-delete {
 }
 
 /* Hide content after a collapsed heading (siblings) */
-.ProseMirror h1.collapsed ~ *:not(h1):not(h2):not(h3):not(h4),
-.ProseMirror h2.collapsed ~ *:not(h1):not(h2):not(h3):not(h4),
-.ProseMirror h3.collapsed ~ *:not(h1):not(h2):not(h3):not(h4) {
+.ProseMirror h1.collapsed~*:not(h1):not(h2):not(h3):not(h4),
+.ProseMirror h2.collapsed~*:not(h1):not(h2):not(h3):not(h4),
+.ProseMirror h3.collapsed~*:not(h1):not(h2):not(h3):not(h4) {
   /* JS-managed via data-collapsed-under */
 }
 

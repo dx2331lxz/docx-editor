@@ -1,0 +1,360 @@
+/* ═══════════════════════════════════════════════════════
+   App Skins — override .glass-* component classes
+   Each skin sets body[data-skin="xxx"] and overrides the
+   glass component visual styles for that look.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Shared A4 page defaults (all non-glass skins) ─────── */
+body:not([data-skin="glass"]) .a4-page {
+    background: #ffffff;
+    color: #1a1a2e;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SKIN: clean — 清爽白（默认）
+   清洁、明亮，接近现代 Office / Notion 风格
+   ════════════════════════════════════════════════════════ */
+body[data-skin="clean"],
+body[data-skin="clean"] #root {
+    background: #f0f4f8;
+    color: #1f2937;
+}
+
+body[data-skin="clean"] .glass-toolbar {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+}
+
+body[data-skin="clean"] .glass-toolbar,
+body[data-skin="clean"] .glass-toolbar * {
+    color: #374151 !important;
+}
+
+body[data-skin="clean"] .glass-toolbar button:hover {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+}
+
+body[data-skin="clean"] .glass-toolbar button.is-active,
+body[data-skin="clean"] .glass-toolbar button[data-active="true"] {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+
+body[data-skin="clean"] .glass-toolbar .toolbar-divider {
+    background: #e5e7eb !important;
+}
+
+body[data-skin="clean"] .glass-menubar {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+body[data-skin="clean"] .glass-menubar,
+body[data-skin="clean"] .glass-menubar * {
+    color: #374151 !important;
+}
+
+body[data-skin="clean"] .glass-menubar button:hover {
+    background: #f9fafb !important;
+    color: #1f2937 !important;
+}
+
+body[data-skin="clean"] .glass-canvas-bg {
+    background: #e2e8f0 !important;
+}
+
+body[data-skin="clean"] .glass-statusbar {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    border-top: 1px solid #e5e7eb !important;
+}
+
+body[data-skin="clean"] .glass-statusbar,
+body[data-skin="clean"] .glass-statusbar * {
+    color: #6b7280 !important;
+}
+
+body[data-skin="clean"] .flow-border {
+    background: #e5e7eb !important;
+    animation: none !important;
+}
+
+body[data-skin="clean"] .glass-tabbar {
+    background: #f9fafb !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+body[data-skin="clean"] .glass-tabbar,
+body[data-skin="clean"] .glass-tabbar * {
+    color: #374151 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SKIN: slate — 商务灰
+   深色顶栏 + 浅色画布，专业沉稳
+   ════════════════════════════════════════════════════════ */
+body[data-skin="slate"],
+body[data-skin="slate"] #root {
+    background: #dde3ea;
+    color: #1e293b;
+}
+
+body[data-skin="slate"] .glass-toolbar {
+    background: #1e293b !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #0f172a !important;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25) !important;
+}
+
+body[data-skin="slate"] .glass-toolbar,
+body[data-skin="slate"] .glass-toolbar * {
+    color: #cbd5e1 !important;
+}
+
+body[data-skin="slate"] .glass-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #f1f5f9 !important;
+}
+
+body[data-skin="slate"] .glass-toolbar button.is-active,
+body[data-skin="slate"] .glass-toolbar button[data-active="true"] {
+    background: rgba(56, 189, 248, 0.2) !important;
+    color: #38bdf8 !important;
+}
+
+body[data-skin="slate"] .glass-toolbar .toolbar-divider {
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
+body[data-skin="slate"] .glass-menubar {
+    background: #263347 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #0f172a !important;
+}
+
+body[data-skin="slate"] .glass-menubar,
+body[data-skin="slate"] .glass-menubar * {
+    color: #cbd5e1 !important;
+}
+
+body[data-skin="slate"] .glass-menubar button:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #f1f5f9 !important;
+}
+
+body[data-skin="slate"] .glass-canvas-bg {
+    background: #cdd5df !important;
+}
+
+body[data-skin="slate"] .glass-statusbar {
+    background: #1e293b !important;
+    backdrop-filter: none !important;
+    border-top: 1px solid #0f172a !important;
+}
+
+body[data-skin="slate"] .glass-statusbar,
+body[data-skin="slate"] .glass-statusbar * {
+    color: #94a3b8 !important;
+}
+
+body[data-skin="slate"] .flow-border {
+    background: rgba(56, 189, 248, 0.5) !important;
+    animation: none !important;
+}
+
+body[data-skin="slate"] .glass-tabbar {
+    background: #263347 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #0f172a !important;
+}
+
+body[data-skin="slate"] .glass-tabbar,
+body[data-skin="slate"] .glass-tabbar * {
+    color: #94a3b8 !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SKIN: warm — 暖阳
+   奶油色调，温暖舒适，适合长时间阅读
+   ════════════════════════════════════════════════════════ */
+body[data-skin="warm"],
+body[data-skin="warm"] #root {
+    background: #f5ede0;
+    color: #44301a;
+}
+
+body[data-skin="warm"] .glass-toolbar {
+    background: #fffaf4 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #e8d9c4 !important;
+    box-shadow: 0 1px 3px rgba(180, 100, 20, 0.08) !important;
+}
+
+body[data-skin="warm"] .glass-toolbar,
+body[data-skin="warm"] .glass-toolbar * {
+    color: #5c3d1e !important;
+}
+
+body[data-skin="warm"] .glass-toolbar button:hover {
+    background: #fce8cc !important;
+    color: #7c3700 !important;
+}
+
+body[data-skin="warm"] .glass-toolbar button.is-active,
+body[data-skin="warm"] .glass-toolbar button[data-active="true"] {
+    background: #fde4ba !important;
+    color: #92400e !important;
+}
+
+body[data-skin="warm"] .glass-toolbar .toolbar-divider {
+    background: #e8cfaf !important;
+}
+
+body[data-skin="warm"] .glass-menubar {
+    background: #fffaf4 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #e8d9c4 !important;
+}
+
+body[data-skin="warm"] .glass-menubar,
+body[data-skin="warm"] .glass-menubar * {
+    color: #5c3d1e !important;
+}
+
+body[data-skin="warm"] .glass-menubar button:hover {
+    background: #fdf0de !important;
+    color: #7c3700 !important;
+}
+
+body[data-skin="warm"] .glass-canvas-bg {
+    background: #ede0ce !important;
+}
+
+body[data-skin="warm"] .a4-page {
+    background: #fffdf8 !important;
+}
+
+body[data-skin="warm"] .glass-statusbar {
+    background: #fffaf4 !important;
+    backdrop-filter: none !important;
+    border-top: 1px solid #e8d9c4 !important;
+}
+
+body[data-skin="warm"] .glass-statusbar,
+body[data-skin="warm"] .glass-statusbar * {
+    color: #92713a !important;
+}
+
+body[data-skin="warm"] .flow-border {
+    background: #e8cfaf !important;
+    animation: none !important;
+}
+
+body[data-skin="warm"] .glass-tabbar {
+    background: #fdf5e8 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #e8d9c4 !important;
+}
+
+body[data-skin="warm"] .glass-tabbar,
+body[data-skin="warm"] .glass-tabbar * {
+    color: #7c5c2e !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SKIN: night — 深夜护眼
+   柔和暗色，不刺眼，适合夜间工作
+   ════════════════════════════════════════════════════════ */
+body[data-skin="night"],
+body[data-skin="night"] #root {
+    background: #181b22;
+    color: #d4d8e1;
+}
+
+body[data-skin="night"] .glass-toolbar {
+    background: #1f2430 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #2d3444 !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+body[data-skin="night"] .glass-toolbar,
+body[data-skin="night"] .glass-toolbar * {
+    color: #b0bcd0 !important;
+}
+
+body[data-skin="night"] .glass-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #dde3ef !important;
+}
+
+body[data-skin="night"] .glass-toolbar button.is-active,
+body[data-skin="night"] .glass-toolbar button[data-active="true"] {
+    background: rgba(99, 179, 237, 0.2) !important;
+    color: #90cdf4 !important;
+}
+
+body[data-skin="night"] .glass-toolbar .toolbar-divider {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+body[data-skin="night"] .glass-menubar {
+    background: #232838 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #2d3444 !important;
+}
+
+body[data-skin="night"] .glass-menubar,
+body[data-skin="night"] .glass-menubar * {
+    color: #b0bcd0 !important;
+}
+
+body[data-skin="night"] .glass-menubar button:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #dde3ef !important;
+}
+
+body[data-skin="night"] .glass-canvas-bg {
+    background: #151820 !important;
+}
+
+body[data-skin="night"] .a4-page {
+    background: #f5f4f0 !important;
+    color: #1a1a2e !important;
+}
+
+body[data-skin="night"] .ProseMirror {
+    color: #1a1a2e !important;
+}
+
+body[data-skin="night"] .glass-statusbar {
+    background: #1a1e28 !important;
+    backdrop-filter: none !important;
+    border-top: 1px solid #2d3444 !important;
+}
+
+body[data-skin="night"] .glass-statusbar,
+body[data-skin="night"] .glass-statusbar * {
+    color: #6b7a96 !important;
+}
+
+body[data-skin="night"] .flow-border {
+    background: rgba(99, 179, 237, 0.4) !important;
+    animation: none !important;
+}
+
+body[data-skin="night"] .glass-tabbar {
+    background: #1f2430 !important;
+    backdrop-filter: none !important;
+    border-bottom: 1px solid #2d3444 !important;
+}
+
+body[data-skin="night"] .glass-tabbar,
+body[data-skin="night"] .glass-tabbar * {
+    color: #7c8a9e !important;
+}

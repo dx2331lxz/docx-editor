@@ -2,14 +2,14 @@
    Glassmorphism / Futurist Dark Theme
    ═══════════════════════════════════════════════════════ */
 
-/* ── Global background ─────────────────────────────────── */
-body,
-#root {
+/* ── Global background (glass skin only) ──────────────── */
+body[data-skin="glass"],
+body[data-skin="glass"] #root {
   background: #0a0e1a !important;
   color: #e0e8ff;
 }
 
-body::before {
+body[data-skin="glass"]::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -286,99 +286,99 @@ body::before {
   background: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* ── Tailwind overrides for dark theme ─────────────────── */
-.bg-white {
+/* ── Tailwind overrides for dark theme (glass skin only) ── */
+body[data-skin="glass"] .bg-white {
   background: transparent !important;
 }
 
-.bg-gray-50 {
+body[data-skin="glass"] .bg-gray-50 {
   background: rgba(255, 255, 255, 0.03) !important;
 }
 
-.bg-gray-100 {
+body[data-skin="glass"] .bg-gray-100 {
   background: rgba(255, 255, 255, 0.05) !important;
 }
 
-.bg-gray-200 {
+body[data-skin="glass"] .bg-gray-200 {
   background: rgba(255, 255, 255, 0.07) !important;
 }
 
-.bg-gray-300 {
+body[data-skin="glass"] .bg-gray-300 {
   background: #0f1420 !important;
 }
 
-.bg-blue-600 {
+body[data-skin="glass"] .bg-blue-600 {
   background: rgba(255, 255, 255, 0.03) !important;
 }
 
-.text-gray-600,
-.text-gray-700,
-.text-gray-800,
-.text-gray-900 {
+body[data-skin="glass"] .text-gray-600,
+body[data-skin="glass"] .text-gray-700,
+body[data-skin="glass"] .text-gray-800,
+body[data-skin="glass"] .text-gray-900 {
   color: #c8d8ff !important;
 }
 
-.text-gray-400,
-.text-gray-500 {
+body[data-skin="glass"] .text-gray-400,
+body[data-skin="glass"] .text-gray-500 {
   color: #8899bb !important;
 }
 
-.border-gray-200,
-.border-gray-300 {
+body[data-skin="glass"] .border-gray-200,
+body[data-skin="glass"] .border-gray-300 {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-.hover\:bg-gray-100:hover {
+body[data-skin="glass"] .hover\:bg-gray-100:hover {
   background: rgba(0, 212, 255, 0.12) !important;
 }
 
-.hover\:bg-gray-200:hover {
+body[data-skin="glass"] .hover\:bg-gray-200:hover {
   background: rgba(0, 212, 255, 0.15) !important;
 }
 
-.hover\:bg-blue-50:hover {
+body[data-skin="glass"] .hover\:bg-blue-50:hover {
   background: rgba(0, 212, 255, 0.1) !important;
 }
 
-.bg-blue-50 {
+body[data-skin="glass"] .bg-blue-50 {
   background: rgba(0, 212, 255, 0.08) !important;
 }
 
-.bg-blue-100 {
+body[data-skin="glass"] .bg-blue-100 {
   background: rgba(0, 212, 255, 0.12) !important;
 }
 
-.text-blue-600,
-.text-blue-700 {
+body[data-skin="glass"] .text-blue-600,
+body[data-skin="glass"] .text-blue-700 {
   color: #00d4ff !important;
 }
 
-.text-white {
+body[data-skin="glass"] .text-white {
   color: #e0e8ff !important;
 }
 
-.bg-white.rounded,
-.bg-white.shadow {
+body[data-skin="glass"] .bg-white.rounded,
+body[data-skin="glass"] .bg-white.shadow {
   background: rgba(13, 10, 30, 0.92) !important;
   border: 1px solid rgba(178, 75, 255, 0.25) !important;
 }
 
-/* Fix: dialog/modal overlays that use fixed positioning */
-[class*="fixed"][class*="inset"] {
+/* Fix: dialog/modal overlays that use fixed positioning (glass only) */
+body[data-skin="glass"] [class*="fixed"][class*="inset"] {
   background: rgba(0, 0, 0, 0.75) !important;
 }
 
-/* Keep A4 page white for readability (no !important — allows inline gradient to override) */
-.a4-page {
+/* Keep A4 page white for readability (glass skin) */
+body[data-skin="glass"] .a4-page {
   background: #ffffff;
   color: #1a1a2e !important;
 }
 
-.a4-page * {
+body[data-skin="glass"] .a4-page * {
   color: inherit;
 }
 
-.ProseMirror {
+body[data-skin="glass"] .ProseMirror {
   color: #1a1a2e !important;
 }
 

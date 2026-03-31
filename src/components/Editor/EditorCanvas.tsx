@@ -163,7 +163,7 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const editorIdRef = useRef(`pg-${Math.random().toString(36).slice(2, 9)}`)
   const [numPages, setNumPages] = useState(1)
 
-  // ── Fixed-page constants ─────────────────────────────────────────────
+  // ── Page dimension constants ─────────────────────────────────────────
   const PAPER_SIZES_MM: Record<string, { w: number; h: number }> = {
     A4: { w: 210, h: 297 }, A3: { w: 297, h: 420 }, Letter: { w: 216, h: 279 },
   }
@@ -171,13 +171,14 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const _isLandscape = pageConfig?.orientation === 'landscape'
   const PAGE_H_MM = _isLandscape ? _paper.w : _paper.h
   const MM_PX = 3.7795275591
+  const CM_PX = MM_PX * 10
   const PAGE_PX = PAGE_H_MM * MM_PX
-  const GAP_PX = 24
-  const UNIT_PX = PAGE_PX + GAP_PX
-  const PAGE_PADDING_TOP_PX = (pageConfig?.marginTop ?? 2.54) * 10 * MM_PX
-  const PAGE_PADDING_BOTTOM_PX = (pageConfig?.marginBottom ?? 2.54) * 10 * MM_PX
+  // Printable content area per page (matches DOCX pagination exactly)
+  const marginTop_px = (pageConfig?.marginTop ?? 2.54) * CM_PX
+  const marginBottom_px = (pageConfig?.marginBottom ?? 2.54) * CM_PX
+  const contentPerPage = Math.max(PAGE_PX - marginTop_px - marginBottom_px, 100)
 
-  // Page background colour (used per page card)
+  // Page background colour
   const pageColor = (() => {
     if (!pageBg || pageBg.type === 'none') return '#ffffff'
     if (pageBg.type === 'solid') return pageBg.color || '#ffffff'
@@ -185,9 +186,6 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
     if (pageBg.type === 'gradient2') return pageBg.color || '#fff9e6'
     return '#ffffff'
   })()
-
-  // Total container height — always snaps to whole pages
-  const totalHeight = numPages * PAGE_PX + Math.max(0, numPages - 1) * GAP_PX
 
   // Watermark overlay (absolute positioned inside A4 page)
   const showWatermark = watermark && watermark.type !== 'none'
@@ -227,137 +225,28 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
     return () => container.removeEventListener('click', handleClick)
   }, [scrollRef])
 
-  // ── Word-style page gap: push paragraphs out of grey bands ───────────
-  // Background gradient is in pageBgStyle. Rather than setting inline styles
-  // on ProseMirror's own DOM nodes (which PM resets on its next render cycle),
-  // we inject a scoped <style> tag in <head>. PM never touches <head>, so
-  // our margin rules survive indefinitely. MutationObserver on ProseMirror
-  // fires on content changes (childList/characterData) but NOT on our own
-  // style-tag mutations, preventing any infinite loop.
+  // ── Lightweight page-count calculation ─────────────────────────────────
+  // No block-pushing — just measure content height and compute how many
+  // logical pages it spans. Page divider lines are rendered as overlays.
   useEffect(() => {
     const page = pageRef.current
     if (!page) return
 
-    const styleId = `page-gap-${editorIdRef.current}`
-
-    // Inject or reuse a scoped <style> tag
-    const getStyleEl = (): HTMLStyleElement => {
-      let el = document.getElementById(styleId) as HTMLStyleElement | null
-      if (!el) {
-        el = document.createElement('style')
-        el.id = styleId
-        document.head.appendChild(el)
-      }
-      return el
-    }
-
-    const pushBlocks = () => {
+    const calcPages = () => {
       const pm = page.querySelector('.ProseMirror') as HTMLElement | null
-      if (!pm) { getStyleEl().textContent = ''; return }
-
-      const getOffsetFromPage = (el: HTMLElement): number => {
-        let top = 0
-        let cur: HTMLElement | null = el
-        while (cur && cur !== page) {
-          top += cur.offsetTop
-          cur = cur.offsetParent as HTMLElement | null
-        }
-        return top
-      }
-
-      const eid = editorIdRef.current
-
-      // Build list of pushable targets with their CSS selectors.
-      // UL/OL children that span > PAGE_PX can't be pushed as a whole;
-      // instead we push their individual list items.
-      type PushTarget = { el: HTMLElement; sel: string }
-      const targets: PushTarget[] = []
-        ; (Array.from(pm.children) as HTMLElement[]).forEach((pmChild, pi) => {
-          const tag = pmChild.tagName
-          if ((tag === 'UL' || tag === 'OL') && pmChild.offsetHeight > PAGE_PX) {
-            ; (Array.from(pmChild.children) as HTMLElement[]).forEach((li, li_i) => {
-              targets.push({
-                el: li,
-                sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1}) > :nth-child(${li_i + 1})`,
-              })
-            })
-          } else {
-            targets.push({
-              el: pmChild,
-              sel: `[data-pgid="${eid}"] .ProseMirror > :nth-child(${pi + 1})`,
-            })
-          }
-        })
-
-      // Clear previous rules so pass 1 reads natural (unpushed) positions.
-      getStyleEl().textContent = ''
-
-      // Accumulate push amounts across passes. Each pass reads positions
-      // WITH already-accumulated CSS applied (forced reflow via offsetTop).
-      // We only look for NEW straddlers (not already in the map).
-      const pushMap = new Map<string, number>() // selector → push px
-
-      for (let pass = 0; pass < 8; pass++) {
-        let foundNew = false
-
-        for (const { el, sel } of targets) {
-          if (pushMap.has(sel)) continue  // already handled
-
-          const topRel = getOffsetFromPage(el)
-          const bottomRel = topRel + el.offsetHeight
-
-          // Find which page this element starts on
-          let pageStart = 0
-          while (pageStart + UNIT_PX <= topRel) pageStart += UNIT_PX
-
-          // Effective page bottom = page end minus bottom margin
-          const effectiveBottom = pageStart + PAGE_PX - PAGE_PADDING_BOTTOM_PX
-          const gapStart = pageStart + PAGE_PX
-          const gapEnd = pageStart + UNIT_PX
-
-          // Push if block crosses effective bottom boundary or starts in the gap zone
-          const crossesBottom = topRel < gapStart && bottomRel > effectiveBottom
-          const startsInGap = topRel >= gapStart && topRel < gapEnd
-
-          if (crossesBottom || startsInGap) {
-            const nextPageTop = pageStart + UNIT_PX + PAGE_PADDING_TOP_PX
-            const push = nextPageTop - topRel
-            if (push > 0) {
-              pushMap.set(sel, push)
-              foundNew = true
-            }
-          }
-        }
-
-        if (!foundNew) break  // layout is stable — no new straddlers
-
-        const rules = Array.from(pushMap.entries()).map(
-          ([sel, push]) => `${sel}{margin-top:${push}px!important}`
-        )
-        getStyleEl().textContent = rules.join('\n')
-      }
-
-      // ── Calculate page count from final layout ────────────────────
-      let maxBottom = 0
-      for (const { el } of targets) {
-        const b = getOffsetFromPage(el) + el.offsetHeight
-        if (b > maxBottom) maxBottom = b
-      }
-      let neededPages = 1
-      if (maxBottom > PAGE_PX) {
-        const idx = Math.floor(maxBottom / UNIT_PX)
-        const rem = maxBottom - idx * UNIT_PX
-        neededPages = rem > PAGE_PX ? idx + 2 : idx + 1
-      }
-      neededPages = Math.max(1, neededPages)
-      setNumPages(neededPages)
-      if (onPageCountChange) onPageCountChange(neededPages)
+      if (!pm) return
+      // Subtract top+bottom padding (margins) to get the net content height,
+      // then divide by content area per page — this matches DOCX pagination.
+      const netHeight = Math.max(0, page.scrollHeight - marginTop_px - marginBottom_px)
+      const pages = Math.max(1, Math.ceil(netHeight / contentPerPage))
+      setNumPages(pages)
+      if (onPageCountChange) onPageCountChange(pages)
     }
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
     const schedule = () => {
       if (debounceTimer) clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(pushBlocks, 150)
+      debounceTimer = setTimeout(calcPages, 120)
     }
 
     let mo: MutationObserver | null = null
@@ -385,9 +274,8 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
       clearTimeout(t2)
       mo?.disconnect()
       editor?.off('update', schedule)
-      document.getElementById(styleId)?.remove()
     }
-  }, [editor, pageConfig, onPageCountChange])
+  }, [editor, pageConfig, onPageCountChange, contentPerPage, marginTop_px, marginBottom_px])
 
   return (
     <div className="glass-canvas-bg flex-1 overflow-auto bg-gray-300 flex flex-col">
@@ -405,89 +293,150 @@ const EditorCanvas: React.FC<EditorCanvasProps> = ({
         <div
           ref={pageRef}
           data-pgid={editorIdRef.current}
-          className={columnClass}
+          data-page-px={Math.round(PAGE_PX)}
+          data-content-per-page={Math.round(contentPerPage)}
+          data-margin-top-px={Math.round(marginTop_px)}
+          className={`a4-page ${columnClass} ${themeClass}`}
           style={{
             width: pageStyle?.width ?? '210mm',
-            height: totalHeight,
+            minHeight: `${PAGE_PX}px`,
             margin: '0 auto',
             position: 'relative',
+            background: pageColor,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            boxSizing: 'border-box',
+            ...borderStyle,
           }}
         >
-          {/* ── Visual page cards (background + shadow per page) ── */}
-          {Array.from({ length: numPages }).map((_, i) => (
+          {/* ── Page divider lines ────────────────────────── */}
+          {/* Position = marginTop + (i+1) × contentPerPage, matching DOCX page breaks */}
+          {numPages > 1 && Array.from({ length: numPages - 1 }).map((_, i) => (
             <div
-              key={i}
-              className={`page-card ${themeClass}`}
+              key={`divider-${i}`}
+              className="page-divider-line"
               style={{
                 position: 'absolute',
-                top: i * UNIT_PX,
                 left: 0,
                 right: 0,
-                height: PAGE_PX,
-                background: pageColor,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-                boxSizing: 'border-box',
-                ...borderStyle,
+                top: marginTop_px + (i + 1) * contentPerPage,
+                height: 0,
+                zIndex: 5,
+                pointerEvents: 'none',
               }}
             >
-              {/* Watermark per page */}
-              {showWatermark && watermark?.type === 'text' && (
-                <div style={{
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 0,
-                  overflow: 'hidden',
-                }}>
-                  <span style={{
-                    fontFamily: watermark.fontFamily || 'sans-serif',
-                    fontSize: (watermark.fontSize || 72) + 'px',
-                    color: watermark.color || '#cccccc',
-                    opacity: watermark.opacity ?? 0.3,
-                    transform: `rotate(${-(watermark.angle ?? 45)}deg)`,
-                    whiteSpace: 'nowrap',
-                    fontWeight: 'bold',
-                  }}>
-                    {watermark.text || '水印'}
-                  </span>
-                </div>
-              )}
-              {showWatermark && watermark?.type === 'image' && watermark.imageDataUrl && (
-                <div style={{
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundImage: `url(${watermark.imageDataUrl})`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                  backgroundSize: '60%',
-                  opacity: watermark.imageOpacity ?? 0.3,
-                  zIndex: 0,
-                }} />
-              )}
-              {/* Document grid overlay per page */}
-              {docGrid?.showGrid && docGrid.mode !== 'none' && (
-                <div
-                  className="doc-grid-overlay"
-                  style={{ '--grid-line-height': `${Math.round(PAGE_H_MM * 3.7795 / docGrid.linesPerPage)}px` } as React.CSSProperties}
-                />
-              )}
+              {/* Left margin dashed line */}
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                width: `${pageConfig?.marginLeft ?? 2.54}cm`,
+                top: 0,
+                borderTop: '2px dashed #b0c4de',
+                opacity: 0.7,
+              }} />
+
+              {/* Right margin dashed line */}
+              <div style={{
+                position: 'absolute',
+                right: 0,
+                width: `${pageConfig?.marginRight ?? 2.54}cm`,
+                top: 0,
+                borderTop: '2px dashed #b0c4de',
+                opacity: 0.7,
+              }} />
+
+              {/* Page number badge (centered in right margin) */}
+              <div style={{
+                position: 'absolute',
+                right: 4,
+                top: -10,
+                background: '#e8eef6',
+                color: '#5a7399',
+                fontSize: 10,
+                fontFamily: 'system-ui, sans-serif',
+                padding: '2px 6px',
+                borderRadius: 4,
+                fontWeight: 600,
+                userSelect: 'none',
+                letterSpacing: '0.5px',
+                transform: 'scale(0.9)',
+                transformOrigin: 'right center'
+              }}>
+                第 {i + 2} 页
+              </div>
             </div>
           ))}
 
-          {/* ── Content layer (on top of page cards) ───────── */}
+          {/* ── Watermark overlay (repeating for all pages) ── */}
+          {showWatermark && watermark?.type === 'text' && (
+            <div className="watermark-repeat" style={{
+              pointerEvents: 'none',
+              userSelect: 'none',
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              overflow: 'hidden',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignContent: 'space-around',
+              justifyContent: 'space-around',
+              gap: `${PAGE_PX * 0.3}px 60px`,
+              paddingTop: PAGE_PX * 0.15,
+            }}>
+              {Array.from({ length: numPages * 2 }).map((_, wi) => (
+                <span key={wi} style={{
+                  fontFamily: watermark.fontFamily || 'sans-serif',
+                  fontSize: (watermark.fontSize || 72) + 'px',
+                  color: watermark.color || '#cccccc',
+                  opacity: watermark.opacity ?? 0.3,
+                  transform: `rotate(${-(watermark.angle ?? 45)}deg)`,
+                  whiteSpace: 'nowrap',
+                  fontWeight: 'bold',
+                  flexShrink: 0,
+                }}>
+                  {watermark.text || '水印'}
+                </span>
+              ))}
+            </div>
+          )}
+          {showWatermark && watermark?.type === 'image' && watermark.imageDataUrl && (
+            <div style={{
+              pointerEvents: 'none',
+              userSelect: 'none',
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              backgroundImage: `url(${watermark.imageDataUrl})`,
+              backgroundRepeat: 'repeat-y',
+              backgroundPosition: 'center',
+              backgroundSize: `60% ${PAGE_PX}px`,
+              opacity: watermark.imageOpacity ?? 0.3,
+            }} />
+          )}
+
+          {/* ── Document grid ──────────────────────────────── */}
+          {docGrid?.showGrid && docGrid.mode !== 'none' && (
+            <div
+              className="doc-grid-overlay"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 0,
+                pointerEvents: 'none',
+                '--grid-line-height': `${Math.round(PAGE_H_MM * 3.7795 / docGrid.linesPerPage)}px`,
+              } as React.CSSProperties}
+            />
+          )}
+
+          {/* ── Content layer ──────────────────────────────── */}
           <div
             style={{
               position: 'relative',
               zIndex: 1,
               paddingTop: `${pageConfig?.marginTop ?? 2.54}cm`,
+              paddingBottom: `${pageConfig?.marginBottom ?? 2.54}cm`,
               paddingLeft: `${pageConfig?.marginLeft ?? 2.54}cm`,
               paddingRight: `${pageConfig?.marginRight ?? 2.54}cm`,
+              overflowX: 'hidden',
             }}
           >
             {/* Header zone */}

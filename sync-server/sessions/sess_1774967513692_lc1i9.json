@@ -1,0 +1,35 @@
+{
+  "id": "sess_1774967513692_lc1i9",
+  "title": "规范文档所有标题的层级结构：normal",
+  "model": "agent",
+  "messages": [
+    {
+      "role": "user",
+      "text": "规范文档所有标题的层级结构：normalize_headings 确保 h1/h2/h3 层级正确，apply_heading_style bordered 添加左边框强调，让文档结构清晰"
+    },
+    {
+      "role": "ai",
+      "steps": [
+        {
+          "id": 1,
+          "type": "thinking_stream",
+          "text": ""
+        },
+        {
+          "id": 3,
+          "type": "error",
+          "text": "API 请求失败 (401): \"Invalid token\""
+        },
+        {
+          "id": 3,
+          "type": "error",
+          "text": "Error: API error 401: \"Invalid token\""
+        }
+      ],
+      "summary": "编辑过程出现错误，请重试。",
+      "done": true
+    }
+  ],
+  "createdAt": "2026-03-31T14:31:53.696Z",
+  "updatedAt": "2026-03-31T14:31:53.696Z"
+}

@@ -462,7 +462,7 @@ export const VIBE_TOOLS = [
         type: 'object',
         properties: {
           before: { type: 'string', description: '段前间距，如 "6px"、"0px"' },
-          after:  { type: 'string', description: '段后间距，如 "6px"、"12px"' },
+          after: { type: 'string', description: '段后间距，如 "6px"、"12px"' },
         },
         required: ['before', 'after'],
       },
@@ -528,10 +528,10 @@ export const VIBE_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          font:      { type: 'string', description: '正文字体，默认 "宋体"' },
-          bodySize:  { type: 'string', description: '正文字号，默认 "12pt"' },
-          lineHeight:{ type: 'string', description: '行距倍数，默认 "1.5"' },
-          indent:    { type: 'boolean', description: '是否首行缩进2em，默认 true' },
+          font: { type: 'string', description: '正文字体，默认 "宋体"' },
+          bodySize: { type: 'string', description: '正文字号，默认 "12pt"' },
+          lineHeight: { type: 'string', description: '行距倍数，默认 "1.5"' },
+          indent: { type: 'boolean', description: '是否首行缩进2em，默认 true' },
         },
         required: [],
       },
@@ -679,25 +679,25 @@ export const VIBE_TOOLS = [
 // ── Font family cross-platform mapping ──────────────────────────────────────
 // Windows font names → cross-platform font stacks with Linux Noto CJK fallback
 const FONT_MAP: Record<string, string> = {
-  'simsun':          'SimSun, "Noto Serif CJK SC", serif',
-  '宋体':             'SimSun, "Noto Serif CJK SC", serif',
-  'simhei':          'SimHei, "Noto Sans CJK SC", sans-serif',
-  '黑体':             'SimHei, "Noto Sans CJK SC", sans-serif',
-  'fangsong':        'FangSong, "Noto Serif CJK SC", serif',
-  '仿宋':             'FangSong, "Noto Serif CJK SC", serif',
-  'kaiti':           'KaiTi, "Noto Serif CJK SC", serif',
-  '楷体':             'KaiTi, "Noto Serif CJK SC", serif',
+  'simsun': 'SimSun, "Noto Serif CJK SC", serif',
+  '宋体': 'SimSun, "Noto Serif CJK SC", serif',
+  'simhei': 'SimHei, "Noto Sans CJK SC", sans-serif',
+  '黑体': 'SimHei, "Noto Sans CJK SC", sans-serif',
+  'fangsong': 'FangSong, "Noto Serif CJK SC", serif',
+  '仿宋': 'FangSong, "Noto Serif CJK SC", serif',
+  'kaiti': 'KaiTi, "Noto Serif CJK SC", serif',
+  '楷体': 'KaiTi, "Noto Serif CJK SC", serif',
   'microsoft yahei': '"Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
-  '微软雅黑':          '"Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
-  'pingfang sc':     '"PingFang SC", "Noto Sans CJK SC", sans-serif',
-  'pingfang':        '"PingFang SC", "Noto Sans CJK SC", sans-serif',
-  '苹方':             '"PingFang SC", "Noto Sans CJK SC", sans-serif',
-  '苹方-简':          '"PingFang SC", "Noto Sans CJK SC", sans-serif',
-  'pingfang-sc':     '"PingFang SC", "Noto Sans CJK SC", sans-serif',
+  '微软雅黑': '"Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
+  'pingfang sc': '"PingFang SC", "Noto Sans CJK SC", sans-serif',
+  'pingfang': '"PingFang SC", "Noto Sans CJK SC", sans-serif',
+  '苹方': '"PingFang SC", "Noto Sans CJK SC", sans-serif',
+  '苹方-简': '"PingFang SC", "Noto Sans CJK SC", sans-serif',
+  'pingfang-sc': '"PingFang SC", "Noto Sans CJK SC", sans-serif',
   'noto sans cjk sc': '"Noto Sans CJK SC", sans-serif',
   'noto serif cjk sc': '"Noto Serif CJK SC", serif',
   'wenquanyi micro hei': '"WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif',
-  '文泉驿微米黑':       '"WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif',
+  '文泉驿微米黑': '"WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif',
 }
 
 function resolveFontFamily(input: string): string {
@@ -1034,10 +1034,10 @@ export async function executeTool(
         if (onPageConfigChange) {
           onPageConfigChange(prev => ({
             ...prev,
-            marginTop:    parseCm(top),
+            marginTop: parseCm(top),
             marginBottom: parseCm(bottom),
-            marginLeft:   parseCm(left),
-            marginRight:  parseCm(right),
+            marginLeft: parseCm(left),
+            marginRight: parseCm(right),
           }))
         }
         return `已设置页边距：上${top} 下${bottom} 左${left} 右${right}`
@@ -1410,37 +1410,47 @@ export async function executeTool(
           strike: editor.isActive('strike'),
           textAlign: editor.isActive({ textAlign: 'left' }) ? 'left'
             : editor.isActive({ textAlign: 'center' }) ? 'center'
-            : editor.isActive({ textAlign: 'right' }) ? 'right'
-            : editor.isActive({ textAlign: 'justify' }) ? 'justify'
-            : 'left',
+              : editor.isActive({ textAlign: 'right' }) ? 'right'
+                : editor.isActive({ textAlign: 'justify' }) ? 'justify'
+                  : 'left',
           heading: editor.isActive('heading', { level: 1 }) ? 'h1'
             : editor.isActive('heading', { level: 2 }) ? 'h2'
-            : editor.isActive('heading', { level: 3 }) ? 'h3'
-            : editor.isActive('heading', { level: 4 }) ? 'h4'
-            : 'paragraph',
+              : editor.isActive('heading', { level: 3 }) ? 'h3'
+                : editor.isActive('heading', { level: 4 }) ? 'h4'
+                  : 'paragraph',
         }
         return JSON.stringify(styles, null, 2)
       }
 
       case 'screenshot_document': {
         const { area = 'first_screen' } = args as { area?: string }
-        const pageEl = document.querySelector('.a4-page') as HTMLElement
-        if (!pageEl) return '错误：未找到文档页面元素（.a4-page）'
+        const pageEl = (
+          document.querySelector('[data-pgid]') ||
+          document.querySelector('.a4-page')
+        ) as HTMLElement | null
+        if (!pageEl) return '错误：未找到文档页面元素'
 
-        // A4 page constants (must match EditorCanvas)
-        const PAGE_MM = 297
-        const MM_PX = 3.7795275591
-        const PAGE_PX = Math.round(PAGE_MM * MM_PX)  // ≈ 1123px per page
-        const GAP_PX = 24
-        const UNIT_PX = PAGE_PX + GAP_PX  // ≈ 1147px per page slot
+        // Read page dimensions from data attributes written by EditorCanvas.
+        // These match exactly what the editor uses for page-break divider lines,
+        // so screenshots are cropped at the same boundaries.
+        const PAGE_PX = parseInt(pageEl.dataset.pagePx ?? '1123')  // full A4 height in px
+        const contentPerPage = parseInt(pageEl.dataset.contentPerPage ?? '931')  // printable area
+        const marginTopPx = parseInt(pageEl.dataset.marginTopPx ?? '96')   // top margin
 
-        // Resolve page-specific crop
-        let cropY: number | undefined
+        // Page N (1-indexed):
+        //   cropY  = marginTop + (N-1) × contentPerPage
+        //   height = PAGE_PX
+        // This matches the divider-line positions so "page 1 screenshot" shows exactly
+        // the same content slice that becomes page 1 in the exported DOCX.
+        let cropY = 0
         let cropHeight: number | undefined
         const pageMatch = area.match(/^page_(\d+)$/)
         if (pageMatch) {
-          const pageNum = parseInt(pageMatch[1]) - 1  // 0-indexed
-          cropY = pageNum * UNIT_PX
+          const pageIdx = parseInt(pageMatch[1]) - 1  // 0-indexed
+          cropY = marginTopPx + pageIdx * contentPerPage
+          cropHeight = PAGE_PX
+        } else if (area === 'first_screen' || area === 'top') {
+          cropY = 0
           cropHeight = PAGE_PX
         }
 
@@ -1449,9 +1459,8 @@ export async function executeTool(
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
-          height: cropHeight ?? (area === 'first_screen' ? 900 : area === 'top' ? 1000 : undefined),
-          y: cropY ?? 0,
-          windowHeight: area === 'first_screen' ? 900 : area === 'top' ? 1000 : undefined,
+          height: cropHeight,
+          y: cropY,
         })
 
         const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1]

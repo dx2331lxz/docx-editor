@@ -2,11 +2,71 @@ import { useState, useEffect } from 'react'
 
 type ColorMode = 'light' | 'dark' | 'system'
 type AccentColor = 'blue' | 'green' | 'purple' | 'orange'
+type AppSkin = 'clean' | 'glass' | 'slate' | 'warm' | 'night'
 
 interface ThemeConfig {
   mode: ColorMode
   accent: AccentColor
+  skin: AppSkin
 }
+
+interface SkinDef {
+  id: AppSkin
+  name: string
+  desc: string
+  toolbar: string
+  canvas: string
+  page: string
+  textOnToolbar: string
+}
+
+const APP_SKINS: SkinDef[] = [
+  {
+    id: 'clean',
+    name: '清爽白',
+    desc: '简洁明亮',
+    toolbar: '#ffffff',
+    canvas: '#e2e8f0',
+    page: '#ffffff',
+    textOnToolbar: '#374151',
+  },
+  {
+    id: 'glass',
+    name: '玻璃暗色',
+    desc: '科技质感',
+    toolbar: '#0d1117',
+    canvas: '#0a0e1a',
+    page: '#ffffff',
+    textOnToolbar: '#c8d8ff',
+  },
+  {
+    id: 'slate',
+    name: '商务灰',
+    desc: '专业沉稳',
+    toolbar: '#1e293b',
+    canvas: '#cdd5df',
+    page: '#ffffff',
+    textOnToolbar: '#cbd5e1',
+  },
+  {
+    id: 'warm',
+    name: '暖阳',
+    desc: '温暖舒适',
+    toolbar: '#fffaf4',
+    canvas: '#ede0ce',
+    page: '#fffdf8',
+    textOnToolbar: '#5c3d1e',
+  },
+  {
+    id: 'night',
+    name: '深夜护眼',
+    desc: '护眼夜间',
+    toolbar: '#1f2430',
+    canvas: '#151820',
+    page: '#f5f4f0',
+    textOnToolbar: '#b0bcd0',
+  },
+]
 
 interface Props {
   onClose: () => void
@@ -15,8 +75,8 @@ interface Props {
 const STORAGE_KEY = 'docx-editor-theme'
 
 const ACCENT_COLORS: Record<AccentColor, { primary: string; light: string; label: string }> = {
-  blue:   { primary: '#2563eb', light: '#eff6ff', label: '蓝色' },
-  green:  { primary: '#16a34a', light: '#f0fdf4', label: '绿色' },
+  blue: { primary: '#2563eb', light: '#eff6ff', label: '蓝色' },
+  green: { primary: '#16a34a', light: '#f0fdf4', label: '绿色' },
   purple: { primary: '#7c3aed', light: '#f5f3ff', label: '紫色' },
   orange: { primary: '#ea580c', light: '#fff7ed', label: '橙色' },
 }
@@ -74,9 +134,10 @@ const DARK_CSS = `
 
 function loadTheme(): ThemeConfig {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || { mode: 'light', accent: 'blue' }
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
+    return { mode: 'light', accent: 'blue', skin: 'clean', ...saved }
   } catch {
-    return { mode: 'light', accent: 'blue' }
+    return { mode: 'light', accent: 'blue', skin: 'clean' }
   }
 }
 
@@ -106,6 +167,10 @@ function applyTheme(config: ThemeConfig) {
   }
 
   root.setAttribute('data-theme', isDark ? 'dark' : 'light')
+
+  // Apply skin
+  document.body.dataset.skin = config.skin ?? 'clean'
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
 }
 
@@ -134,7 +199,7 @@ export default function AppThemeDialog({ onClose }: Props) {
 
   const MODE_OPTIONS: { value: ColorMode; label: string; icon: string }[] = [
     { value: 'light', label: '浅色模式', icon: '☀️' },
-    { value: 'dark',  label: '深色模式', icon: '🌙' },
+    { value: 'dark', label: '深色模式', icon: '🌙' },
     { value: 'system', label: '跟随系统', icon: '💻' },
   ]
 
@@ -143,14 +208,72 @@ export default function AppThemeDialog({ onClose }: Props) {
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
     }}>
-      <div style={{ background: '#fff', borderRadius: 8, width: 460, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', borderRadius: 8, width: 520, overflow: 'hidden', maxHeight: '90vh', overflowY: 'auto' }}>
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>界面主题</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#111827' }}>界面外观</h2>
           <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
         </div>
 
         <div style={{ padding: 20 }}>
+          {/* Skin selector */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 12 }}>外观皮肤</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+              {APP_SKINS.map(skin => {
+                const isActive = config.skin === skin.id
+                return (
+                  <button
+                    key={skin.id}
+                    onClick={() => update({ skin: skin.id })}
+                    style={{
+                      border: `2px solid ${isActive ? ACCENT_COLORS[config.accent].primary : '#e5e7eb'}`,
+                      borderRadius: 8,
+                      padding: 0,
+                      cursor: 'pointer',
+                      background: 'transparent',
+                      overflow: 'hidden',
+                      transition: 'border-color 0.15s',
+                      boxShadow: isActive ? `0 0 0 1px ${ACCENT_COLORS[config.accent].primary}` : 'none',
+                    }}
+                  >
+                    {/* Mini preview */}
+                    <div style={{ background: skin.canvas, padding: '6px 6px 4px' }}>
+                      {/* Toolbar strip */}
+                      <div style={{
+                        background: skin.toolbar,
+                        borderRadius: '4px 4px 0 0',
+                        padding: '3px 4px',
+                        display: 'flex',
+                        gap: 2,
+                        alignItems: 'center',
+                      }}>
+                        {[1, 2, 3].map(i => (
+                          <div key={i} style={{ width: 8, height: 4, background: skin.textOnToolbar, borderRadius: 1, opacity: 0.6 }} />
+                        ))}
+                      </div>
+                      {/* Page */}
+                      <div style={{
+                        background: skin.page,
+                        height: 36,
+                        borderRadius: '0 0 2px 2px',
+                        padding: '4px 5px',
+                      }}>
+                        {[1, 2, 3].map(i => (
+                          <div key={i} style={{ height: 3, background: '#d1d5db', borderRadius: 1, marginBottom: 3, width: i === 3 ? '60%' : '100%' }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ padding: '5px 4px 6px', background: '#fff' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#1f2937', marginBottom: 1 }}>{skin.name}</div>
+                      <div style={{ fontSize: 10, color: '#9ca3af' }}>{skin.desc}</div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Color mode */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 10 }}>外观模式</div>
@@ -174,7 +297,7 @@ export default function AppThemeDialog({ onClose }: Props) {
           </div>
 
           {/* Accent color */}
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 10 }}>主题色</div>
             <div style={{ display: 'flex', gap: 12 }}>
               {(Object.entries(ACCENT_COLORS) as [AccentColor, typeof ACCENT_COLORS[AccentColor]][]).map(([key, val]) => (
@@ -199,21 +322,11 @@ export default function AppThemeDialog({ onClose }: Props) {
               ))}
             </div>
           </div>
-
-          {/* Preview */}
-          <div style={{ padding: 16, background: config.mode === 'dark' ? '#1e1e2e' : ACCENT_COLORS[config.accent].light, borderRadius: 6, border: `1px solid ${ACCENT_COLORS[config.accent].primary}33` }}>
-            <div style={{ fontSize: 12, color: config.mode === 'dark' ? '#94a3b8' : '#6b7280', marginBottom: 6 }}>预览</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <div style={{ padding: '4px 12px', background: ACCENT_COLORS[config.accent].primary, color: '#fff', borderRadius: 4, fontSize: 12 }}>主按钮</div>
-              <div style={{ padding: '4px 12px', background: '#fff', border: `1px solid ${ACCENT_COLORS[config.accent].primary}`, color: ACCENT_COLORS[config.accent].primary, borderRadius: 4, fontSize: 12 }}>次按钮</div>
-              <div style={{ padding: '4px 12px', background: config.mode === 'dark' ? '#27273a' : '#fff', color: config.mode === 'dark' ? '#e2e8f0' : '#1f2937', borderRadius: 4, fontSize: 12, border: '1px solid #e5e7eb' }}>文字</div>
-            </div>
-          </div>
         </div>
 
         <div style={{ padding: '12px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button
-            onClick={() => { update({ mode: 'light', accent: 'blue' }) }}
+            onClick={() => { update({ mode: 'light', accent: 'blue', skin: 'clean' }) }}
             style={{ padding: '6px 16px', border: '1px solid #d1d5db', background: '#fff', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
           >重置</button>
           <button

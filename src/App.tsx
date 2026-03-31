@@ -11,6 +11,7 @@ import FindReplaceDialog from './components/FindReplace/FindReplaceDialog'
 import ParagraphDialog from './components/ParagraphDialog/ParagraphDialog'
 import PageSetupDialog, { DEFAULT_PAGE_CONFIG } from './components/PageSetup/PageSetupDialog'
 import type { PageConfig } from './components/PageSetup/PageSetupDialog'
+import MarginPresetsPanel from './components/MarginPresets/MarginPresetsPanel'
 import SpecialSymbolsPanel from './components/SpecialSymbols/SpecialSymbolsPanel'
 import CommentPanel from './components/Comment/CommentPanel'
 import LinkDialog from './components/Link/LinkDialog'
@@ -119,6 +120,7 @@ const App: React.FC = () => {
   const [showParagraphDialog, setShowParagraphDialog] = useState(false)
   const [showPageSetup, setShowPageSetup] = useState(false)
   const [pageConfig, setPageConfig] = useState<PageConfig>(DEFAULT_PAGE_CONFIG)
+  const [marginPanelAnchor, setMarginPanelAnchor] = useState<DOMRect | null>(null)
   const [totalPages, setTotalPages] = useState(1)
   const [showSpecialSymbols, setShowSpecialSymbols] = useState(false)
   const [showCommentPanel, setShowCommentPanel] = useState(false)
@@ -243,7 +245,8 @@ const App: React.FC = () => {
   const editor = useDocxEditor({ onStatsChange: setStats, onDocumentChange: setCurrentDoc })
   const { lastSaved } = useAutoSave(editor)
 
-  const handleExport = async () => {    if (!currentDoc || !editor) return
+  const handleExport = async () => {
+    if (!currentDoc || !editor) return
     const blob = await exportDocx(currentDoc, pageConfig, editor.getHTML())
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -416,7 +419,7 @@ const App: React.FC = () => {
             onOpenPageSetup={() => setShowPageSetup(true)}
             onOpenSpecialSymbols={() => setShowSpecialSymbols(true)}
             onInsertTOC={() => {
-              ;(editor?.chain().focus() as Record<string, () => unknown>).insertTableOfContents?.()
+              ; (editor?.chain().focus() as Record<string, () => unknown>).insertTableOfContents?.()
             }}
             onInsertComment={() => setShowCommentPanel(true)}
             onOpenPageBorder={() => setShowPageBorder(true)}
@@ -502,6 +505,7 @@ const App: React.FC = () => {
             onOpenVibeEditing={() => setShowVibeEditing(true)}
             onExportPDF={handleExportPDF}
             onPageConfigChange={(partial) => setPageConfig(prev => ({ ...prev, ...partial }))}
+            onOpenMarginPresets={(rect) => setMarginPanelAnchor(rect)}
           />
           <ToolBar
             editor={editor}
@@ -621,7 +625,7 @@ const App: React.FC = () => {
               onDeleteComment={handleDeleteComment}
             />
           )}
-          
+
         </div>
       )}
 
@@ -667,6 +671,15 @@ const App: React.FC = () => {
           config={pageConfig}
           onApply={setPageConfig}
           onClose={() => setShowPageSetup(false)}
+        />
+      )}
+      {marginPanelAnchor && (
+        <MarginPresetsPanel
+          anchorRect={marginPanelAnchor}
+          currentConfig={pageConfig}
+          onApply={(partial) => setPageConfig(prev => ({ ...prev, ...partial }))}
+          onOpenCustom={() => setShowPageSetup(true)}
+          onClose={() => setMarginPanelAnchor(null)}
         />
       )}
       {showSpecialSymbols && editor && (
