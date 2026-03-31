@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+sync-server/config/ai.json
+sync-server/config/quark.json
+server/data/config.json
 
 # Editor directories and files
 .vscode/*
